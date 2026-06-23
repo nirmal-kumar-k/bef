@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash } from '@phosphor-icons/react'
 import {
   Dialog,
   DialogContent,
@@ -32,7 +32,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
-import { Check, ChevronsUpDown } from 'lucide-react'
+import { Check, CaretUpDown } from '@phosphor-icons/react'
 import { cn, handleEnterToTab } from '@/lib/utils'
 
 // Mock Data
@@ -132,7 +132,7 @@ export function NewOrderModal({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent 
-        className="w-full sm:max-w-[1300px] bg-[#0B101A] border-[#243050] text-foreground max-h-[95vh] overflow-hidden flex flex-col p-0"
+        className="w-full sm:max-w-[1300px] bg-[#050810] border-[#243050] text-foreground max-h-[95vh] overflow-hidden flex flex-col p-0"
         onKeyDown={handleEnterToTab}
       >
         <div className="p-6 pb-4 border-b border-[#243050] shrink-0">
@@ -152,26 +152,26 @@ export function NewOrderModal({
                 
                 <div className="space-y-2">
                   <Label className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider">Customer Order No.</Label>
-                  <Input placeholder="e.g. PO-98214" className="h-10 px-3 rounded-md bg-[#121A2B] border-[#243050] text-[#EEF3FF] text-sm" />
+                  <Input placeholder="e.g. PO-98214" className="h-10 px-3 rounded-md bg-[#0C1221] border-[#243050] text-[#EEF3FF] text-sm" />
                 </div>
                 
                 <div className="space-y-2">
                   <Label className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider">Internal Order No.</Label>
-                  <Input placeholder="e.g. INT-4412" className="h-10 px-3 rounded-md bg-[#121A2B] border-[#243050] text-[#EEF3FF] text-sm" />
+                  <Input placeholder="e.g. INT-4412" className="h-10 px-3 rounded-md bg-[#0C1221] border-[#243050] text-[#EEF3FF] text-sm" />
                 </div>
 
                 <div className="space-y-2">
                   <Label className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider">Customer</Label>
                   <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
                     <PopoverTrigger
-                      className="flex h-10 w-full items-center justify-between rounded-md border border-[#243050] bg-[#121A2B] px-3 py-2 text-sm text-[#EEF3FF] hover:bg-[#1A263D]"
+                      className="flex h-10 w-full items-center justify-between rounded-md border border-[#243050] bg-[#0C1221] px-3 py-2 text-sm text-[#EEF3FF] hover:bg-[#1A263D]"
                     >
                     {selectedCustomer
                       ? customers.find((c) => c.value === selectedCustomer)?.label
                       : 'Select customer...'}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    <CaretUpDown weight="duotone" className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </PopoverTrigger>
-                    <PopoverContent className="w-[300px] p-0 bg-[#121A2B] border-[#243050]">
+                    <PopoverContent className="w-[300px] p-0 bg-[#0C1221] border-[#243050]">
                       <Command className="bg-transparent">
                         <CommandInput placeholder="Search customer..." className="text-[#EEF3FF]" />
                         <CommandList>
@@ -187,10 +187,10 @@ export function NewOrderModal({
                                 }}
                                 className="text-[#EEF3FF] hover:bg-[#1A263D] cursor-pointer"
                               >
-                                <Check
+                                <Check weight="duotone"
                                   className={cn(
                                     'mr-2 h-4 w-4',
-                                    selectedCustomer === customer.value ? 'opacity-100 text-[#F5712E]' : 'opacity-0'
+                                    selectedCustomer === customer.value ? 'opacity-100 text-[#EB6824]' : 'opacity-0'
                                   )}
                                 />
                                 {customer.label}
@@ -205,17 +205,17 @@ export function NewOrderModal({
 
                 <div className="space-y-2">
                   <Label className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider">Order Date</Label>
-                  <Input type="date" className="h-10 px-3 rounded-md bg-[#121A2B] border-[#243050] text-[#EEF3FF] text-sm [color-scheme:dark]" />
+                  <Input type="date" className="h-10 px-3 rounded-md bg-[#0C1221] border-[#243050] text-[#EEF3FF] text-sm [color-scheme:dark]" />
                 </div>
 
                 <div className="space-y-2">
                   <Label className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider">Delivery Date</Label>
-                  <Input type="date" className="h-10 px-3 rounded-md bg-[#121A2B] border-[#243050] text-[#EEF3FF] text-sm [color-scheme:dark]" />
+                  <Input type="date" className="h-10 px-3 rounded-md bg-[#0C1221] border-[#243050] text-[#EEF3FF] text-sm [color-scheme:dark]" />
                 </div>
                 
                 <div className="space-y-2">
                   <Label className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider">Remarks</Label>
-                  <Textarea placeholder="Notes..." className="min-h-[80px] px-3 py-2 rounded-md bg-[#121A2B] border-[#243050] text-[#EEF3FF] text-sm resize-y" />
+                  <Textarea placeholder="Notes..." className="min-h-[80px] px-3 py-2 rounded-md bg-[#0C1221] border-[#243050] text-[#EEF3FF] text-sm resize-y" />
                 </div>
               </div>
             </div>
@@ -225,14 +225,14 @@ export function NewOrderModal({
               <h3 className="text-[#8B9FC4] font-semibold uppercase tracking-wider text-sm border-b border-[#243050] pb-2">Line Items</h3>
               
               {/* Add Item Form */}
-              <div className="flex items-end gap-3 bg-[#121A2B]/50 p-4 rounded-xl border border-[#243050]">
+              <div className="flex items-end gap-3 bg-[#0C1221]/50 p-4 rounded-xl border border-[#243050]">
                 <div className="flex-[1.5] space-y-2">
                   <Label className="text-[#8B9FC4] text-xs font-semibold uppercase">Pattern</Label>
                   <Select value={selectedPattern} onValueChange={setSelectedPattern}>
-                    <SelectTrigger id="pattern-trigger" className="h-10 px-3 rounded-md bg-[#121A2B] border-[#243050] text-[#EEF3FF] text-sm">
+                    <SelectTrigger id="pattern-trigger" className="h-10 px-3 rounded-md bg-[#0C1221] border-[#243050] text-[#EEF3FF] text-sm">
                       <SelectValue placeholder="Select..." />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#121A2B] border-[#243050] text-[#EEF3FF]">
+                    <SelectContent className="bg-[#0C1221] border-[#243050] text-[#EEF3FF]">
                       {patterns.map(p => (
                         <SelectItem key={p.value} value={p.value} className="hover:bg-[#1A263D] cursor-pointer">{p.label}</SelectItem>
                       ))}
@@ -242,10 +242,10 @@ export function NewOrderModal({
                 <div className="flex-[2] space-y-2">
                   <Label className="text-[#8B9FC4] text-xs font-semibold uppercase">Product</Label>
                   <Select value={selectedProduct} onValueChange={setSelectedProduct} disabled={!selectedPattern}>
-                    <SelectTrigger className="h-10 px-3 rounded-md bg-[#121A2B] border-[#243050] text-[#EEF3FF] text-sm disabled:opacity-50">
+                    <SelectTrigger className="h-10 px-3 rounded-md bg-[#0C1221] border-[#243050] text-[#EEF3FF] text-sm disabled:opacity-50">
                       <SelectValue placeholder={selectedPattern ? "Select..." : "Pattern first"} />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#121A2B] border-[#243050] text-[#EEF3FF]">
+                    <SelectContent className="bg-[#0C1221] border-[#243050] text-[#EEF3FF]">
                       {selectedPattern && products[selectedPattern]?.map(p => (
                         <SelectItem key={p.value} value={p.value} className="hover:bg-[#1A263D] cursor-pointer">{p.label}</SelectItem>
                       ))}
@@ -260,22 +260,22 @@ export function NewOrderModal({
                     onChange={(e) => setQuantity(e.target.value === '' ? '' : Number(e.target.value))}
                     onKeyDown={handleQuantityKeyDown}
                     placeholder="0" 
-                    className="h-10 px-3 rounded-md bg-[#121A2B] border-[#243050] text-[#EEF3FF] text-sm" 
+                    className="h-10 px-3 rounded-md bg-[#0C1221] border-[#243050] text-[#EEF3FF] text-sm" 
                   />
                 </div>
                 <Button 
                   onClick={handleAddItem}
                   disabled={!selectedPattern || !selectedProduct || !quantity}
-                  className="bg-[#E8581A] hover:bg-[#F5712E] text-white h-10 px-6 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="bg-[#D4521A] hover:bg-[#EB6824] text-white h-10 px-6 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Plus className="mr-2 h-4 w-4" /> Add
+                  <Plus weight="bold" className="mr-2 h-4 w-4" /> Add
                 </Button>
               </div>
 
               {/* Cart Table */}
-              <div className="flex-1 border border-[#243050] rounded-xl overflow-hidden bg-[#0B101A] flex flex-col">
+              <div className="flex-1 border border-[#243050] rounded-xl overflow-hidden bg-[#050810] flex flex-col">
                 <table className="w-full text-sm text-left">
-                  <thead className="bg-[#121A2B] border-b border-[#243050] text-[#8B9FC4] text-xs uppercase tracking-wider font-semibold">
+                  <thead className="bg-[#0C1221] border-b border-[#243050] text-[#8B9FC4] text-xs uppercase tracking-wider font-semibold">
                     <tr>
                       <th className="px-4 py-3 w-[250px]">Product</th>
                       <th className="px-4 py-3 text-right">Qty</th>
@@ -308,10 +308,10 @@ export function NewOrderModal({
                             <td className="px-4 py-3 text-center text-[#8B9FC4]">{item.weight} kg</td>
                             <td className="px-4 py-3 text-center text-[#8B9FC4]">₹{item.ratePerKg.toFixed(2)}</td>
                             <td className="px-4 py-3 text-right text-[#C4D2EE]">₹{unitCost.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                            <td className="px-4 py-3 text-right font-mono font-medium text-[#F5712E]">₹{lineTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                            <td className="px-4 py-3 text-right font-mono font-medium text-[#EB6824]">₹{lineTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                             <td className="px-4 py-3 text-right">
                               <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)} className="h-8 w-8 text-[#5A6E90] hover:text-red-400 hover:bg-red-400/10">
-                                <Trash2 className="h-4 w-4" />
+                                <Trash weight="duotone" className="h-4 w-4" />
                               </Button>
                             </td>
                           </tr>
@@ -322,7 +322,7 @@ export function NewOrderModal({
                 </table>
                 
                 {/* Grand Total Area */}
-                <div className="mt-auto bg-[#121A2B] border-t border-[#243050] p-5 flex justify-end items-center gap-6">
+                <div className="mt-auto bg-[#0C1221] border-t border-[#243050] p-5 flex justify-end items-center gap-6">
                   <p className="text-[#8B9FC4] font-semibold uppercase tracking-widest text-sm">Order Total</p>
                   <p className="text-3xl font-bold font-mono text-[#EEF3FF]">
                     ₹{grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
@@ -334,11 +334,11 @@ export function NewOrderModal({
           </div>
         </div>
 
-        <div className="p-5 border-t border-[#243050] shrink-0 flex justify-end gap-3 bg-[#0B101A]">
+        <div className="p-5 border-t border-[#243050] shrink-0 flex justify-end gap-3 bg-[#050810]">
           <Button variant="ghost" onClick={onClose} className="text-[#8B9FC4] hover:text-[#EEF3FF] hover:bg-[#1C2840] h-12 px-6">
             Cancel
           </Button>
-          <Button className="bg-[#E8581A] hover:bg-[#F5712E] text-white h-12 px-8 font-semibold text-[15px]">
+          <Button className="bg-[#D4521A] hover:bg-[#EB6824] text-white h-12 px-8 font-semibold text-[15px]">
             Create Order
           </Button>
         </div>

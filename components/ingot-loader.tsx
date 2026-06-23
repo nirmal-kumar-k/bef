@@ -26,7 +26,7 @@ import * as THREE from 'three'
 
 // ─────────────────────────────────────────────────────────────────────────────
 const RING_R   = 1.08   // outer radius of each ring
-const ORANGE   = '#E8581A'
+const ORANGE   = '#D4521A'
 
 // ─────────────────────────────────────────────────────────────────────────────
 function OrbitalCore() {
@@ -341,10 +341,10 @@ export function IngotLoader() {
             to right,
             rgba(232, 88, 26, 0),
             rgba(232, 88, 26, 0.6) 35%,
-            #E8581A 80%,
+            #D4521A 80%,
             #FF9058 100%
           );
-          box-shadow:       0 0 8px rgba(232, 88, 26, 0.7), 0 0 2px #E8581A;
+          box-shadow:       0 0 8px rgba(232, 88, 26, 0.7), 0 0 2px #D4521A;
           animation:        befSweep 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
         @keyframes befSweep {

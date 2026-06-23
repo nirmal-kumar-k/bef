@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus } from 'lucide-react'
+import { Plus } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
@@ -63,14 +63,14 @@ const categories = ['All', 'Received', 'In Progress', 'Completed', 'Dispatched']
 
 const statusColors: Record<string, string> = {
   'Received': 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-  'In Progress': 'bg-[#E8581A]/20 text-[#F5712E] border-[#E8581A]/40',
+  'In Progress': 'bg-[#D4521A]/20 text-[#EB6824] border-[#D4521A]/40',
   'Completed': 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
   'Dispatched': 'bg-purple-500/20 text-purple-400 border-purple-500/30',
 }
 
 const statusAccentColors: Record<string, string> = {
   'Received': 'border-blue-500/30 shadow-[0_0_20px_rgba(59,130,246,0.15)]',
-  'In Progress': 'border-[#E8581A]/30 shadow-[0_0_20px_rgba(232,88,26,0.15)]',
+  'In Progress': 'border-[#D4521A]/30 shadow-[0_0_20px_rgba(232,88,26,0.15)]',
   'Completed': 'border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.15)]',
   'Dispatched': 'border-purple-500/30 shadow-[0_0_20px_rgba(168,85,247,0.15)]',
 }
@@ -91,16 +91,16 @@ export default function OrdersPage() {
             <p className="text-[#8B9FC4]">View and manage production orders</p>
           </div>
           <Button 
-            className="bg-[#E8581A] hover:bg-[#F5712E] text-white px-6 py-5 text-sm font-semibold rounded-lg"
+            className="bg-[#D4521A] hover:bg-[#EB6824] text-white px-6 py-5 text-sm font-semibold rounded-lg"
             onClick={() => setIsModalOpen(true)}
           >
-            <Plus className="mr-2 h-5 w-5" />
+            <Plus weight="bold" className="mr-2 h-5 w-5" />
             New Order
           </Button>
         </div>
 
         {/* Filter Bar */}
-        <div className="flex items-center gap-3 py-6 px-6 bg-[#0B101A]/50 border border-[#243050] rounded-xl overflow-x-auto min-h-[80px]">
+        <div className="flex items-center gap-3 py-6 px-6 bg-[#0C1221] border border-white/[0.06] rounded-[14px] overflow-x-auto min-h-[80px]">
           {categories.map((cat) => (
             <Badge
               key={cat}
@@ -109,7 +109,7 @@ export default function OrdersPage() {
               className={cn(
                 'cursor-pointer h-12 px-8 text-[15px] font-medium transition-colors border rounded-lg min-w-[120px] flex items-center justify-center shrink-0',
                 activeCategory === cat
-                  ? 'bg-[#E8581A]/20 border-[#E8581A]/40 text-[#F5712E]'
+                  ? 'bg-[#D4521A]/20 border-[#D4521A]/40 text-[#EB6824]'
                   : 'bg-transparent text-[#8B9FC4] border-sidebar-border hover:border-[#2E3C5C] hover:text-[#EEF3FF]'
               )}
             >
@@ -121,7 +121,7 @@ export default function OrdersPage() {
         {/* Orders List View */}
         <div className="space-y-4">
           {filteredOrders.length === 0 ? (
-            <div className="py-12 text-center border border-[#243050] rounded-xl bg-[#0B101A]/50">
+            <div className="py-12 text-center border border-[#243050] rounded-xl bg-[#050810]/50">
               <p className="text-[#8B9FC4] text-lg">No orders found for this status.</p>
             </div>
           ) : (
@@ -129,7 +129,7 @@ export default function OrdersPage() {
               <div 
                 key={order.id} 
                 className={cn(
-                  "flex items-center bg-[#121A2B] border p-5 rounded-xl hover:bg-[#1A263D] transition-all duration-300",
+                  "flex items-center bg-[#0C1221] border p-5 rounded-[14px] hover:bg-white/[0.04] transition-all duration-150",
                   statusAccentColors[order.status]
                 )}
               >

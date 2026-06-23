@@ -24,7 +24,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
-import { Check, ChevronsUpDown, Plus, Trash2 } from 'lucide-react'
+import { Check, CaretUpDown, Plus, Trash } from '@phosphor-icons/react'
 import { cn, handleEnterToTab } from '@/lib/utils'
 
 // Mock products
@@ -97,7 +97,7 @@ export function ProductMappingModal({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent 
-        className="w-full sm:max-w-4xl bg-[#0B101A] border-[#243050] text-foreground max-h-[90vh] overflow-y-auto"
+        className="w-full sm:max-w-4xl bg-[#050810] border-[#243050] text-foreground max-h-[90vh] overflow-y-auto"
         onKeyDown={handleEnterToTab}
       >
         <DialogHeader>
@@ -110,12 +110,12 @@ export function ProductMappingModal({
         </DialogHeader>
 
         <div className="py-4 space-y-6">
-          <div className="bg-[#121A2B]/50 border border-[#243050] rounded-lg p-4">
+          <div className="bg-[#0C1221]/50 border border-[#243050] rounded-lg p-4">
             <h3 className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider mb-2">Pattern Info</h3>
             <div className="flex gap-8">
               <div>
                 <span className="text-[#5A6E90] text-sm">Code:</span>
-                <span className="ml-2 text-[#F5712E] font-mono font-medium">P-{patternId || 'XXXX'}</span>
+                <span className="ml-2 text-[#EB6824] font-mono font-medium">P-{patternId || 'XXXX'}</span>
               </div>
               <div>
                 <span className="text-[#5A6E90] text-sm">Name:</span>
@@ -128,7 +128,7 @@ export function ProductMappingModal({
             <h3 className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider border-b border-[#243050] pb-2">Mapped Products</h3>
             
             {lines.map((line, index) => (
-              <div key={line.id} className="grid grid-cols-12 gap-4 items-end bg-[#121A2B] p-4 rounded-lg border border-[#243050]">
+              <div key={line.id} className="grid grid-cols-12 gap-4 items-end bg-[#0C1221] p-4 rounded-lg border border-[#243050]">
                 {/* Product Code Input */}
                 <div className="col-span-3 space-y-2">
                   <Label className="text-[#8B9FC4]">Product Code</Label>
@@ -136,7 +136,7 @@ export function ProductMappingModal({
                     placeholder="e.g. PRD-0512" 
                     value={line.productCode}
                     onChange={(e) => handleProductCodeChange(line.id, e.target.value)}
-                    className="bg-[#0B101A] border-[#243050] text-[#EEF3FF]"
+                    className="bg-[#050810] border-[#243050] text-[#EEF3FF]"
                   />
                 </div>
 
@@ -158,7 +158,7 @@ export function ProductMappingModal({
                     placeholder="Count" 
                     value={line.cavities}
                     onChange={(e) => updateCavities(line.id, e.target.value)}
-                    className="bg-[#0B101A] border-[#243050] text-[#EEF3FF]"
+                    className="bg-[#050810] border-[#243050] text-[#EEF3FF]"
                   />
                 </div>
 
@@ -171,7 +171,7 @@ export function ProductMappingModal({
                     disabled={lines.length === 1}
                     className="text-[#5A6E90] hover:text-red-400 hover:bg-red-400/10"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash weight="duotone" className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
@@ -182,7 +182,7 @@ export function ProductMappingModal({
               onClick={addLine}
               className="mt-4 bg-transparent border-[#243050] text-[#8B9FC4] hover:text-[#EEF3FF] hover:bg-[#1C2840] hover:border-[#2E3C5C] transition-colors"
             >
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus weight="bold" className="mr-2 h-4 w-4" />
               Add Product
             </Button>
           </div>
@@ -192,7 +192,7 @@ export function ProductMappingModal({
           <Button variant="ghost" onClick={onClose} className="text-[#8B9FC4] hover:text-[#EEF3FF] hover:bg-[#1C2840]">
             Cancel
           </Button>
-          <Button className="bg-[#E8581A] hover:bg-[#F5712E] text-white">
+          <Button className="bg-[#D4521A] hover:bg-[#EB6824] text-white">
             Save Mapping
           </Button>
         </DialogFooter>
@@ -217,15 +217,15 @@ function ProductCombobox({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
-        className="flex h-10 w-full items-center justify-between rounded-md border border-[#243050] bg-[#0B101A] px-3 py-2 text-sm text-[#EEF3FF] hover:bg-[#1A263D]"
+        className="flex h-10 w-full items-center justify-between rounded-md border border-[#243050] bg-[#050810] px-3 py-2 text-sm text-[#EEF3FF] hover:bg-[#1A263D]"
         aria-expanded={open}
       >
         <span className="truncate">
           {selectedProduct ? `${selectedProduct.code} — ${selectedProduct.name}` : 'Select product...'}
         </span>
-        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        <CaretUpDown weight="duotone" className="ml-2 h-4 w-4 shrink-0 opacity-50" />
       </PopoverTrigger>
-      <PopoverContent className="w-[380px] p-0 bg-[#121A2B] border-[#243050]">
+      <PopoverContent className="w-[380px] p-0 bg-[#0C1221] border-[#243050]">
         <Command className="bg-transparent">
           <CommandInput placeholder="Search products..." className="text-[#EEF3FF]" value={searchFilter} />
           <CommandList>
@@ -241,13 +241,13 @@ function ProductCombobox({
                   }}
                   className="text-[#EEF3FF] hover:bg-[#1A263D] cursor-pointer"
                 >
-                  <Check
+                  <Check weight="duotone"
                     className={cn(
                       'mr-2 h-4 w-4 flex-shrink-0',
-                      selectedId === product.id ? 'opacity-100 text-[#F5712E]' : 'opacity-0'
+                      selectedId === product.id ? 'opacity-100 text-[#EB6824]' : 'opacity-0'
                     )}
                   />
-                  <span className="font-mono text-[#F5712E] mr-2">{product.code}</span>
+                  <span className="font-mono text-[#EB6824] mr-2">{product.code}</span>
                   {product.name}
                   <span className="ml-auto text-[#5A6E90] text-xs">{product.weight}</span>
                 </CommandItem>

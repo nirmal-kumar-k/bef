@@ -25,7 +25,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
-import { Check, ChevronsUpDown } from 'lucide-react'
+import { Check, CaretUpDown } from '@phosphor-icons/react'
 import { cn, handleEnterToTab } from '@/lib/utils'
 
 // Mock Customers
@@ -62,7 +62,7 @@ export function NewProductModal({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent 
-        className="w-full sm:max-w-4xl bg-[#0B101A] border-[#243050] text-foreground max-h-[90vh] overflow-hidden flex flex-col"
+        className="w-full sm:max-w-4xl bg-[#050810] border-[#243050] text-foreground max-h-[90vh] overflow-hidden flex flex-col"
         onKeyDown={handleEnterToTab}
       >
         <DialogHeader className="shrink-0">
@@ -78,11 +78,11 @@ export function NewProductModal({
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="product-code" className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider">Product Code</Label>
-                <Input id="product-code" placeholder="e.g. PRD-0512" className="h-12 px-4 rounded-lg bg-[#121A2B] border-[#243050] text-[#EEF3FF] text-[15px]" />
+                <Input id="product-code" placeholder="e.g. PRD-0512" className="h-12 px-4 rounded-lg bg-[#0C1221] border-[#243050] text-[#EEF3FF] text-[15px]" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="product-name" className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider">Product Name</Label>
-                <Input id="product-name" placeholder="e.g. Pump Housing" className="h-12 px-4 rounded-lg bg-[#121A2B] border-[#243050] text-[#EEF3FF] text-[15px]" />
+                <Input id="product-name" placeholder="e.g. Pump Housing" className="h-12 px-4 rounded-lg bg-[#0C1221] border-[#243050] text-[#EEF3FF] text-[15px]" />
               </div>
             </div>
 
@@ -92,15 +92,15 @@ export function NewProductModal({
                 <Label className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider">Customer</Label>
                 <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
                   <PopoverTrigger
-                    className="flex h-12 w-full items-center justify-between rounded-lg border border-[#243050] bg-[#121A2B] px-4 py-2 text-[15px] text-[#EEF3FF] hover:bg-[#1A263D]"
+                    className="flex h-12 w-full items-center justify-between rounded-lg border border-[#243050] bg-[#0C1221] px-4 py-2 text-[15px] text-[#EEF3FF] hover:bg-[#1A263D]"
                     aria-expanded={customerOpen}
                   >
                   {selectedCustomer
                     ? customers.find((c) => c.value === selectedCustomer)?.label
                     : 'Select customer...'}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  <CaretUpDown weight="duotone" className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </PopoverTrigger>
-                <PopoverContent className="w-[400px] p-0 bg-[#121A2B] border-[#243050]">
+                <PopoverContent className="w-[400px] p-0 bg-[#0C1221] border-[#243050]">
                   <Command className="bg-transparent">
                     <CommandInput placeholder="Search customer..." className="text-[#EEF3FF]" />
                     <CommandList>
@@ -116,10 +116,10 @@ export function NewProductModal({
                             }}
                             className="text-[#EEF3FF] hover:bg-[#1A263D] cursor-pointer"
                           >
-                            <Check
+                            <Check weight="duotone"
                               className={cn(
                                 'mr-2 h-4 w-4',
-                                selectedCustomer === customer.value ? 'opacity-100 text-[#F5712E]' : 'opacity-0'
+                                selectedCustomer === customer.value ? 'opacity-100 text-[#EB6824]' : 'opacity-0'
                               )}
                             />
                             {customer.label}
@@ -139,20 +139,20 @@ export function NewProductModal({
                   placeholder="0.0"
                   value={weight}
                   onChange={(e) => setWeight(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="h-12 px-4 rounded-lg bg-[#121A2B] border-[#243050] text-[#EEF3FF] text-[15px]"
+                  className="h-12 px-4 rounded-lg bg-[#0C1221] border-[#243050] text-[#EEF3FF] text-[15px]"
                 />
               </div>
             </div>
 
             {/* Row 3: Rate per kg Toggle & Pricing logic */}
-            <div className="grid grid-cols-2 gap-6 items-end bg-[#121A2B]/40 p-5 rounded-xl border border-[#243050]">
+            <div className="grid grid-cols-2 gap-6 items-end bg-[#0C1221]/40 p-5 rounded-xl border border-[#243050]">
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Label className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider">Rate per kg</Label>
                 <Switch
                   checked={ratePerKgToggle}
                   onCheckedChange={setRatePerKgToggle}
-                  className="data-[state=checked]:bg-[#E8581A]"
+                  className="data-[state=checked]:bg-[#D4521A]"
                 />
               </div>
               
@@ -163,7 +163,7 @@ export function NewProductModal({
                       placeholder="Rate e.g. 150"
                       value={ratePerKg}
                       onChange={(e) => setRatePerKg(e.target.value === '' ? '' : Number(e.target.value))}
-                      className="h-12 px-4 rounded-lg bg-[#121A2B] border-[#243050] text-[#EEF3FF] text-[15px]"
+                      className="h-12 px-4 rounded-lg bg-[#0C1221] border-[#243050] text-[#EEF3FF] text-[15px]"
                     />
                   </div>
                 )}
@@ -181,7 +181,7 @@ export function NewProductModal({
                     placeholder="0.00"
                     value={manualUnitPrice}
                     onChange={(e) => setManualUnitPrice(e.target.value === '' ? '' : Number(e.target.value))}
-                    className="h-12 px-4 rounded-lg bg-[#121A2B] border-[#243050] text-[#EEF3FF] text-[15px]"
+                    className="h-12 px-4 rounded-lg bg-[#0C1221] border-[#243050] text-[#EEF3FF] text-[15px]"
                   />
                 )}
               </div>
@@ -190,12 +190,12 @@ export function NewProductModal({
             {/* Row 4: Product Image */}
             <div className="space-y-2 pb-2">
               <Label className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider">Product Image</Label>
-              <div className="relative flex items-center h-12 px-2 rounded-lg bg-[#121A2B] border border-[#243050] group focus-within:ring-1 focus-within:ring-[#E8581A]">
+              <div className="relative flex items-center h-12 px-2 rounded-lg bg-[#0C1221] border border-[#243050] group focus-within:ring-1 focus-within:ring-[#D4521A]">
                 <input
                   type="file"
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                 />
-                <div className="bg-[#E8581A] text-white text-sm font-semibold px-4 py-1.5 rounded-md mr-4 group-hover:bg-[#F5712E] transition-colors relative z-0 pointer-events-none">
+                <div className="bg-[#D4521A] text-white text-sm font-semibold px-4 py-1.5 rounded-md mr-4 group-hover:bg-[#EB6824] transition-colors relative z-0 pointer-events-none">
                   Choose File
                 </div>
                 <span className="text-[#EEF3FF] text-[15px] relative z-0 pointer-events-none">No file chosen</span>
@@ -208,7 +208,7 @@ export function NewProductModal({
           <Button variant="ghost" onClick={onClose} className="text-[#8B9FC4] hover:text-[#EEF3FF] hover:bg-[#1C2840]">
             Cancel
           </Button>
-          <Button className="bg-[#E8581A] hover:bg-[#F5712E] text-white">
+          <Button className="bg-[#D4521A] hover:bg-[#EB6824] text-white">
             Save Product
           </Button>
         </DialogFooter>

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus } from 'lucide-react'
+import { Plus } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { NewProductModal } from '@/components/products/new-product-modal'
 import { ViewProductModal } from '@/components/products/view-product-modal'
@@ -27,18 +27,17 @@ export default function ProductsPage() {
         </div>
         <Button
           onClick={() => setIsModalOpen(true)}
-          className="bg-[#E8581A] text-white transition-all hover:bg-[#F5712E] hover:shadow-[0_4px_14px_rgba(232,88,26,0.35)] hover:-translate-y-[1px]"
+          className="bg-[#D4521A] text-white transition-all hover:bg-[#EB6824] hover:shadow-[0_4px_14px_rgba(232,88,26,0.35)] hover:-translate-y-[1px]"
         >
-          <Plus className="mr-2 h-4 w-4" />
-          Add Product
+          <Plus weight="bold" className="mr-2 h-4 w-4" />
+          New Product
         </Button>
       </div>
 
-      {/* Products Table */}
-      <div className="rounded-lg border border-[#243050] bg-[#0B101A] overflow-hidden">
+      <div className="rounded-[14px] border border-white/[0.06] bg-[#0C1221] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-[15px] text-left">
-            <thead className="bg-[#121A2B] border-b border-[#243050] text-[#8B9FC4] text-[13px] uppercase tracking-wider font-heading">
+            <thead className="bg-[#0C1221] border-b border-[#243050] text-[#8B9FC4] text-[13px] uppercase tracking-wider font-heading">
               <tr>
                 <th className="px-6 py-4 font-medium">Product Code</th>
                 <th className="px-6 py-4 font-medium">Product Name</th>
@@ -57,7 +56,7 @@ export default function ProductsPage() {
                     setIsViewModalOpen(true)
                   }}
                 >
-                  <td className="px-6 py-4 font-mono text-[#F5712E] font-medium">{product.code}</td>
+                  <td className="px-6 py-4 font-mono text-[#EB6824] font-medium">{product.code}</td>
                   <td className="px-6 py-4 text-[#EEF3FF] font-medium group-hover:text-white transition-colors">{product.name}</td>
                   <td className="px-6 py-4 text-[#8B9FC4] group-hover:text-[#C4D2EE] transition-colors">{product.customer}</td>
                   <td className="px-6 py-4 text-right text-[#C4D2EE]">{product.weight}</td>

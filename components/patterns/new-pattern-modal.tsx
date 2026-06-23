@@ -34,7 +34,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
-import { Check, ChevronsUpDown, Image as ImageIcon, Lock } from 'lucide-react'
+import { Check, CaretUpDown, Image as ImageIcon, Lock } from '@phosphor-icons/react'
 import { cn, handleEnterToTab } from '@/lib/utils'
 
 // Mock Customers
@@ -81,7 +81,7 @@ export function NewPatternModal({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent 
-        className="w-full sm:max-w-3xl md:max-w-4xl lg:max-w-5xl bg-[#0B101A] border-sidebar-border text-foreground overflow-y-auto max-h-[90vh]"
+        className="w-full sm:max-w-3xl md:max-w-4xl lg:max-w-5xl bg-[#050810] border-sidebar-border text-foreground overflow-y-auto max-h-[90vh]"
         onKeyDown={handleEnterToTab}
       >
         <DialogHeader>
@@ -102,21 +102,21 @@ export function NewPatternModal({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="pattern-code">Pattern Code</Label>
-              <Input id="pattern-code" placeholder="Enter pattern code" className="bg-[#121A2B] border-sidebar-border" />
+              <Input id="pattern-code" placeholder="Enter pattern code" className="bg-[#0C1221] border-sidebar-border" />
             </div>
             <div className="space-y-2">
               <Label>Customer</Label>
               <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
                 <PopoverTrigger
-                  className="flex h-10 w-full items-center justify-between rounded-md border border-sidebar-border bg-[#121A2B] px-3 py-2 text-sm hover:bg-[#1A263D] hover:text-white"
+                  className="flex h-10 w-full items-center justify-between rounded-md border border-sidebar-border bg-[#0C1221] px-3 py-2 text-sm hover:bg-[#1A263D] hover:text-white"
                   aria-expanded={customerOpen}
                 >
                   {selectedCustomer
                     ? customers.find((c) => c.value === selectedCustomer)?.label
                     : 'Select customer...'}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  <CaretUpDown weight="duotone" className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </PopoverTrigger>
-                <PopoverContent className="w-[300px] p-0 bg-[#121A2B] border-sidebar-border">
+                <PopoverContent className="w-[300px] p-0 bg-[#0C1221] border-sidebar-border">
                   <Command className="bg-transparent">
                     <CommandInput placeholder="Search customer..." />
                     <CommandList>
@@ -134,7 +134,7 @@ export function NewPatternModal({
                             }}
                             className="text-white hover:bg-[#1A263D]"
                           >
-                            <Check
+                            <Check weight="duotone"
                               className={cn(
                                 'mr-2 h-4 w-4',
                                 selectedCustomer === customer.value
@@ -157,11 +157,11 @@ export function NewPatternModal({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="pattern-name">Pattern Name</Label>
-              <Input id="pattern-name" placeholder="Enter pattern name" className="bg-[#121A2B] border-sidebar-border" />
+              <Input id="pattern-name" placeholder="Enter pattern name" className="bg-[#0C1221] border-sidebar-border" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="customer-pattern-code">Customer Pattern Code</Label>
-              <Input id="customer-pattern-code" placeholder="Optional" className="bg-[#121A2B] border-sidebar-border" />
+              <Input id="customer-pattern-code" placeholder="Optional" className="bg-[#0C1221] border-sidebar-border" />
             </div>
           </div>
 
@@ -170,16 +170,16 @@ export function NewPatternModal({
             <div className="space-y-2">
               <Label>Pattern Category</Label>
               <Select defaultValue="machine">
-                <SelectTrigger className="bg-[#121A2B] border-sidebar-border">
+                <SelectTrigger className="bg-[#0C1221] border-sidebar-border">
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
-                <SelectContent className="bg-[#121A2B] border-sidebar-border">
+                <SelectContent className="bg-[#0C1221] border-sidebar-border">
                   <SelectItem value="machine">Machine Moulding</SelectItem>
                   <SelectItem value="hand">Hand Moulding</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-center justify-between p-3 border border-sidebar-border rounded-md bg-[#121A2B]">
+            <div className="flex items-center justify-between p-3 border border-sidebar-border rounded-md bg-[#0C1221]">
               <div className="space-y-0.5">
                 <Label>Customer-provided pattern</Label>
               </div>
@@ -191,7 +191,7 @@ export function NewPatternModal({
           <div className="grid grid-cols-12 gap-4 items-end">
             <div className="col-span-4 space-y-2">
               <Label>Top Matchplate / Scope</Label>
-              <div className="flex items-center justify-between p-2.5 border border-sidebar-border rounded-md bg-[#121A2B] h-10">
+              <div className="flex items-center justify-between p-2.5 border border-sidebar-border rounded-md bg-[#0C1221] h-10">
                 <span className="text-sm">Present</span>
                 <Switch
                   checked={topMatchplateToggle}
@@ -200,7 +200,7 @@ export function NewPatternModal({
               </div>
             </div>
             <div className="col-span-8 space-y-2">
-              <Input placeholder="Enter top matchplate details..." disabled={!topMatchplateToggle} className="bg-[#121A2B] border-sidebar-border disabled:opacity-50" />
+              <Input placeholder="Enter top matchplate details..." disabled={!topMatchplateToggle} className="bg-[#0C1221] border-sidebar-border disabled:opacity-50" />
             </div>
           </div>
 
@@ -208,7 +208,7 @@ export function NewPatternModal({
           <div className="grid grid-cols-12 gap-4 items-end">
             <div className="col-span-4 space-y-2">
               <Label>Bottom Matchplate / Drag</Label>
-              <div className="flex items-center justify-between p-2.5 border border-sidebar-border rounded-md bg-[#121A2B] h-10">
+              <div className="flex items-center justify-between p-2.5 border border-sidebar-border rounded-md bg-[#0C1221] h-10">
                 <span className="text-sm">Present</span>
                 <Switch
                   checked={bottomMatchplateToggle}
@@ -217,7 +217,7 @@ export function NewPatternModal({
               </div>
             </div>
             <div className="col-span-8 space-y-2">
-              <Input placeholder="Enter bottom matchplate details..." disabled={!bottomMatchplateToggle} className="bg-[#121A2B] border-sidebar-border disabled:opacity-50" />
+              <Input placeholder="Enter bottom matchplate details..." disabled={!bottomMatchplateToggle} className="bg-[#0C1221] border-sidebar-border disabled:opacity-50" />
             </div>
           </div>
 
@@ -226,10 +226,10 @@ export function NewPatternModal({
             <div className="space-y-2">
               <Label>Top Matchplate / Scope Owner</Label>
               <Select defaultValue="foundry" disabled={!topMatchplateToggle}>
-                <SelectTrigger className="bg-[#121A2B] border-sidebar-border disabled:opacity-50">
+                <SelectTrigger className="bg-[#0C1221] border-sidebar-border disabled:opacity-50">
                   <SelectValue placeholder="Select owner" />
                 </SelectTrigger>
-                <SelectContent className="bg-[#121A2B] border-sidebar-border">
+                <SelectContent className="bg-[#0C1221] border-sidebar-border">
                   <SelectItem value="foundry">Foundry</SelectItem>
                   <SelectItem value="customer">Customer</SelectItem>
                 </SelectContent>
@@ -238,10 +238,10 @@ export function NewPatternModal({
             <div className="space-y-2">
               <Label>Bottom Matchplate / Drag Owner</Label>
               <Select defaultValue="foundry" disabled={!bottomMatchplateToggle}>
-                <SelectTrigger className="bg-[#121A2B] border-sidebar-border disabled:opacity-50">
+                <SelectTrigger className="bg-[#0C1221] border-sidebar-border disabled:opacity-50">
                   <SelectValue placeholder="Select owner" />
                 </SelectTrigger>
-                <SelectContent className="bg-[#121A2B] border-sidebar-border">
+                <SelectContent className="bg-[#0C1221] border-sidebar-border">
                   <SelectItem value="foundry">Foundry</SelectItem>
                   <SelectItem value="customer">Customer</SelectItem>
                 </SelectContent>
@@ -257,18 +257,18 @@ export function NewPatternModal({
                 type="number"
                 min={0}
                 placeholder="0"
-                className="bg-[#121A2B] border-sidebar-border"
+                className="bg-[#0C1221] border-sidebar-border"
               />
             </div>
             <div className="space-y-2">
-              <Label className="flex items-center gap-1">Good Cast Wt (kg) <Lock className="h-3 w-3 text-muted-foreground" /></Label>
+              <Label className="flex items-center gap-1">Good Cast Wt (kg) <Lock weight="duotone" className="h-3 w-3 text-muted-foreground" /></Label>
               <Input
                 type="number"
                 min={0}
                 value={goodCastingWeight}
                 readOnly
                 placeholder="0.0"
-                className="bg-[#121A2B]/50 border-sidebar-border text-muted-foreground cursor-not-allowed"
+                className="bg-[#0C1221]/50 border-sidebar-border text-muted-foreground cursor-not-allowed"
               />
             </div>
             <div className="space-y-2">
@@ -279,7 +279,7 @@ export function NewPatternModal({
                 value={totalBoxWeight}
                 onChange={(e) => setTotalBoxWeight(e.target.value === '' ? '' : Number(e.target.value))}
                 placeholder="0.0"
-                className="bg-[#121A2B] border-sidebar-border"
+                className="bg-[#0C1221] border-sidebar-border"
               />
             </div>
             <div className="space-y-2">
@@ -295,7 +295,7 @@ export function NewPatternModal({
             <Label>Remarks</Label>
             <Textarea
               placeholder="Any additional notes..."
-              className="bg-[#121A2B] border-sidebar-border resize-none h-24"
+              className="bg-[#0C1221] border-sidebar-border resize-none h-24"
             />
           </div>
 
@@ -304,11 +304,11 @@ export function NewPatternModal({
             <Label>Photos (Max 10)</Label>
             <div className="flex gap-2 overflow-x-auto pb-2">
               {/* Fake thumbnails row */}
-              <div className="h-16 w-16 shrink-0 bg-[#121A2B] border border-sidebar-border rounded-md flex items-center justify-center text-muted-foreground hover:bg-[#1A263D] transition-colors cursor-pointer">
-                <ImageIcon className="h-6 w-6 opacity-40" />
+              <div className="h-16 w-16 shrink-0 bg-[#0C1221] border border-sidebar-border rounded-md flex items-center justify-center text-muted-foreground hover:bg-[#1A263D] transition-colors cursor-pointer">
+                <ImageIcon weight="duotone" className="h-6 w-6 opacity-40" />
               </div>
-              <div className="h-16 w-16 shrink-0 bg-[#121A2B] border border-sidebar-border rounded-md flex items-center justify-center text-muted-foreground hover:bg-[#1A263D] transition-colors cursor-pointer">
-                <ImageIcon className="h-6 w-6 opacity-40" />
+              <div className="h-16 w-16 shrink-0 bg-[#0C1221] border border-sidebar-border rounded-md flex items-center justify-center text-muted-foreground hover:bg-[#1A263D] transition-colors cursor-pointer">
+                <ImageIcon weight="duotone" className="h-6 w-6 opacity-40" />
               </div>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
@@ -318,10 +318,10 @@ export function NewPatternModal({
         </div>
 
         <DialogFooter className="mt-4">
-          <Button variant="ghost" onClick={onClose} className="hover:bg-[#121A2B] hover:text-white">
+          <Button variant="ghost" onClick={onClose} className="hover:bg-[#0C1221] hover:text-white">
             Cancel
           </Button>
-          <Button className="bg-[#E8581A] hover:bg-[#D04810] text-white">
+          <Button className="bg-[#D4521A] hover:bg-[#D04810] text-white">
             Save Pattern
           </Button>
         </DialogFooter>
