@@ -23,8 +23,17 @@
       }
     ],
     "paths": {
+      "@/shared/*": [
+        "./src/shared/*"
+      ],
+      "@/domains/*": [
+        "./src/domains/*"
+      ],
+      "@/infrastructure/*": [
+        "./src/infrastructure/*"
+      ],
       "@/*": [
-        "./*"
+        "./src/*"
       ]
     }
   },
