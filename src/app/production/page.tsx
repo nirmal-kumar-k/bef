@@ -1,20 +1,61 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { initialJobs, ProductionJob } from '@/domains/production/data/tracking-mock'
 import { Card } from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
 import { Button } from '@/shared/ui/button'
+import { Badge } from '@/shared/ui/badge'
 import { cn } from '@/shared/lib/utils'
-import { CheckCircle, ClockCounterClockwise, ArrowRight } from '@phosphor-icons/react'
+import { CheckCircle, ClockCounterClockwise, ArrowRight, MagnifyingGlass, Funnel, CalendarCheck } from '@phosphor-icons/react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { CloseDayModal } from '@/domains/production/components/close-day-modal'
+import { OrderTimelineDrawer } from '@/domains/production/components/order-timeline-drawer'
 
-type StageKey = keyof ProductionJob['stages']
+export interface IStageData {
+  planned: number
+  completed: number
+  pending: number
+  variance: number
+  unit: string
+  rejected?: number
+  rework?: number
+  operator?: string
+  remarks?: string
+  invoiceNumber?: string
+  vehicleNumber?: string
+  driverName?: string
+}
+
+export interface Schedule {
+  id: string
+  orderId: string
+  date: string
+  shift: string
+  priority: string
+  remarks: string
+  status: string
+  customerOrderNo: string
+  customer: string
+  cart: any[]
+  stages: {
+    core: IStageData
+    melting: IStageData
+    moulding: IStageData
+    pouring: IStageData
+    knockout: IStageData
+    shotBlasting: IStageData
+    grinding: IStageData
+    inspection: IStageData
+    readyForDispatch: IStageData
+  }
+}
+
+type StageKey = keyof Schedule['stages']
 
 const STAGES: { key: StageKey; label: string }[] = [
   { key: 'core', label: 'Core' },
-  { key: 'melting', label: 'Melting' },
   { key: 'moulding', label: 'Moulding' },
+  { key: 'melting', label: 'Melting' },
   { key: 'pouring', label: 'Pouring' },
   { key: 'knockout', label: 'Knockout' },
   { key: 'shotBlasting', label: 'Shot Blasting' },
@@ -25,165 +66,251 @@ const STAGES: { key: StageKey; label: string }[] = [
 
 export default function ProductionTrackingPage() {
   const [activeStage, setActiveStage] = useState<StageKey>('core')
-  const [jobs, setJobs] = useState<ProductionJob[]>([])
+  const [schedules, setSchedules] = useState<Schedule[]>([])
   const [loading, setLoading] = useState(true)
+  
+  // Filters
+  const [search, setSearch] = useState('')
+  const [dateFilter, setDateFilter] = useState(() => new Date().toISOString().split('T')[0])
+  
+  // Modals
+  const [isCloseDayOpen, setIsCloseDayOpen] = useState(false)
+  const [timelineOrder, setTimelineOrder] = useState<string | null>(null)
 
   const fetchData = useCallback(async () => {
     try {
-      const [orderRes, prodRes, patRes] = await Promise.all([
-        fetch('/api/orders'),
-        fetch('/api/products'),
-        fetch('/api/patterns')
-      ])
-      
-      if (orderRes.ok && prodRes.ok && patRes.ok) {
-        const ordersData = await orderRes.json()
-        const productsData = await prodRes.json()
-        const patternsData = await patRes.json()
-        
-        const openOrders = ordersData.filter((o: any) => o.status === 'Received')
-        
-        const savedProgressStr = localStorage.getItem('production_tracking_progress')
-        const savedProgress = savedProgressStr ? JSON.parse(savedProgressStr) : {}
-
-        const realJobs: ProductionJob[] = []
-        
-        openOrders.forEach((order: any) => {
-          order.cart?.forEach((item: any, idx: number) => {
-            const uniqueId = `${order.id || order._id}-${idx}`
-            
-            // Only add if it doesn't already exist in our realJobs (just in case of weird duplicates)
-            if (realJobs.find(j => j.id === uniqueId)) return;
-
-            const product = productsData.find((p: any) => p.name === item.productName || p.code === item.product)
-            const pattern = product?.linkedPattern ? patternsData.find((p: any) => p.code === product.linkedPattern) : null
-            
-            const cavities = product?.cavities || 1
-            const plannedQty = item.quantity || 0
-            const calculatedMoulds = Math.ceil(plannedQty / cavities)
-            
-            const mappedProduct = pattern?.mappedProducts?.find((mp: any) => mp.name === product?.name)
-            const coreBoxesCount = mappedProduct?.coreBoxesCount || 0
-            const calculatedCores = calculatedMoulds * coreBoxesCount
-            const boxWeight = pattern?.totalWeight || 0
-            
-            // Calculate heats required
-            const furnaceCapacity = 150 // Example fixed capacity
-            const totalMetal = calculatedMoulds * boxWeight
-            const totalHeats = Math.ceil(totalMetal / furnaceCapacity)
-
-            // If we have saved progress for this job, use it. Otherwise, initialize fresh.
-            if (savedProgress[uniqueId]) {
-              realJobs.push(savedProgress[uniqueId])
-            } else {
-              realJobs.push({
-                id: uniqueId,
-                orderNo: order.customerOrderNo || 'Unknown',
-                customer: order.customer || 'Unknown',
-                productCode: product?.code || item.product || '-',
-                productName: item.productName || '-',
-                patternCode: pattern?.code || '-',
-                cavities: cavities,
-                coreBoxes: coreBoxesCount,
-                boxWeight: boxWeight,
-                stages: {
-                  core: { planned: calculatedCores, completed: 0, pending: calculatedCores, variance: -calculatedCores, unit: 'cores' },
-                  melting: { planned: totalHeats, completed: 0, pending: totalHeats, variance: -totalHeats, unit: 'heats' },
-                  moulding: { planned: calculatedMoulds, completed: 0, pending: calculatedMoulds, variance: -calculatedMoulds, unit: 'moulds' },
-                  pouring: { planned: 0, completed: 0, pending: 0, variance: 0, unit: 'moulds' }, // Flows from moulding
-                  knockout: { planned: 0, completed: 0, pending: 0, variance: 0, unit: 'moulds' }, // Flows from pouring
-                  shotBlasting: { planned: 0, completed: 0, pending: 0, variance: 0, unit: 'pieces' }, // Flows from knockout
-                  grinding: { planned: 0, completed: 0, pending: 0, variance: 0, unit: 'pieces' }, // Flows from shotBlasting
-                  inspection: { planned: 0, completed: 0, pending: 0, variance: 0, unit: 'pieces' }, // Flows from grinding
-                  readyForDispatch: { planned: 0, completed: 0, pending: 0, variance: 0, unit: 'pieces' } // Flows from inspection
-                }
-              })
-            }
-          })
-        })
-        
-        setJobs(realJobs)
+      setLoading(true)
+      const res = await fetch(`/api/schedules?date=${dateFilter}`)
+      if (res.ok) {
+        setSchedules(await res.json())
       }
     } catch (err) {
-      console.error('Failed to fetch tracking data:', err)
-      // Fallback to initialJobs if API fails completely
-      setJobs(initialJobs)
+      console.error('Failed to fetch schedules:', err)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [dateFilter])
 
   useEffect(() => {
     fetchData()
   }, [fetchData])
 
-  // Save to localStorage whenever jobs change significantly (e.g. from handleUpdateCompleted)
-  const saveProgress = (updatedJobs: ProductionJob[]) => {
-    const progressMap: Record<string, ProductionJob> = {}
-    updatedJobs.forEach(job => {
-      progressMap[job.id] = job
-    })
-    localStorage.setItem('production_tracking_progress', JSON.stringify(progressMap))
-  }
-
-  // Handlers for completing quantities
-  const handleUpdateCompleted = (jobId: string, newValue: number) => {
-    setJobs(prevJobs => {
-      const newJobs = prevJobs.map(job => {
-        if (job.id !== jobId) return job
+  const handleStageUpdate = (scheduleId: string, field: keyof IStageData, value: string | number) => {
+    setSchedules(prevSchedules => {
+      return prevSchedules.map(sched => {
+        if (sched.id !== scheduleId) return sched
         
-        const updatedJob = JSON.parse(JSON.stringify(job)) as ProductionJob
-        const stageData = updatedJob.stages[activeStage]
+        const updated = JSON.parse(JSON.stringify(sched)) as Schedule
+        const stageData = updated.stages[activeStage]
         
-        // Update the current stage
-        stageData.completed = newValue
-        stageData.pending = stageData.planned - stageData.completed
-        stageData.variance = stageData.completed - stageData.planned
-        
-        // Cascade to the next stage
-        const stageIndex = STAGES.findIndex(s => s.key === activeStage)
-        if (stageIndex < STAGES.length - 1) {
-          const nextStageKey = STAGES[stageIndex + 1].key
-          const nextStageData = updatedJob.stages[nextStageKey]
-          
-          // Separation logic (Knockout -> Shot Blasting)
-          if (activeStage === 'knockout' && nextStageKey === 'shotBlasting') {
-            nextStageData.planned = stageData.completed * updatedJob.cavities
-          } else if (activeStage === 'moulding' && nextStageKey === 'pouring') {
-              nextStageData.planned = stageData.completed
-          } else if (activeStage === 'core') {
-              // Core does not directly map 1:1 to melting planned in the same way, but keeping it simple for now
-          } else if (activeStage !== 'melting' && activeStage !== 'core') {
-            // Normal 1:1 flow
-            nextStageData.planned = stageData.completed
-          }
-          
-          // Recalculate pending and variance for the next stage based on its new planned value
-          nextStageData.pending = nextStageData.planned - nextStageData.completed
-          nextStageData.variance = nextStageData.completed - nextStageData.planned
+        // Update the current stage field
+        if (field === 'operator' || field === 'remarks' || field === 'invoiceNumber' || field === 'vehicleNumber') {
+           (stageData as any)[field] = value as string
+        } else {
+           const numVal = typeof value === 'string' ? parseInt(value, 10) || 0 : value
+           ;(stageData as any)[field] = numVal
+           
+           // Auto-propagate 'completed' backward to earlier stages if they are currently 0
+           if (field === 'completed' && stageData.planned > 0) {
+              const ratio = numVal / stageData.planned
+              const stageOrder = [
+                'core', 'melting', 'moulding', 'pouring', 'knockout', 
+                'shotBlasting', 'grinding', 'inspection', 'readyForDispatch'
+              ]
+              const currentIndex = stageOrder.indexOf(activeStage)
+              
+              if (currentIndex > 0) {
+                 for (let i = 0; i < currentIndex; i++) {
+                    const pStage = (updated.stages as any)[stageOrder[i]]
+                    if (pStage && pStage.completed === 0 && pStage.planned > 0) {
+                       pStage.completed = Math.ceil(pStage.planned * ratio)
+                       pStage.pending = Math.max(0, pStage.planned - pStage.completed)
+                       pStage.variance = pStage.completed - pStage.planned
+                    }
+                 }
+              }
+           }
+           
+           // MOULD TO PIECE CONVERSION
+           // If we just updated pouring (moulds), we need to set knockout (pieces)
+           if (field === 'completed' && activeStage === 'pouring') {
+              const cavity = updated.cart && updated.cart.length > 0 ? (updated.cart[0].cavity || 1) : 1
+              const totalPiecesProduced = numVal * cavity
+              
+              const knockoutStage = updated.stages.knockout
+              if (knockoutStage && knockoutStage.planned === 0 && knockoutStage.completed === 0) {
+                 // Push it to knockout as planned pieces received
+                 knockoutStage.planned = totalPiecesProduced
+                 knockoutStage.pending = totalPiecesProduced
+                 knockoutStage.variance = -totalPiecesProduced
+              }
+           }
         }
         
-        return updatedJob
+        // Recalculate pending and variance
+        stageData.pending = Math.max(0, stageData.planned - (stageData.completed || 0))
+        stageData.variance = (stageData.completed || 0) - stageData.planned
+        
+        return updated
       })
-
-      saveProgress(newJobs)
-      return newJobs
     })
   }
 
-  const renderTable = () => {
-    return (
+  // Quick save to DB
+  const handleSaveProgress = async () => {
+    try {
+      await fetch('/api/schedules', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(schedules)
+      })
+    } catch (err) {
+      console.error('Failed to save progress:', err)
+    }
+  }
+
+  const filteredSchedules = useMemo(() => {
+    if (!search) return schedules
+    const s = search.toLowerCase()
+    return schedules.filter(sched => 
+      sched.customerOrderNo.toLowerCase().includes(s) || 
+      sched.customer.toLowerCase().includes(s)
+    )
+  }, [schedules, search])
+
+  // KPIs
+  const totalMeltingPlanned = schedules.reduce((sum, s) => sum + s.stages.melting.planned, 0)
+  const totalMeltingCompleted = schedules.reduce((sum, s) => sum + s.stages.melting.completed, 0)
+  const meltingUtil = totalMeltingPlanned ? Math.round((totalMeltingCompleted / totalMeltingPlanned) * 100) : 0
+  
+  const totalMouldingPlanned = schedules.reduce((sum, s) => sum + s.stages.moulding.planned, 0)
+  const totalMouldingCompleted = schedules.reduce((sum, s) => sum + s.stages.moulding.completed, 0)
+  const mouldingUtil = totalMouldingPlanned ? Math.round((totalMouldingCompleted / totalMouldingPlanned) * 100) : 0
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-[#EEF3FF] font-heading tracking-tight">Production Tracking</h1>
+          <p className="text-[#8B9FC4] mt-1 text-sm">Monitor daily execution, actuals, and variances</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Input 
+            type="date" 
+            value={dateFilter}
+            onChange={e => setDateFilter(e.target.value)}
+            className="w-40 bg-[#0C1221] border-[#243050] text-[#EEF3FF]"
+          />
+          <Button variant="outline" onClick={handleSaveProgress} className="border-[#243050] text-[#8B9FC4] hover:text-[#EEF3FF] hover:bg-[#1A263D]">
+            Save Progress
+          </Button>
+          <Button onClick={() => setIsCloseDayOpen(true)} disabled={schedules.length === 0} className="bg-[#D4521A] hover:bg-[#E56020] text-white">
+            <CalendarCheck className="w-4 h-4 mr-2" />
+            Close Day
+          </Button>
+        </div>
+      </div>
+
+      {/* KPI Dashboard Strip */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+         <Card className="bg-[#0C1221] border-[#243050] p-4 flex flex-row items-center justify-between">
+            <div>
+               <p className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider mb-1">Furnace Utilization</p>
+               <h3 className="text-2xl font-bold text-[#EEF3FF]">{meltingUtil}%</h3>
+            </div>
+            <div className="text-right">
+               <p className="text-[#5A6E90] text-sm">Completed: {totalMeltingCompleted}</p>
+               <p className="text-[#5A6E90] text-sm">Planned: {totalMeltingPlanned}</p>
+            </div>
+         </Card>
+         <Card className="bg-[#0C1221] border-[#243050] p-4 flex flex-row items-center justify-between">
+            <div>
+               <p className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider mb-1">Moulding Line Utilization</p>
+               <h3 className="text-2xl font-bold text-[#EEF3FF]">{mouldingUtil}%</h3>
+            </div>
+            <div className="text-right">
+               <p className="text-[#5A6E90] text-sm">Completed: {totalMouldingCompleted}</p>
+               <p className="text-[#5A6E90] text-sm">Planned: {totalMouldingPlanned}</p>
+            </div>
+         </Card>
+         <Card className="bg-[#0C1221] border-[#243050] p-4 flex flex-row items-center justify-between">
+            <div>
+               <p className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider mb-1">Active Scheduled Jobs</p>
+               <h3 className="text-2xl font-bold text-[#EEF3FF]">{schedules.length}</h3>
+            </div>
+         </Card>
+      </div>
+
+      {/* Process Navigation */}
+      <div className="flex items-center gap-1 overflow-x-auto pb-2 scrollbar-hide">
+        {STAGES.map((stage, idx) => (
+          <div key={stage.key} className="flex items-center shrink-0">
+            <button
+              onClick={() => setActiveStage(stage.key)}
+              className={cn(
+                "px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-300 relative overflow-hidden",
+                activeStage === stage.key
+                  ? "text-[#EEF3FF] bg-[#1A263D] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] border border-[#243050]"
+                  : "text-[#5A6E90] hover:text-[#C4D2EE] hover:bg-[#0C1221] border border-transparent"
+              )}
+            >
+              <div className="flex items-center gap-2 relative z-10">
+                {activeStage === stage.key ? (
+                  <CheckCircle weight="fill" className="w-4 h-4 text-[#D4521A]" />
+                ) : (
+                  <ClockCounterClockwise weight="bold" className="w-4 h-4 opacity-50" />
+                )}
+                {stage.label}
+              </div>
+            </button>
+            
+            {idx < STAGES.length - 1 && (
+              <ArrowRight weight="bold" className="w-3 h-3 text-[#243050] mx-1" />
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Search Bar */}
+      <div className="relative">
+         <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5A6E90]" />
+         <Input 
+            type="text" 
+            placeholder="Search by Order No or Customer..." 
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="pl-9 bg-[#0C1221] border-[#243050] text-[#EEF3FF]"
+         />
+      </div>
+
+      {/* Main Table */}
       <div className="bg-[#0C1221] border border-[#243050] rounded-xl overflow-hidden mt-6">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-[#1A263D] border-b border-[#243050]">
-              <th className="px-6 py-4 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider">Job / Order No</th>
-              <th className="px-6 py-4 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider">Product & Pattern</th>
+              <th className="px-6 py-4 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider">Order Info</th>
               <th className="px-6 py-4 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider text-right">Expected/Planned</th>
-              <th className="px-6 py-4 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider text-right">Actual Completed</th>
-              {activeStage === 'melting' || activeStage === 'pouring' ? (
-                <th className="px-6 py-4 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider text-left">Heat Info</th>
-              ) : null}
+              
+              {activeStage === 'readyForDispatch' ? (
+                <>
+                  <th className="px-6 py-4 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider text-right">Dispatch Qty</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider">Logistics (Inv / Veh)</th>
+                </>
+              ) : activeStage === 'grinding' || activeStage === 'inspection' ? (
+                <>
+                  <th className="px-6 py-4 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider text-right">Good/Accepted</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider text-right">Rework</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider text-right">Rejected</th>
+                </>
+              ) : activeStage === 'knockout' ? (
+                <>
+                  <th className="px-6 py-4 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider text-right">Completed</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider text-right">Damaged (Rej)</th>
+                </>
+              ) : (
+                <th className="px-6 py-4 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider text-right">Actual Completed</th>
+              )}
+              
               <th className="px-6 py-4 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider text-right">Pending</th>
               <th className="px-6 py-4 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider text-right">Variance</th>
             </tr>
@@ -191,30 +318,30 @@ export default function ProductionTrackingPage() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={7} className="px-6 py-12 text-center text-[#8B9FC4]">
+                <td colSpan={8} className="px-6 py-12 text-center text-[#8B9FC4]">
                   Loading production data...
                 </td>
               </tr>
-            ) : jobs.length === 0 ? (
+            ) : filteredSchedules.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-6 py-12 text-center text-[#8B9FC4]">
-                  No active production jobs found.
+                <td colSpan={8} className="px-6 py-12 text-center text-[#8B9FC4]">
+                  No active production scheduled for this date.
                 </td>
               </tr>
             ) : (
-              jobs.map(job => {
-                const stage = job.stages[activeStage]
+              filteredSchedules.map(sched => {
+                const stage = sched.stages[activeStage]
+                if (!stage) return null;
                 const unitLabel = stage.unit.charAt(0).toUpperCase() + stage.unit.slice(1)
                 
                 return (
-                  <tr key={job.id} className="border-b border-[#243050] hover:bg-[#1A263D]/30 transition-colors">
+                  <tr key={sched.id} className="border-b border-[#243050] hover:bg-[#1A263D]/30 transition-colors">
                     <td className="px-6 py-4">
-                      <div className="font-bold text-[#EEF3FF]">{job.orderNo}</div>
-                      <div className="text-sm text-[#8B9FC4]">{job.customer}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="font-medium text-[#C4D2EE]">{job.productName} ({job.productCode})</div>
-                      <div className="text-sm font-mono text-[#5A6E90]">Pat: {job.patternCode} | {job.cavities} Cavities</div>
+                      <div className="font-bold text-[#EEF3FF] cursor-pointer hover:text-[#D4521A] transition-colors" onClick={() => setTimelineOrder(sched.id)}>
+                        {sched.customerOrderNo}
+                      </div>
+                      <div className="text-sm text-[#8B9FC4]">{sched.customer}</div>
+                      {sched.priority === 'High' && <Badge variant="outline" className="mt-1 bg-red-500/10 text-red-500 border-red-500/20 text-[10px]">High Priority</Badge>}
                     </td>
                     
                     {/* Expected / Planned */}
@@ -223,56 +350,98 @@ export default function ProductionTrackingPage() {
                       <span className="text-xs text-[#5A6E90] ml-1">{unitLabel}</span>
                     </td>
                     
-                    {/* Actual Completed */}
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end items-center gap-2">
+                    {/* Dynamic Inputs Based on Stage */}
+                    {activeStage === 'readyForDispatch' ? (
+                      <>
+                        <td className="px-6 py-4 text-right">
+                          <Input 
+                            type="number" min="0" value={stage.completed.toString()}
+                            onChange={(e) => handleStageUpdate(sched.id, 'completed', e.target.value)}
+                            className="w-24 ml-auto h-10 text-right bg-[#050810] border-[#243050] text-[#EEF3FF] focus:border-[#D4521A] text-lg font-mono"
+                          />
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col gap-2">
+                             <Input 
+                               placeholder="Invoice No" value={stage.invoiceNumber || ''}
+                               onChange={(e) => handleStageUpdate(sched.id, 'invoiceNumber', e.target.value)}
+                               className="h-8 bg-[#050810] border-[#243050] text-[#EEF3FF] text-xs"
+                             />
+                             <Input 
+                               placeholder="Vehicle No" value={stage.vehicleNumber || ''}
+                               onChange={(e) => handleStageUpdate(sched.id, 'vehicleNumber', e.target.value)}
+                               className="h-8 bg-[#050810] border-[#243050] text-[#EEF3FF] text-xs"
+                             />
+                          </div>
+                        </td>
+                      </>
+                    ) : activeStage === 'grinding' || activeStage === 'inspection' ? (
+                      <>
+                        <td className="px-6 py-4 text-right">
+                          <Input 
+                            type="number" min="0" value={stage.completed.toString()}
+                            onChange={(e) => handleStageUpdate(sched.id, 'completed', e.target.value)}
+                            className="w-20 ml-auto h-10 text-right bg-[#050810] border-[#243050] text-green-400 focus:border-[#D4521A] text-lg font-mono"
+                          />
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <Input 
+                            type="number" min="0" value={(stage.rework || 0).toString()}
+                            onChange={(e) => handleStageUpdate(sched.id, 'rework', e.target.value)}
+                            className="w-20 ml-auto h-10 text-right bg-[#050810] border-[#243050] text-yellow-400 focus:border-[#D4521A] text-lg font-mono"
+                          />
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <Input 
+                            type="number" min="0" value={(stage.rejected || 0).toString()}
+                            onChange={(e) => handleStageUpdate(sched.id, 'rejected', e.target.value)}
+                            className="w-20 ml-auto h-10 text-right bg-[#050810] border-[#243050] text-red-400 focus:border-[#D4521A] text-lg font-mono"
+                          />
+                        </td>
+                      </>
+                    ) : activeStage === 'knockout' ? (
+                      <>
+                        <td className="px-6 py-4 text-right">
+                          <Input 
+                            type="number" min="0" value={stage.completed.toString()}
+                            onChange={(e) => handleStageUpdate(sched.id, 'completed', e.target.value)}
+                            className="w-24 ml-auto h-10 text-right bg-[#050810] border-[#243050] text-[#EEF3FF] focus:border-[#D4521A] text-lg font-mono"
+                          />
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <Input 
+                            type="number" min="0" value={(stage.rejected || 0).toString()}
+                            onChange={(e) => handleStageUpdate(sched.id, 'rejected', e.target.value)}
+                            className="w-24 ml-auto h-10 text-right bg-[#050810] border-[#243050] text-red-400 focus:border-[#D4521A] text-lg font-mono"
+                          />
+                        </td>
+                      </>
+                    ) : (
+                      <td className="px-6 py-4 text-right">
                         <Input 
-                          type="number"
-                          min="0"
-                          value={stage.completed.toString()}
-                          onChange={(e) => handleUpdateCompleted(job.id, Number(e.target.value))}
-                          className="w-24 h-10 text-right bg-[#050810] border-[#243050] text-[#EEF3FF] focus:border-[#D4521A] text-lg font-mono"
+                          type="number" min="0" value={stage.completed.toString()}
+                          onChange={(e) => handleStageUpdate(sched.id, 'completed', e.target.value)}
+                          className="w-24 ml-auto h-10 text-right bg-[#050810] border-[#243050] text-[#EEF3FF] focus:border-[#D4521A] text-lg font-mono"
                         />
-                      </div>
-                    </td>
-
-                    {/* Heat Info (Melting / Pouring) */}
-                    {(activeStage === 'melting' || activeStage === 'pouring') && (
-                      <td className="px-6 py-4">
-                        <div className="flex flex-wrap gap-2 max-w-[200px]">
-                          {stage.heatDetails?.map((hd, idx) => (
-                            <span 
-                              key={idx} 
-                              className={cn(
-                                "text-xs px-2 py-1 rounded border font-mono",
-                                hd.completed 
-                                  ? "bg-green-500/10 border-green-500/30 text-green-400" 
-                                  : "bg-[#050810] border-[#243050] text-[#8B9FC4]"
-                              )}
-                            >
-                              {hd.heatNo} ({hd.quantity})
-                            </span>
-                          ))}
-                        </div>
                       </td>
                     )}
-
+                    
                     {/* Pending */}
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-6 py-4 text-right font-mono">
                       <span className={cn(
-                        "font-mono text-lg",
-                        stage.pending > 0 ? "text-yellow-400" : "text-[#8B9FC4]"
+                        "text-lg font-bold",
+                        stage.pending === 0 ? "text-green-400" : "text-red-400"
                       )}>
                         {stage.pending}
                       </span>
                     </td>
-
+                    
                     {/* Variance */}
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-6 py-4 text-right font-mono">
                       <span className={cn(
-                        "font-mono text-lg px-3 py-1 rounded-full bg-opacity-10",
-                        stage.variance === 0 ? "text-[#8B9FC4]" : 
-                        stage.variance > 0 ? "text-green-400 bg-green-400/10" : "text-red-400 bg-red-400/10"
+                        "text-lg",
+                        stage.variance > 0 ? "text-blue-400" : 
+                        stage.variance < 0 ? "text-red-400" : "text-[#EEF3FF]"
                       )}>
                         {stage.variance > 0 ? '+' : ''}{stage.variance}
                       </span>
@@ -284,89 +453,20 @@ export default function ProductionTrackingPage() {
           </tbody>
         </table>
       </div>
-    )
-  }
 
-  return (
-    <div className="flex flex-col h-full bg-[#050810] text-[#EEF3FF] p-8 overflow-y-auto">
-      <div className="max-w-[1600px] mx-auto w-full space-y-6">
-        
-        <header className="flex flex-col md:flex-row justify-between items-start md:items-end pb-4 border-b border-[#243050] gap-4">
-          <div>
-            <h1 className="text-3xl font-bold font-heading text-[#EEF3FF] tracking-tight">Production Tracking</h1>
-            <p className="text-[#8B9FC4] mt-2">Track real-time actuals, manage stage flows, and monitor variances.</p>
-          </div>
-          <div className="flex items-center gap-3">
-             {/* Action buttons if needed */}
-          </div>
-        </header>
-
-        {/* Central Navigation Bar (The 9 Stages) */}
-        <div className="w-full overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-[#243050] scrollbar-track-transparent">
-          <div className="flex space-x-2 min-w-max p-1.5 bg-[#0C1221]/80 backdrop-blur-md border border-[#243050] rounded-2xl shadow-sm">
-            {STAGES.map((stage, idx) => (
-              <button
-                key={stage.key}
-                onClick={() => setActiveStage(stage.key)}
-                className={cn(
-                  "flex items-center gap-3 px-6 py-3.5 rounded-xl text-[15px] font-semibold transition-all relative overflow-hidden group",
-                  activeStage === stage.key 
-                    ? "bg-[#D4521A] text-white shadow-md scale-[1.02]" 
-                    : "text-[#8B9FC4] hover:text-[#EEF3FF] hover:bg-[#1A263D]/50"
-                )}
-              >
-                {/* Arrow connector between tabs */}
-                {idx > 0 && activeStage !== stage.key && (
-                  <ArrowRight className="absolute left-2 w-4 h-4 opacity-20" />
-                )}
-                <span className="relative z-10">{idx + 1}. {stage.label}</span>
-                {activeStage === stage.key && (
-                  <motion.div 
-                    layoutId="activeTabIndicator"
-                    className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"
-                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                  />
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Animated Content Area */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeStage}
-            initial={{ opacity: 0, y: 8, filter: 'blur(4px)' }}
-            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-            exit={{ opacity: 0, y: -8, filter: 'blur(4px)' }}
-            transition={{ duration: 0.15, ease: "easeOut" }}
-            className="space-y-6"
-          >
-            {/* Info Banner */}
-            <div className="flex items-center justify-between bg-[#0C1221]/80 backdrop-blur-md border border-[#243050] p-5 rounded-2xl shadow-sm">
-              <div className="flex items-center gap-4">
-                 <div className="w-12 h-12 rounded-full bg-[#1A263D] flex items-center justify-center border border-[#243050] shadow-inner">
-                   <CheckCircle weight="duotone" className="w-6 h-6 text-[#D4521A]" />
-                 </div>
-                 <div>
-                   <h3 className="text-[#EEF3FF] font-semibold text-lg">{STAGES.find(s => s.key === activeStage)?.label} Stage</h3>
-                   <p className="text-[#8B9FC4] text-[15px] mt-0.5">
-                     {activeStage === 'knockout' 
-                       ? 'After knockout, boxes are separated into individual product pieces for Shot Blasting.'
-                       : activeStage === 'melting' || activeStage === 'pouring'
-                       ? 'Track heat numbers and poured moulds/boxes.'
-                       : 'Only completed quantities will flow into the next production stage.'}
-                   </p>
-                 </div>
-              </div>
-            </div>
-
-            {/* Dynamic Table Area */}
-            {renderTable()}
-          </motion.div>
-        </AnimatePresence>
-
-      </div>
+      <CloseDayModal 
+         isOpen={isCloseDayOpen}
+         schedules={schedules}
+         date={dateFilter}
+         onClose={() => setIsCloseDayOpen(false)}
+         onRefresh={fetchData}
+      />
+      
+      <OrderTimelineDrawer
+         isOpen={!!timelineOrder}
+         scheduleId={timelineOrder!}
+         onClose={() => setTimelineOrder(null)}
+      />
     </div>
   )
 }

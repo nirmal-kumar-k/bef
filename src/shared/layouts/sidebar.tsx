@@ -13,7 +13,8 @@ import {
   List,
   X,
   CalendarBlank,
-  Factory
+  Factory,
+  Fire
 } from '@phosphor-icons/react'
 import { useRole } from '@/shared/context/role-context'
 
@@ -34,6 +35,12 @@ const navGroups = [
       { href: '/patterns', label: 'Patterns', icon: <Shapes weight="duotone" className="w-[18px] h-[18px] opacity-80 group-hover:opacity-100 transition-opacity" /> },
       { href: '/products', label: 'Products', icon: <Package weight="duotone" className="w-[18px] h-[18px] opacity-80 group-hover:opacity-100 transition-opacity" /> },
       { href: '/grade-master', label: 'Grade Master', icon: <List weight="duotone" className="w-[18px] h-[18px] opacity-80 group-hover:opacity-100 transition-opacity" /> },
+    ]
+  },
+  {
+    label: 'Post-Pouring Production',
+    items: [
+      { href: '/pouring', label: 'Pouring', icon: <Fire weight="duotone" className="w-[18px] h-[18px] opacity-80 group-hover:opacity-100 transition-opacity" /> },
     ]
   },
   {
