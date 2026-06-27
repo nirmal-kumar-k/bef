@@ -37,10 +37,11 @@ import { ImageCarousel } from '@/shared/ui/image-carousel'
 import { Check, CaretUpDown, CaretLeft, CaretRight, Image as ImageIcon, Lock, Plus, Trash, X, PencilSimple } from '@phosphor-icons/react'
 import { ConfirmDeleteDialog } from '@/shared/ui/confirm-delete-dialog'
 import { cn, handleEnterToTab } from '@/shared/lib/utils'
-import { customers, type Pattern } from '@/domains/patterns/data/mock'
+import { type Pattern } from '@/domains/patterns/data/mock'
 
 interface CoreBox {
   id: string
+  code: string
   owner: 'Foundry' | 'Customer'
   images: string[]
 }
@@ -58,6 +59,15 @@ export function NewPatternModal({
   const [customerOpen, setCustomerOpen] = useState(false)
   const [coreBoxToDelete, setCoreBoxToDelete] = useState<{id: string, type: 'top'|'bottom'} | null>(null)
   const [selectedCustomer, setSelectedCustomer] = useState('')
+
+  // Fetched data from API
+  const [customers, setCustomers] = useState<{ value: string; label: string }[]>([])
+
+  useEffect(() => {
+    if (!isOpen) return
+    fetch('/api/customers').then(r => r.json()).then(data => setCustomers(data)).catch(() => {})
+  }, [isOpen])
+
   const [patternCode, setPatternCode] = useState('')
   const [patternName, setPatternName] = useState('')
   const [category, setCategory] = useState('Machine Moulding')
@@ -70,7 +80,7 @@ export function NewPatternModal({
 
   // Top Core Boxes
   const [topCoreBoxPresent, setTopCoreBoxPresent] = useState<'Yes' | 'No'>('Yes')
-  const [topCoreBoxes, setTopCoreBoxes] = useState<CoreBox[]>([{ id: 'init-top', owner: 'Foundry', images: [] }])
+  const [topCoreBoxes, setTopCoreBoxes] = useState<CoreBox[]>([{ id: 'init-top', code: '', owner: 'Foundry', images: [] }])
 
   // Bottom Matchplate/Drag
   const [bottomPresent, setBottomPresent] = useState<'Yes' | 'No'>('Yes')
@@ -79,14 +89,27 @@ export function NewPatternModal({
 
   // Bottom Core Boxes
   const [bottomCoreBoxPresent, setBottomCoreBoxPresent] = useState<'Yes' | 'No'>('Yes')
-  const [bottomCoreBoxes, setBottomCoreBoxes] = useState<CoreBox[]>([{ id: 'init-bottom', owner: 'Foundry', images: [] }])
+  const [bottomCoreBoxes, setBottomCoreBoxes] = useState<CoreBox[]>([{ id: 'init-bottom', code: '', owner: 'Foundry', images: [] }])
+
+  // Shared Core Box (common for Top & Bottom)
+  const [coreBoxPresent, setCoreBoxPresent] = useState<'Yes' | 'No'>('Yes')
+  const [sharedCoreBoxes, setSharedCoreBoxes] = useState<CoreBox[]>([{ id: 'init-shared', code: '', owner: 'Foundry', images: [] }])
+
+  // Core Box Details
+  const [typeOfCoreOptions, setTypeOfCoreOptions] = useState<string[]>(['Oil Core', 'CO2 Core', 'Amine Core'])
+  const [typeOfCore, setTypeOfCore] = useState('')
+  const [typeOfCoreOpen, setTypeOfCoreOpen] = useState(false)
+  const [typeOfCoreInput, setTypeOfCoreInput] = useState('')
+  const [coreWeight, setCoreWeight] = useState<number | ''>('')
+  const [avgCoreProduction, setAvgCoreProduction] = useState<number | ''>('')
+  const [avgMouldsPerHour, setAvgMouldsPerHour] = useState<number | ''>('')
 
   // Weights
   const [goodCastingWeight, setGoodCastingWeight] = useState<number | ''>('')
   const [totalBoxWeight, setTotalBoxWeight] = useState<number | ''>('')
 
   // Photos Preview
-  const [previewImage, setPreviewImage] = useState<string | null>(null)
+  const [patternImages, setPatternImages] = useState<string[]>([])
 
   // Derived Values
   const yieldPercentage = useMemo(() => {
@@ -112,15 +135,22 @@ export function NewPatternModal({
     setTopOwner('Foundry')
     setTopImages([])
     setTopCoreBoxPresent('Yes')
-    setTopCoreBoxes([{ id: Date.now().toString(), owner: 'Foundry', images: [] }])
+    setTopCoreBoxes([{ id: Date.now().toString(), code: '', owner: 'Foundry', images: [] }])
     setBottomPresent('Yes')
     setBottomOwner('Foundry')
     setBottomImages([])
     setBottomCoreBoxPresent('Yes')
-    setBottomCoreBoxes([{ id: (Date.now() + 1).toString(), owner: 'Foundry', images: [] }])
+    setBottomCoreBoxes([{ id: (Date.now() + 1).toString(), code: '', owner: 'Foundry', images: [] }])
+    setCoreBoxPresent('Yes')
+    setSharedCoreBoxes([{ id: Date.now().toString(), code: '', owner: 'Foundry', images: [] }])
+    setTypeOfCore('')
+    setTypeOfCoreInput('')
+    setCoreWeight('')
+    setAvgCoreProduction('')
+    setAvgMouldsPerHour('')
     setGoodCastingWeight('')
     setTotalBoxWeight('')
-    setPreviewImage(null)
+    setPatternImages([])
   }
 
   const handleSave = () => {
@@ -134,8 +164,18 @@ export function NewPatternModal({
       goodWeight: typeof goodCastingWeight === 'number' ? goodCastingWeight : 0,
       totalWeight: typeof totalBoxWeight === 'number' ? totalBoxWeight : 0,
       topMatchplate: topPresent === 'Yes',
+      topOwner: topPresent === 'Yes' ? topOwner : 'Foundry',
+      topImages: topPresent === 'Yes' ? topImages : [],
       bottomMatchplate: bottomPresent === 'Yes',
-      coreBoxes: (topCoreBoxPresent === 'Yes' ? topCoreBoxes.length : 0) + (bottomCoreBoxPresent === 'Yes' ? bottomCoreBoxes.length : 0),
+      bottomOwner: bottomPresent === 'Yes' ? bottomOwner : 'Foundry',
+      bottomImages: bottomPresent === 'Yes' ? bottomImages : [],
+      coreBoxes: coreBoxPresent === 'Yes' ? sharedCoreBoxes.length : 0,
+      sharedCoreBoxes: coreBoxPresent === 'Yes' ? sharedCoreBoxes : [],
+      typeOfCore: coreBoxPresent === 'Yes' ? typeOfCore : '',
+      coreWeight: coreBoxPresent === 'Yes' && typeof coreWeight === 'number' ? coreWeight : null,
+      avgCoreProduction: coreBoxPresent === 'Yes' && typeof avgCoreProduction === 'number' ? avgCoreProduction : null,
+      avgMouldsPerHour: coreBoxPresent === 'Yes' && typeof avgMouldsPerHour === 'number' ? avgMouldsPerHour : null,
+      patternImages,
       remarks,
       mappedProducts: [],
     })
@@ -148,7 +188,7 @@ export function NewPatternModal({
   }
 
   const addTopCoreBox = () => {
-    setTopCoreBoxes([...topCoreBoxes, { id: Date.now().toString(), owner: 'Foundry', images: [] }])
+    setTopCoreBoxes([...topCoreBoxes, { id: Date.now().toString(), code: '', owner: 'Foundry', images: [] }])
   }
 
   const removeTopCoreBox = (id: string) => {
@@ -160,7 +200,7 @@ export function NewPatternModal({
   }
 
   const addBottomCoreBox = () => {
-    setBottomCoreBoxes([...bottomCoreBoxes, { id: Date.now().toString(), owner: 'Foundry', images: [] }])
+    setBottomCoreBoxes([...bottomCoreBoxes, { id: Date.now().toString(), code: '', owner: 'Foundry', images: [] }])
   }
 
   const removeBottomCoreBox = (id: string) => {
@@ -230,6 +270,7 @@ export function NewPatternModal({
                             <CommandItem
                               key={customer.value}
                               value={customer.value}
+                              keywords={[customer.label]}
                               onSelect={(currentValue) => {
                                 setSelectedCustomer(
                                   currentValue === selectedCustomer ? '' : currentValue
@@ -273,6 +314,17 @@ export function NewPatternModal({
                 </Select>
               </div>
             </div>
+
+            {/* Pattern Images */}
+            <div className="space-y-2 pt-4 border-t border-[#243050]">
+              <Label className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider mb-2 block">Pattern Images</Label>
+              <ImageCarousel 
+                images={patternImages} 
+                onImagesChange={setPatternImages}
+                size="small"
+                previewPosition="right"
+              />
+            </div>
           </div>
 
           {/* Section: Matchplates */}
@@ -313,78 +365,6 @@ export function NewPatternModal({
                 </div>
               </div>
 
-              {/* Top Core Boxes Details */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between border-b border-[#243050] pb-2">
-                  <div className="flex items-center gap-4">
-                    <h3 className="text-sm font-semibold text-[#8B9FC4] uppercase tracking-wider">Top Core Boxes Details</h3>
-                    <Select 
-                      value={topCoreBoxPresent} 
-                      onValueChange={(val: 'Yes' | 'No') => {
-                        setTopCoreBoxPresent(val)
-                      }}
-                    >
-                      <SelectTrigger className="h-7 text-xs bg-[#0C1221] border-[#243050] w-[80px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-[#050810] border-[#243050]">
-                        <SelectItem value="Yes" className="text-xs">Yes</SelectItem>
-                        <SelectItem value="No" className="text-xs">No</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button size="sm" variant="ghost" onClick={addTopCoreBox} disabled={topCoreBoxPresent === 'No'} className="text-[#D4521A] hover:bg-[#D4521A]/10 hover:text-[#D4521A]">
-                    <Plus className="w-4 h-4 mr-1" /> Add Top Core Box
-                  </Button>
-                </div>
-                
-                <div className={cn("transition-opacity duration-300", topCoreBoxPresent === 'No' && "opacity-50 pointer-events-none")}>
-                  {topCoreBoxes.length === 0 ? (
-                    <div className="text-center py-6 border border-dashed border-[#243050] rounded-xl bg-[#0C1221]/50">
-                      <p className="text-[#5A6E90] text-sm">No top core boxes added.</p>
-                    </div>
-                  ) : (
-                  <div className="space-y-3">
-                    {topCoreBoxes.map((cb, index) => (
-                      <div key={cb.id} className="flex items-start gap-4 bg-[#0C1221] p-3 rounded-lg border border-[#243050]">
-                        <div className="flex-1 space-y-1.5">
-                          <Label className="text-xs text-[#8B9FC4]">Code</Label>
-                          <Input 
-                            readOnly 
-                            value={patternCode ? `${patternCode}-TCB${index + 1}` : `TCB-${index + 1}`} 
-                            className="bg-[#050810]/50 border-[#243050] text-[#5A6E90] h-9 focus-visible:ring-0 cursor-not-allowed" 
-                          />
-                        </div>
-                        <div className="flex-1 space-y-1.5">
-                          <Label className="text-xs text-[#8B9FC4]">Owner</Label>
-                          <Select value={cb.owner} onValueChange={(val: any) => updateTopCoreBox(cb.id, { owner: val })}>
-                            <SelectTrigger className="bg-[#050810] border-[#243050] h-9">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent className="bg-[#050810] border-[#243050]">
-                              <SelectItem value="Foundry">Foundry</SelectItem>
-                              <SelectItem value="Customer">Customer</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="flex-1 space-y-1.5 min-w-[140px]">
-                          <Label className="text-xs text-[#8B9FC4]">Images</Label>
-                          <ImageCarousel images={cb.images} onImagesChange={(imgs) => updateTopCoreBox(cb.id, { images: imgs })} disabled={topCoreBoxPresent === 'No'} size="small" />
-                        </div>
-                        <Button 
-                          variant="ghost" 
-                          onClick={() => setCoreBoxToDelete({ id: cb.id, type: 'top' })}
-                          className="h-9 mt-6 px-3 shrink-0 text-[#5A6E90] hover:text-red-400 hover:bg-red-400/10"
-                          disabled={topCoreBoxes.length <= 1}
-                        >
-                          <Trash className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                </div>
-              </div>
             </div>
 
             {/* Bottom Matchplate Section */}
@@ -422,52 +402,53 @@ export function NewPatternModal({
                   <ImageCarousel images={bottomImages} onImagesChange={setBottomImages} disabled={bottomPresent === 'No'} size="large" />
                 </div>
               </div>
+            </div>
 
-              {/* Bottom Core Boxes Details */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between border-b border-[#243050] pb-2">
-                  <div className="flex items-center gap-4">
-                    <h3 className="text-sm font-semibold text-[#8B9FC4] uppercase tracking-wider">Bottom Core Boxes Details</h3>
-                    <Select 
-                      value={bottomCoreBoxPresent} 
-                      onValueChange={(val: 'Yes' | 'No') => {
-                        setBottomCoreBoxPresent(val)
-                      }}
-                    >
-                      <SelectTrigger className="h-7 text-xs bg-[#0C1221] border-[#243050] w-[80px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-[#050810] border-[#243050]">
-                        <SelectItem value="Yes" className="text-xs">Yes</SelectItem>
-                        <SelectItem value="No" className="text-xs">No</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button size="sm" variant="ghost" onClick={addBottomCoreBox} disabled={bottomCoreBoxPresent === 'No'} className="text-[#D4521A] hover:bg-[#D4521A]/10 hover:text-[#D4521A]">
-                    <Plus className="w-4 h-4 mr-1" /> Add Bottom Core Box
-                  </Button>
+            {/* Shared Core Box Section */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between border-b border-[#243050] pb-2">
+                <div className="flex items-center gap-4">
+                  <h3 className="text-sm font-semibold text-[#8B9FC4] uppercase tracking-wider">Core Box Details</h3>
+
+                  <Select
+                    value={coreBoxPresent}
+                    onValueChange={(val: 'Yes' | 'No') => setCoreBoxPresent(val)}
+                  >
+                    <SelectTrigger className="h-7 text-xs bg-[#0C1221] border-[#243050] w-[80px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#050810] border-[#243050]">
+                      <SelectItem value="Yes" className="text-xs">Yes</SelectItem>
+                      <SelectItem value="No" className="text-xs">No</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                
-                <div className={cn("transition-opacity duration-300", bottomCoreBoxPresent === 'No' && "opacity-50 pointer-events-none")}>
-                  {bottomCoreBoxes.length === 0 ? (
-                    <div className="text-center py-6 border border-dashed border-[#243050] rounded-xl bg-[#0C1221]/50">
-                      <p className="text-[#5A6E90] text-sm">No bottom core boxes added.</p>
-                    </div>
-                  ) : (
+                <Button size="sm" variant="ghost" onClick={() => setSharedCoreBoxes([...sharedCoreBoxes, { id: Date.now().toString(), code: '', owner: 'Foundry', images: [] }])} disabled={coreBoxPresent === 'No'} className="text-[#D4521A] hover:bg-[#D4521A]/10 hover:text-[#D4521A]">
+                  <Plus className="w-4 h-4 mr-1" /> Add Core Box
+                </Button>
+              </div>
+
+              <div className={cn("transition-opacity duration-300", coreBoxPresent === 'No' && "opacity-50 pointer-events-none")}>
+                {sharedCoreBoxes.length === 0 ? (
+                  <div className="text-center py-6 border border-dashed border-[#243050] rounded-xl bg-[#0C1221]/50">
+                    <p className="text-[#5A6E90] text-sm">No core boxes added.</p>
+                  </div>
+                ) : (
                   <div className="space-y-3">
-                    {bottomCoreBoxes.map((cb, index) => (
+                    {sharedCoreBoxes.map((cb, index) => (
                       <div key={cb.id} className="flex items-start gap-4 bg-[#0C1221] p-3 rounded-lg border border-[#243050]">
                         <div className="flex-1 space-y-1.5">
                           <Label className="text-xs text-[#8B9FC4]">Code</Label>
-                          <Input 
-                            readOnly 
-                            value={patternCode ? `${patternCode}-BCB${index + 1}` : `BCB-${index + 1}`} 
-                            className="bg-[#050810]/50 border-[#243050] text-[#5A6E90] h-9 focus-visible:ring-0 cursor-not-allowed" 
+                          <Input
+                            value={cb.code}
+                            onChange={(e) => setSharedCoreBoxes(sharedCoreBoxes.map(b => b.id === cb.id ? { ...b, code: e.target.value } : b))}
+                            placeholder={patternCode ? `${patternCode}-CB${index + 1}` : `CB-${index + 1}`}
+                            className="bg-[#050810]/50 border-[#243050] text-[#EEF3FF] h-9 focus-visible:ring-1 focus-visible:ring-[#D4521A]"
                           />
                         </div>
                         <div className="flex-1 space-y-1.5">
                           <Label className="text-xs text-[#8B9FC4]">Owner</Label>
-                          <Select value={cb.owner} onValueChange={(val: any) => updateBottomCoreBox(cb.id, { owner: val })}>
+                          <Select value={cb.owner} onValueChange={(val: any) => setSharedCoreBoxes(sharedCoreBoxes.map(b => b.id === cb.id ? { ...b, owner: val } : b))}>
                             <SelectTrigger className="bg-[#050810] border-[#243050] h-9">
                               <SelectValue />
                             </SelectTrigger>
@@ -479,13 +460,13 @@ export function NewPatternModal({
                         </div>
                         <div className="flex-1 space-y-1.5 min-w-[140px]">
                           <Label className="text-xs text-[#8B9FC4]">Images</Label>
-                          <ImageCarousel images={cb.images} onImagesChange={(imgs) => updateBottomCoreBox(cb.id, { images: imgs })} disabled={bottomCoreBoxPresent === 'No'} size="small" />
+                          <ImageCarousel images={cb.images} onImagesChange={(imgs) => setSharedCoreBoxes(sharedCoreBoxes.map(b => b.id === cb.id ? { ...b, images: imgs } : b))} disabled={coreBoxPresent === 'No'} size="small" />
                         </div>
-                        <Button 
-                          variant="ghost" 
-                          onClick={() => setCoreBoxToDelete({ id: cb.id, type: 'bottom' })}
+                        <Button
+                          variant="ghost"
+                          onClick={() => setSharedCoreBoxes(sharedCoreBoxes.filter(b => b.id !== cb.id))}
                           className="h-9 mt-6 px-3 shrink-0 text-[#5A6E90] hover:text-red-400 hover:bg-red-400/10"
-                          disabled={bottomCoreBoxes.length <= 1}
+                          disabled={sharedCoreBoxes.length <= 1}
                         >
                           <Trash className="w-4 h-4" />
                         </Button>
@@ -493,6 +474,109 @@ export function NewPatternModal({
                     ))}
                   </div>
                 )}
+              </div>
+
+              {/* Core Box Extra Fields */}
+              <div className={cn("grid grid-cols-2 gap-4 pt-2 transition-opacity duration-300", coreBoxPresent === 'No' && "opacity-50 pointer-events-none")}>
+                {/* Type of Core — combobox with extensible options */}
+                <div className="space-y-2">
+                  <Label className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider">Type of Core</Label>
+                  <Popover open={typeOfCoreOpen} onOpenChange={setTypeOfCoreOpen}>
+                    <PopoverTrigger className="flex h-10 w-full items-center justify-between rounded-md border border-[#243050] bg-[#0C1221] px-3 py-2 text-sm hover:bg-[#1A263D] hover:text-white">
+                      {typeOfCore || <span className="text-[#5A6E90]">Select or add type...</span>}
+                      <CaretUpDown weight="duotone" className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[260px] p-0 bg-[#0C1221] border-[#243050]">
+                      <Command className="bg-transparent">
+                        <CommandInput
+                          placeholder="Search or type new..."
+                          value={typeOfCoreInput}
+                          onValueChange={setTypeOfCoreInput}
+                          className="text-[#EEF3FF]"
+                        />
+                        <CommandList>
+                          <CommandEmpty>
+                            {typeOfCoreInput.trim() ? (
+                              <button
+                                type="button"
+                                className="w-full text-left px-4 py-2 text-sm text-[#D4521A] hover:bg-[#1A263D]"
+                                onClick={() => {
+                                  const newOption = typeOfCoreInput.trim()
+                                  if (!typeOfCoreOptions.includes(newOption)) {
+                                    setTypeOfCoreOptions([...typeOfCoreOptions, newOption])
+                                  }
+                                  setTypeOfCore(newOption)
+                                  setTypeOfCoreInput('')
+                                  setTypeOfCoreOpen(false)
+                                }}
+                              >
+                                + Add "{typeOfCoreInput.trim()}"
+                              </button>
+                            ) : (
+                              <span className="px-4 py-2 text-sm text-[#5A6E90]">No options found.</span>
+                            )}
+                          </CommandEmpty>
+                          <CommandGroup>
+                            {typeOfCoreOptions.map((opt) => (
+                              <CommandItem
+                                key={opt}
+                                value={opt}
+                                keywords={[opt]}
+                                onSelect={() => {
+                                  setTypeOfCore(opt)
+                                  setTypeOfCoreInput('')
+                                  setTypeOfCoreOpen(false)
+                                }}
+                                className="text-[#EEF3FF] hover:bg-[#1A263D] cursor-pointer"
+                              >
+                                <Check weight="duotone" className={cn('mr-2 h-4 w-4', typeOfCore === opt ? 'opacity-100 text-[#D4521A]' : 'opacity-0')} />
+                                {opt}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                {/* Core Weight */}
+                <div className="space-y-2">
+                  <Label className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider">Core Weight (kg)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    placeholder="0.0"
+                    value={coreWeight}
+                    onChange={(e) => setCoreWeight(e.target.value === '' ? '' : Number(e.target.value))}
+                    className="bg-[#0C1221] border-[#243050] text-[#EEF3FF] h-10"
+                  />
+                </div>
+
+                {/* Average Core Production */}
+                <div className="space-y-2">
+                  <Label className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider">Avg Core Production (per hour)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    placeholder="e.g. 10"
+                    value={avgCoreProduction}
+                    onChange={(e) => setAvgCoreProduction(e.target.value === '' ? '' : Number(e.target.value))}
+                    className="bg-[#0C1221] border-[#243050] text-[#EEF3FF] h-10"
+                  />
+                </div>
+
+                {/* Average Moulds per Hour */}
+                <div className="space-y-2">
+                  <Label className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider">Avg Moulds per Hour</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    placeholder="e.g. 12"
+                    value={avgMouldsPerHour}
+                    onChange={(e) => setAvgMouldsPerHour(e.target.value === '' ? '' : Number(e.target.value))}
+                    className="bg-[#0C1221] border-[#243050] text-[#EEF3FF] h-10"
+                  />
                 </div>
               </div>
             </div>
@@ -566,8 +650,9 @@ export function NewPatternModal({
         open={!!coreBoxToDelete} 
         onOpenChange={(open) => !open && setCoreBoxToDelete(null)}
         onConfirm={() => {
-          if (coreBoxToDelete?.type === 'top') removeTopCoreBox(coreBoxToDelete.id)
-          else if (coreBoxToDelete?.type === 'bottom') removeBottomCoreBox(coreBoxToDelete.id)
+          if (coreBoxToDelete) {
+            setSharedCoreBoxes(sharedCoreBoxes.filter(b => b.id !== coreBoxToDelete.id))
+          }
           setCoreBoxToDelete(null)
         }}
         title="Remove Core Box?"

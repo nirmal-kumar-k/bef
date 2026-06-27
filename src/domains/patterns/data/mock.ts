@@ -1,10 +1,3 @@
-export const customers = [
-  { value: 'alpha', label: 'Alpha Heavy Industries' },
-  { value: 'beta', label: 'Beta Metalworks' },
-  { value: 'gamma', label: 'Gamma Components' },
-  { value: 'delta', label: 'Delta Forge' },
-]
-
 export interface Pattern {
   id: string
   code: string
@@ -16,8 +9,18 @@ export interface Pattern {
   topMatchplate: boolean
   bottomMatchplate: boolean
   coreBoxes: number
+  sharedCoreBoxes?: { id: string; code: string; owner: string; images: string[] }[]
+  topOwner?: string
+  topImages?: string[]
+  bottomOwner?: string
+  bottomImages?: string[]
+  typeOfCore?: string
+  coreWeight?: number
+  avgCoreProduction?: string
+  avgMouldsPerHour?: number
+  patternImages?: string[]
   remarks: string
-  mappedProducts: { name: string; cavities: number }[]
+  mappedProducts: { name: string; cavities: number; selectedCoreBoxes?: { coreBoxCode: string; quantity: number }[] }[]
 }
 
 export type FilterCategory = 'All' | 'Machine Moulding' | 'Hand Moulding'

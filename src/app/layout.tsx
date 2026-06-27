@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from 'next'
 import { Inter, Plus_Jakarta_Sans } from 'next/font/google'
 import { AppLayout } from "@/shared/layouts/app-layout"
 import { RoleProvider } from "@/shared/context/role-context"
+import { AppProvider } from "@/application/store/provider"
 import './globals.css'
 
 const inter = Inter({ variable: '--font-inter', subsets: ['latin'] })
@@ -46,11 +47,13 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className={`${inter.variable} ${plusJakartaSans.variable} bg-background`}>
       <body className="font-sans antialiased" suppressHydrationWarning>
-        <RoleProvider>
-          <AppLayout>
-            {children}
-          </AppLayout>
-        </RoleProvider>
+        <AppProvider>
+          <RoleProvider>
+            <AppLayout>
+              {children}
+            </AppLayout>
+          </RoleProvider>
+        </AppProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

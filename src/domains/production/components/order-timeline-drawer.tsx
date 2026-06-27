@@ -68,12 +68,16 @@ export function OrderTimelineDrawer({
         onClick={onClose}
       />
       
-      <div 
-        className={cn(
-          "fixed inset-y-0 right-0 w-[500px] max-w-[90vw] bg-[#050810] border-l border-[#243050] z-[101] shadow-2xl transition-transform duration-300 ease-out flex flex-col",
-          isOpen ? "translate-x-0" : "translate-x-full"
-        )}
-      >
+      <div className={cn(
+        "fixed inset-0 z-[101] flex items-center justify-center p-4 transition-opacity duration-300",
+        isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+      )}>
+        <div 
+          className={cn(
+            "bg-[#050810] border border-[#243050] rounded-2xl w-full max-w-[500px] shadow-2xl flex flex-col overflow-hidden max-h-[90vh] transition-transform duration-300 ease-out",
+            isOpen ? "scale-100 translate-y-0" : "scale-95 translate-y-4"
+          )}
+        >
         {/* Header */}
         <div className="sticky top-0 z-10 bg-[#0C1221]/95 backdrop-blur-md border-b border-[#243050] px-6 py-5 flex items-center justify-between shrink-0">
           <div>
@@ -156,7 +160,8 @@ export function OrderTimelineDrawer({
           )}
         </div>
       </div>
-    </>
+    </div>
+  </>
   )
 
   if (typeof document === 'undefined') return null

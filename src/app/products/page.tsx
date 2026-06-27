@@ -6,7 +6,6 @@ import { Button } from '@/shared/ui/button'
 import { NewProductModal } from '@/domains/products/components/new-product-modal'
 import { ViewProductModal } from '@/domains/products/components/view-product-modal'
 import type { Product } from '@/domains/products/data/mock'
-import { customers } from '@/domains/products/data/mock'
 import { useRole } from '@/shared/context/role-context'
 import { ShieldWarning, Funnel, Check, CaretUpDown, X, MagnifyingGlass } from '@phosphor-icons/react'
 import { cn } from '@/shared/lib/utils'
@@ -35,6 +34,13 @@ export default function ProductsPage() {
   const [customerOpen, setCustomerOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const { role } = useRole()
+
+  // Fetched data from API
+  const [customers, setCustomers] = useState<{ value: string; label: string }[]>([])
+
+  useEffect(() => {
+    fetch('/api/customers').then(r => r.json()).then(data => setCustomers(data)).catch(() => {})
+  }, [])
 
   const fetchProducts = useCallback(async () => {
     try {

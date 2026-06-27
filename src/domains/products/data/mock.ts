@@ -12,10 +12,3 @@ export interface Product {
   images?: string[]
   linkedPattern?: string
 }
-
-export const customers = [
-  { value: 'alpha', label: 'Alpha Heavy Industries' },
-  { value: 'beta', label: 'Beta Metalworks' },
-  { value: 'gamma', label: 'Gamma Components' },
-  { value: 'delta', label: 'Delta Forge' },
-]

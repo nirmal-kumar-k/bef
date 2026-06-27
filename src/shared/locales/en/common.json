@@ -1,0 +1,12 @@
+{
+  "home": {
+    "title": "Welcome to BEF Dashboard",
+    "description": "Production and Foundry Management System"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete"
+  }
+}

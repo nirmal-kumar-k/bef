@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Plus, Trash } from '@phosphor-icons/react'
 import { ConfirmDeleteDialog } from '@/shared/ui/confirm-delete-dialog'
 import {
@@ -35,7 +35,7 @@ import {
 } from '@/shared/ui/popover'
 import { Check, CaretUpDown } from '@phosphor-icons/react'
 import { cn, handleEnterToTab } from '@/shared/lib/utils'
-import { customers, patterns, products, type Order } from '@/domains/orders/data/mock'
+import { type Order } from '@/domains/orders/data/mock'
 import { useRole } from '@/shared/context/role-context'
 
 interface CartItem {
@@ -71,6 +71,7 @@ export function NewOrderModal({
   
   // Add item state
   const [selectedProduct, setSelectedProduct] = useState('')
+  const [productDropdownOpen, setProductDropdownOpen] = useState(false)
   const [quantity, setQuantity] = useState<number | ''>('')
   const [ratePerKg, setRatePerKg] = useState<number | ''>('')
   const [unitCost, setUnitCost] = useState<number | ''>('')
@@ -80,10 +81,29 @@ export function NewOrderModal({
   const [itemToDelete, setItemToDelete] = useState<string | null>(null)
   const [gstPercent, setGstPercent] = useState<string>('18')
 
+  // Fetched data from API
+  const [customers, setCustomers] = useState<{ value: string; label: string }[]>([])
+  const [allProductsList, setAllProductsList] = useState<{ value: string; label: string; weight: number; ratePerKg: number }[]>([])
+
+  useEffect(() => {
+    if (!isOpen) return
+    // Fetch customers
+    fetch('/api/customers').then(r => r.json()).then(data => setCustomers(data)).catch(() => {})
+    // Fetch products and map to dropdown format
+    fetch('/api/products').then(r => r.json()).then((data: any[]) => {
+      setAllProductsList(data.map(p => ({
+        value: p.code || p.id,
+        label: `${p.code} (${p.name})`,
+        weight: parseFloat(p.weight) || 0,
+        ratePerKg: p.ratePerKg || 0,
+      })))
+    }).catch(() => {})
+  }, [isOpen])
+
   // Initialize from existing data if editing
   useMemo(() => {
     if (isOpen && initialData) {
-      const custValue = customers.find(c => c.label === initialData.customer)?.value || ''
+      const custValue = customers.find(c => c.label === initialData.customer)?.value || initialData.customer || ''
       setSelectedCustomer(custValue)
       setCustomerOrderNo(initialData.customerOrderNo || '')
       setInternalOrderNo(initialData.internalOrderNo || '')
@@ -91,20 +111,8 @@ export function NewOrderModal({
       setDeliveryDate(initialData.deliveryDate || '')
       setCart((initialData.cart || []).map(item => ({ ...item, id: item.id || Math.random().toString(36).substr(2, 9) })))
       setGstPercent(initialData.gstPercent?.toString() || '18')
-      // Remarks are not in the mock model but could be added
     }
-  }, [isOpen, initialData])
-
-  // Derived state for products
-  const allProductsList = useMemo(() => {
-    const list: { value: string; label: string; weight: number; ratePerKg: number }[] = []
-    Object.entries(products).forEach(([_, prods]) => {
-      prods.forEach(p => {
-        list.push(p)
-      })
-    })
-    return list
-  }, [])
+  }, [isOpen, initialData, customers])
 
   const resetForm = () => {
     setSelectedCustomer('')
@@ -265,6 +273,7 @@ export function NewOrderModal({
                               <CommandItem
                                 key={customer.value}
                                 value={customer.value}
+                                keywords={[customer.label]}
                                 onSelect={(currentValue) => {
                                   setSelectedCustomer(currentValue === selectedCustomer ? '' : currentValue)
                                   setCustomerOpen(false)
@@ -311,26 +320,57 @@ export function NewOrderModal({
               
               {/* Add Item Form */}
               <div className="flex items-end gap-3 bg-[#0C1221]/50 p-4 rounded-xl border border-[#243050]">
-                <div className="flex-[2] space-y-2">
+                <div className="flex-1 space-y-2">
                   <Label className="text-[#8B9FC4] text-xs font-semibold uppercase">Product</Label>
-                  <Select value={selectedProduct} onValueChange={(val) => {
-                    setSelectedProduct(val);
-                    const p = allProductsList.find(x => x.value === val);
-                    if (p) {
-                      setRatePerKg(p.ratePerKg);
-                      setUnitCost(p.ratePerKg * p.weight);
-                    }
-                    setTimeout(() => document.getElementById('rate-input')?.focus(), 10);
-                  }}>
-                    <SelectTrigger id="product-trigger" className="h-10 px-3 rounded-md bg-[#0C1221] border-[#243050] text-[#EEF3FF] text-sm">
-                      <SelectValue placeholder="Select Product..." />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#0C1221] border-[#243050] text-[#EEF3FF]">
-                      {allProductsList.map(p => (
-                        <SelectItem key={p.value} value={p.value} className="hover:bg-[#1A263D] cursor-pointer">{p.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Popover open={productDropdownOpen} onOpenChange={setProductDropdownOpen}>
+                    <PopoverTrigger
+                      id="product-trigger"
+                      className="flex h-10 w-full items-center justify-between rounded-md border border-[#243050] bg-[#0C1221] px-3 py-2 text-sm text-[#EEF3FF] hover:bg-[#1A263D]"
+                      aria-expanded={productDropdownOpen}
+                    >
+                      <span className="truncate pr-2">
+                        {selectedProduct
+                          ? allProductsList.find((p) => p.value === selectedProduct)?.label
+                          : 'Select Product...'}
+                      </span>
+                      <CaretUpDown weight="duotone" className="h-4 w-4 shrink-0 opacity-50" />
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[420px] p-0 bg-[#0C1221] border-[#243050]">
+                      <Command className="bg-transparent">
+                        <CommandInput placeholder="Search product..." className="text-[#EEF3FF]" />
+                        <CommandList>
+                          <CommandEmpty className="text-[#8B9FC4] p-4 text-center text-sm">
+                            No product found.
+                          </CommandEmpty>
+                          <CommandGroup>
+                            {allProductsList.map((p) => (
+                              <CommandItem
+                                key={p.value}
+                                value={p.label}
+                                onSelect={() => {
+                                  setSelectedProduct(p.value);
+                                  setRatePerKg(p.ratePerKg);
+                                  setUnitCost(p.ratePerKg * p.weight);
+                                  setProductDropdownOpen(false);
+                                  setTimeout(() => document.getElementById('rate-input')?.focus(), 10);
+                                }}
+                                className="text-[#EEF3FF] hover:bg-[#1A263D] cursor-pointer"
+                              >
+                                <Check
+                                  weight="duotone"
+                                  className={cn(
+                                    'mr-2 h-4 w-4 flex-shrink-0',
+                                    selectedProduct === p.value ? 'opacity-100 text-[#D4521A]' : 'opacity-0'
+                                  )}
+                                />
+                                {p.label}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
                     <div className="w-[100px] space-y-2">
@@ -393,11 +433,11 @@ export function NewOrderModal({
                   <thead className="bg-[#0C1221] border-b border-[#243050] text-[#8B9FC4] text-xs uppercase tracking-wider font-semibold">
                     <tr>
                       <th className="px-4 py-3 w-[250px]">Product</th>
-                      <th className="px-4 py-3 text-right">Qty</th>
-                      {initialData && <th className="px-4 py-3 text-right">Delivery Qty</th>}
+                      <th className="px-4 py-3 text-center">Qty</th>
+                      {initialData && <th className="px-4 py-3 text-center">Delivery Qty</th>}
                       <th className="px-4 py-3 text-center">Weight</th>
-                      <th className="px-4 py-3 text-right">Unit Cost</th>
-                      <th className="px-4 py-3 text-right">Line Total</th>
+                      <th className="px-4 py-3 text-center">Unit Cost</th>
+                      <th className="px-4 py-3 text-center">Line Total</th>
                       <th className="px-4 py-3 w-[50px]"></th>
                     </tr>
                   </thead>
@@ -418,13 +458,13 @@ export function NewOrderModal({
                             <td className="px-4 py-3">
                               <p className="font-medium text-[#EEF3FF] truncate max-w-[220px]">{item.productName}</p>
                             </td>
-                            <td className="px-4 py-3 text-right font-medium text-[#EEF3FF]">{item.quantity.toLocaleString()}</td>
+                            <td className="px-4 py-3 text-center font-medium text-[#EEF3FF]">{item.quantity.toLocaleString()}</td>
                             {initialData && (
-                              <td className="px-4 py-3 text-right">
+                              <td className="px-4 py-3 text-center">
                                 <Input 
                                   type="number" 
                                   min="0"
-                                  className="h-8 w-20 px-2 ml-auto text-right bg-[#050810] border-[#243050] text-[#EEF3FF] focus:border-[#D4521A]" 
+                                  className="h-7 w-16 mx-auto text-sm font-mono font-medium text-center bg-[#EEF3FF]/10 border-transparent text-[#EEF3FF] rounded-md focus:border-[#D4521A] focus:bg-[#0C1221] transition-colors px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
                                   value={item.deliveryQuantity}
                                   onChange={(e) => handleDeliveryQtyChange(item.id, Number(e.target.value))}
                                 />
@@ -433,20 +473,20 @@ export function NewOrderModal({
                             <td className="px-4 py-3 text-center text-[#8B9FC4]">{item.weight} kg</td>
                             <td className="px-4 py-3 text-center text-[#8B9FC4]">
                                 {initialData ? (
-                                  <div className="flex items-center justify-end gap-1">
+                                  <div className="flex items-center justify-center gap-1">
                                     <span className="text-[#8B9FC4]">₹</span>
                                     <Input 
                                       type="number" 
                                       value={item.unitCost}
                                       onChange={(e) => handleUpdateCartItemCost(index, e.target.value)}
-                                      className="h-8 w-24 px-2 text-right bg-[#050810] border-[#243050] text-[#EEF3FF] focus:border-[#D4521A]" 
+                                      className="h-7 w-20 text-sm font-mono font-medium text-center bg-[#EEF3FF]/10 border-transparent text-[#EEF3FF] rounded-md focus:border-[#D4521A] focus:bg-[#0C1221] transition-colors px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
                                     />
                                   </div>
                                 ) : (
                                   <span>₹{safeUnitCost.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                                 )}
                             </td>
-                            <td className="px-4 py-3 text-right font-mono font-medium text-[#D4521A]">₹{lineTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                            <td className="px-4 py-3 text-center font-mono font-medium text-[#D4521A]">₹{lineTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                             <td className="px-4 py-3 text-right">
                               <Button variant="ghost" size="icon" onClick={() => setItemToDelete(item.id!)} className="h-8 w-8 text-[#5A6E90] hover:text-red-400 hover:bg-red-400/10">
                                 <Trash weight="duotone" className="h-4 w-4" />

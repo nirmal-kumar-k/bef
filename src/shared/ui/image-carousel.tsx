@@ -10,13 +10,15 @@ interface ImageCarouselProps {
   onImagesChange: (imgs: string[]) => void
   disabled?: boolean
   size?: 'small' | 'large'
+  previewPosition?: 'left' | 'right'
 }
 
 export function ImageCarousel({
   images,
   onImagesChange,
   disabled = false,
-  size = 'large'
+  size = 'large',
+  previewPosition = 'left'
 }: ImageCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [showConfirm, setShowConfirm] = useState(false)
@@ -88,7 +90,7 @@ export function ImageCarousel({
             <div className={cn("relative group", boxClass)}>
               <img src={images[currentIndex]} alt={`Preview ${currentIndex + 1}`} className="w-full h-full rounded-xl object-cover border-2 border-[#243050] border-solid" />
               
-              <div className={cn("absolute top-1/2 -translate-y-1/2 right-[calc(100%+24px)] z-[100] rounded-2xl overflow-hidden border border-[#8B9FC4]/30 shadow-[0_20px_50px_rgba(0,0,0,0.5),0_0_30px_rgba(139,159,196,0.2)] opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-500 ease-out scale-90 group-hover:scale-100 origin-right hidden md:block", floatingClass)}>
+              <div className={cn("absolute bottom-0 z-[100] rounded-2xl overflow-hidden border border-[#8B9FC4]/30 shadow-[0_20px_50px_rgba(0,0,0,0.5),0_0_30px_rgba(139,159,196,0.2)] opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-500 ease-out scale-90 group-hover:scale-100 hidden md:block", floatingClass, previewPosition === 'left' ? "right-[calc(100%+24px)] origin-bottom-right" : "left-[calc(100%+24px)] origin-bottom-left")}>
                 <img src={images[currentIndex]} alt="Large Preview" className="w-full h-full object-cover" />
               </div>
             </div>

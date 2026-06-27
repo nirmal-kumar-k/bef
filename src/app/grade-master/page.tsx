@@ -1,21 +1,54 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Plus, PencilSimple } from '@phosphor-icons/react'
 import { Button } from '@/shared/ui/button'
 import { GradeModal } from '@/domains/grade-master/components/grade-modal'
-import { mockGrades, type Grade } from '@/domains/grade-master/data/mock'
+import type { Grade } from '@/domains/grade-master/data/mock'
 
 export default function GradeMasterPage() {
-  const [grades, setGrades] = useState<Grade[]>(mockGrades)
+  const [grades, setGrades] = useState<Grade[]>([])
+  const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingGrade, setEditingGrade] = useState<Grade | null>(null)
 
-  const handleSaveGrade = (grade: Partial<Grade>) => {
-    if (grade.id) {
-      setGrades(grades.map(g => g.id === grade.id ? { ...g, ...grade } as Grade : g))
-    } else {
-      setGrades([...grades, { ...grade, id: Date.now().toString() } as Grade])
+  const fetchGrades = useCallback(async () => {
+    try {
+      const res = await fetch('/api/grades')
+      if (res.ok) {
+        const data = await res.json()
+        setGrades(data)
+      }
+    } catch (err) {
+      console.error('Failed to fetch grades:', err)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchGrades()
+  }, [fetchGrades])
+
+  const handleSaveGrade = async (grade: Partial<Grade>) => {
+    try {
+      if (grade.id) {
+        const res = await fetch(`/api/grades/${grade.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(grade),
+        })
+        if (res.ok) await fetchGrades()
+      } else {
+        const res = await fetch('/api/grades', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(grade),
+        })
+        if (res.ok) await fetchGrades()
+      }
+    } catch (err) {
+      console.error('Failed to save grade:', err)
     }
   }
 
@@ -58,31 +91,48 @@ export default function GradeMasterPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#243050]">
-              {grades.map((grade) => (
-                <tr 
-                  key={grade.id} 
-                  className="hover:bg-[#1A263D]/50 transition-colors group"
-                >
-                  <td className="px-6 py-4 font-mono text-[#D4521A] font-medium">{grade.code}</td>
-                  <td className="px-6 py-4 text-[#EEF3FF] font-medium">{grade.name}</td>
-                  <td className="px-6 py-4 text-[#8B9FC4] font-mono text-sm">{grade.c}</td>
-                  <td className="px-6 py-4 text-[#8B9FC4] font-mono text-sm">{grade.si}</td>
-                  <td className="px-6 py-4 text-[#8B9FC4] font-mono text-sm">{grade.mn}</td>
-                  <td className="px-6 py-4 text-[#8B9FC4] font-mono text-sm">{grade.p}</td>
-                  <td className="px-6 py-4 text-[#8B9FC4] font-mono text-sm">{grade.s}</td>
-                  <td className="px-6 py-4 text-right">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => openEditModal(grade)}
-                      className="text-[#8B9FC4] hover:text-[#EEF3FF] hover:bg-[#243050] h-8 px-2"
-                    >
-                      <PencilSimple className="w-4 h-4 mr-1.5" />
-                      Edit
-                    </Button>
+              {loading ? (
+                <tr>
+                  <td colSpan={8} className="px-6 py-12 text-center text-[#8B9FC4]">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="w-6 h-6 border-2 border-[#243050] border-t-[#D4521A] rounded-full animate-spin" />
+                      Loading grades...
+                    </div>
                   </td>
                 </tr>
-              ))}
+              ) : grades.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-6 py-12 text-center text-[#8B9FC4]">
+                    No grades found. Add your first grade to get started.
+                  </td>
+                </tr>
+              ) : (
+                grades.map((grade) => (
+                  <tr 
+                    key={grade.id} 
+                    className="hover:bg-[#1A263D]/50 transition-colors group"
+                  >
+                    <td className="px-6 py-4 font-mono text-[#D4521A] font-medium">{grade.code}</td>
+                    <td className="px-6 py-4 text-[#EEF3FF] font-medium">{grade.name}</td>
+                    <td className="px-6 py-4 text-[#8B9FC4] font-mono text-sm">{grade.c}</td>
+                    <td className="px-6 py-4 text-[#8B9FC4] font-mono text-sm">{grade.si}</td>
+                    <td className="px-6 py-4 text-[#8B9FC4] font-mono text-sm">{grade.mn}</td>
+                    <td className="px-6 py-4 text-[#8B9FC4] font-mono text-sm">{grade.p}</td>
+                    <td className="px-6 py-4 text-[#8B9FC4] font-mono text-sm">{grade.s}</td>
+                    <td className="px-6 py-4 text-right">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => openEditModal(grade)}
+                        className="text-[#8B9FC4] hover:text-[#EEF3FF] hover:bg-[#243050] h-8 px-2"
+                      >
+                        <PencilSimple className="w-4 h-4 mr-1.5" />
+                        Edit
+                      </Button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

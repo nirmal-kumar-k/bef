@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -28,8 +28,7 @@ import {
 } from '@/shared/ui/popover'
 import { Check, CaretUpDown } from '@phosphor-icons/react'
 import { cn, handleEnterToTab } from '@/shared/lib/utils'
-import { customers, type Product } from '@/domains/products/data/mock'
-import { mockGrades } from '@/domains/grade-master/data/mock'
+import { type Product } from '@/domains/products/data/mock'
 import { ImageCarousel } from '@/shared/ui/image-carousel'
 import { useRole } from '@/shared/context/role-context'
 
@@ -46,6 +45,15 @@ export function NewProductModal({
   const [customerOpen, setCustomerOpen] = useState(false)
   const [selectedCustomer, setSelectedCustomer] = useState('')
 
+  // Fetched data from API
+  const [customers, setCustomers] = useState<{ value: string; label: string }[]>([])
+  const [grades, setGrades] = useState<{ id: string; code: string; name: string }[]>([])
+
+  useEffect(() => {
+    if (!isOpen) return
+    fetch('/api/customers').then(r => r.json()).then(data => setCustomers(data)).catch(() => {})
+    fetch('/api/grades').then(r => r.json()).then(data => setGrades(data)).catch(() => {})
+  }, [isOpen])
   const [code, setCode] = useState('')
   const [name, setName] = useState('')
   const [weight, setWeight] = useState<string>('')
@@ -160,6 +168,7 @@ export function NewProductModal({
                           <CommandItem
                             key={customer.value}
                             value={customer.value}
+                            keywords={[customer.label]}
                             onSelect={(currentValue) => {
                               setSelectedCustomer(currentValue === selectedCustomer ? '' : currentValue)
                               setCustomerOpen(false)
@@ -191,7 +200,7 @@ export function NewProductModal({
                     aria-expanded={gradeOpen}
                   >
                   {selectedGrade
-                    ? mockGrades.find((g) => g.code === selectedGrade)?.code
+                    ? grades.find((g) => g.code === selectedGrade)?.code
                     : 'Select grade...'}
                   <CaretUpDown weight="duotone" className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </PopoverTrigger>
@@ -201,10 +210,11 @@ export function NewProductModal({
                     <CommandList>
                       <CommandEmpty className="text-[#8B9FC4] p-4 text-center text-sm">No grade found.</CommandEmpty>
                       <CommandGroup>
-                        {mockGrades.map((grade) => (
+                        {grades.map((grade) => (
                           <CommandItem
                             key={grade.code}
                             value={grade.code}
+                            keywords={[grade.name]}
                             onSelect={(currentValue) => {
                               setSelectedGrade(currentValue === selectedGrade ? '' : currentValue)
                               setGradeOpen(false)
@@ -306,6 +316,7 @@ export function NewProductModal({
                 onImagesChange={setImages}
                 size="small"
                 disabled={false}
+                previewPosition="right"
               />
             </div>
           </div>

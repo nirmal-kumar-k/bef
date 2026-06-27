@@ -218,9 +218,9 @@ export default function ProductionTrackingPage() {
                <p className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider mb-1">Furnace Utilization</p>
                <h3 className="text-2xl font-bold text-[#EEF3FF]">{meltingUtil}%</h3>
             </div>
-            <div className="text-right">
-               <p className="text-[#5A6E90] text-sm">Completed: {totalMeltingCompleted}</p>
-               <p className="text-[#5A6E90] text-sm">Planned: {totalMeltingPlanned}</p>
+            <div className="text-right flex flex-col justify-center gap-1">
+               <h4 className="text-[#EEF3FF] text-sm font-bold uppercase tracking-wider">Completed: {totalMeltingCompleted}</h4>
+               <h4 className="text-[#EEF3FF] text-sm font-bold uppercase tracking-wider">Planned: {totalMeltingPlanned}</h4>
             </div>
          </Card>
          <Card className="bg-[#0C1221] border-[#243050] p-4 flex flex-row items-center justify-between">
@@ -228,9 +228,9 @@ export default function ProductionTrackingPage() {
                <p className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider mb-1">Moulding Line Utilization</p>
                <h3 className="text-2xl font-bold text-[#EEF3FF]">{mouldingUtil}%</h3>
             </div>
-            <div className="text-right">
-               <p className="text-[#5A6E90] text-sm">Completed: {totalMouldingCompleted}</p>
-               <p className="text-[#5A6E90] text-sm">Planned: {totalMouldingPlanned}</p>
+            <div className="text-right flex flex-col justify-center gap-1">
+               <h4 className="text-[#EEF3FF] text-sm font-bold uppercase tracking-wider">Completed: {totalMouldingCompleted}</h4>
+               <h4 className="text-[#EEF3FF] text-sm font-bold uppercase tracking-wider">Planned: {totalMouldingPlanned}</h4>
             </div>
          </Card>
          <Card className="bg-[#0C1221] border-[#243050] p-4 flex flex-row items-center justify-between">
@@ -288,31 +288,31 @@ export default function ProductionTrackingPage() {
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-[#1A263D] border-b border-[#243050]">
-              <th className="px-6 py-4 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider">Order Info</th>
-              <th className="px-6 py-4 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider text-right">Expected/Planned</th>
+              <th className="px-4 py-3 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider w-[25%]">Order Info</th>
+              <th className="px-4 py-3 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider text-center w-[15%]">Expected/Planned</th>
               
               {activeStage === 'readyForDispatch' ? (
                 <>
-                  <th className="px-6 py-4 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider text-right">Dispatch Qty</th>
-                  <th className="px-6 py-4 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider">Logistics (Inv / Veh)</th>
+                  <th className="px-4 py-3 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider text-center w-[15%]">Dispatch Qty</th>
+                  <th className="px-4 py-3 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider text-center w-[25%]">Logistics (Inv / Veh)</th>
                 </>
               ) : activeStage === 'grinding' || activeStage === 'inspection' ? (
                 <>
-                  <th className="px-6 py-4 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider text-right">Good/Accepted</th>
-                  <th className="px-6 py-4 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider text-right">Rework</th>
-                  <th className="px-6 py-4 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider text-right">Rejected</th>
+                  <th className="px-4 py-3 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider text-center w-[10%]">Completed</th>
+                  <th className="px-4 py-3 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider text-center w-[10%]">Rework</th>
+                  <th className="px-4 py-3 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider text-center w-[10%]">Rejected</th>
                 </>
               ) : activeStage === 'knockout' ? (
                 <>
-                  <th className="px-6 py-4 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider text-right">Completed</th>
-                  <th className="px-6 py-4 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider text-right">Damaged (Rej)</th>
+                  <th className="px-4 py-3 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider text-center w-[15%]">Completed</th>
+                  <th className="px-4 py-3 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider text-center w-[15%]">Damaged (Rej)</th>
                 </>
               ) : (
-                <th className="px-6 py-4 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider text-right">Actual Completed</th>
+                <th className="px-4 py-3 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider text-center w-[30%]">Completed</th>
               )}
               
-              <th className="px-6 py-4 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider text-right">Pending</th>
-              <th className="px-6 py-4 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider text-right">Variance</th>
+              <th className="px-4 py-3 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider text-center w-[15%]">Pending</th>
+              <th className="px-4 py-3 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider text-center w-[15%]">Variance</th>
             </tr>
           </thead>
           <tbody>
@@ -336,7 +336,7 @@ export default function ProductionTrackingPage() {
                 
                 return (
                   <tr key={sched.id} className="border-b border-[#243050] hover:bg-[#1A263D]/30 transition-colors">
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3">
                       <div className="font-bold text-[#EEF3FF] cursor-pointer hover:text-[#D4521A] transition-colors" onClick={() => setTimelineOrder(sched.id)}>
                         {sched.customerOrderNo}
                       </div>
@@ -344,90 +344,92 @@ export default function ProductionTrackingPage() {
                       {sched.priority === 'High' && <Badge variant="outline" className="mt-1 bg-red-500/10 text-red-500 border-red-500/20 text-[10px]">High Priority</Badge>}
                     </td>
                     
-                    {/* Expected / Planned */}
-                    <td className="px-6 py-4 text-right">
-                      <span className="font-mono text-[#EEF3FF] text-lg">{stage.planned}</span>
-                      <span className="text-xs text-[#5A6E90] ml-1">{unitLabel}</span>
+                    {/* Planned */}
+                    <td className="px-4 py-3 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        <span className="text-[#EEF3FF] font-bold text-base">{stage.planned}</span>
+                        <span className="text-[#5A6E90] text-xs">{stage.unit}</span>
+                      </div>
                     </td>
                     
-                    {/* Dynamic Inputs Based on Stage */}
+                    {/* Actual Input */}
                     {activeStage === 'readyForDispatch' ? (
                       <>
-                        <td className="px-6 py-4 text-right">
+                        <td className="px-4 py-3 text-center">
                           <Input 
                             type="number" min="0" value={stage.completed.toString()}
                             onChange={(e) => handleStageUpdate(sched.id, 'completed', e.target.value)}
-                            className="w-24 ml-auto h-10 text-right bg-[#050810] border-[#243050] text-[#EEF3FF] focus:border-[#D4521A] text-lg font-mono"
+                            className="w-12 mx-auto h-7 text-xs font-mono font-medium text-center bg-[#EEF3FF]/10 border-transparent text-[#EEF3FF] rounded-md focus:border-[#D4521A] transition-colors px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                           />
                         </td>
-                        <td className="px-6 py-4">
-                          <div className="flex flex-col gap-2">
-                             <Input 
-                               placeholder="Invoice No" value={stage.invoiceNumber || ''}
-                               onChange={(e) => handleStageUpdate(sched.id, 'invoiceNumber', e.target.value)}
-                               className="h-8 bg-[#050810] border-[#243050] text-[#EEF3FF] text-xs"
-                             />
-                             <Input 
-                               placeholder="Vehicle No" value={stage.vehicleNumber || ''}
-                               onChange={(e) => handleStageUpdate(sched.id, 'vehicleNumber', e.target.value)}
-                               className="h-8 bg-[#050810] border-[#243050] text-[#EEF3FF] text-xs"
-                             />
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col items-center gap-2">
+                            <Input 
+                              placeholder="Invoice No." value={stage.invoiceNumber || ''}
+                              onChange={(e) => handleStageUpdate(sched.id, 'invoiceNumber', e.target.value)}
+                              className="w-32 h-8 text-xs bg-[#050810] border-[#243050] text-[#EEF3FF] focus:border-[#D4521A] text-center"
+                            />
+                            <Input 
+                              placeholder="Vehicle No." value={stage.vehicleNumber || ''}
+                              onChange={(e) => handleStageUpdate(sched.id, 'vehicleNumber', e.target.value)}
+                              className="w-32 h-8 text-xs bg-[#050810] border-[#243050] text-[#EEF3FF] focus:border-[#D4521A] text-center"
+                            />
                           </div>
                         </td>
                       </>
                     ) : activeStage === 'grinding' || activeStage === 'inspection' ? (
                       <>
-                        <td className="px-6 py-4 text-right">
+                        <td className="px-4 py-3 text-center">
                           <Input 
                             type="number" min="0" value={stage.completed.toString()}
                             onChange={(e) => handleStageUpdate(sched.id, 'completed', e.target.value)}
-                            className="w-20 ml-auto h-10 text-right bg-[#050810] border-[#243050] text-green-400 focus:border-[#D4521A] text-lg font-mono"
+                            className="w-12 mx-auto h-7 text-xs font-mono font-medium text-center bg-green-500/10 border-transparent text-green-400 rounded-md focus:border-green-500 transition-colors px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                           />
                         </td>
-                        <td className="px-6 py-4 text-right">
+                        <td className="px-4 py-3 text-center">
                           <Input 
                             type="number" min="0" value={(stage.rework || 0).toString()}
                             onChange={(e) => handleStageUpdate(sched.id, 'rework', e.target.value)}
-                            className="w-20 ml-auto h-10 text-right bg-[#050810] border-[#243050] text-yellow-400 focus:border-[#D4521A] text-lg font-mono"
+                            className="w-12 mx-auto h-7 text-xs font-mono font-medium text-center bg-yellow-500/10 border-transparent text-yellow-400 rounded-md focus:border-yellow-500 transition-colors px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                           />
                         </td>
-                        <td className="px-6 py-4 text-right">
+                        <td className="px-4 py-3 text-center">
                           <Input 
                             type="number" min="0" value={(stage.rejected || 0).toString()}
                             onChange={(e) => handleStageUpdate(sched.id, 'rejected', e.target.value)}
-                            className="w-20 ml-auto h-10 text-right bg-[#050810] border-[#243050] text-red-400 focus:border-[#D4521A] text-lg font-mono"
+                            className="w-12 mx-auto h-7 text-xs font-mono font-medium text-center bg-red-500/10 border-transparent text-red-400 rounded-md focus:border-red-500 transition-colors px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                           />
                         </td>
                       </>
                     ) : activeStage === 'knockout' ? (
                       <>
-                        <td className="px-6 py-4 text-right">
+                        <td className="px-4 py-3 text-center">
                           <Input 
                             type="number" min="0" value={stage.completed.toString()}
                             onChange={(e) => handleStageUpdate(sched.id, 'completed', e.target.value)}
-                            className="w-24 ml-auto h-10 text-right bg-[#050810] border-[#243050] text-[#EEF3FF] focus:border-[#D4521A] text-lg font-mono"
+                            className="w-12 mx-auto h-7 text-xs font-mono font-medium text-center bg-[#EEF3FF]/10 border-transparent text-[#EEF3FF] rounded-md focus:border-[#D4521A] transition-colors px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                           />
                         </td>
-                        <td className="px-6 py-4 text-right">
+                        <td className="px-4 py-3 text-center">
                           <Input 
                             type="number" min="0" value={(stage.rejected || 0).toString()}
                             onChange={(e) => handleStageUpdate(sched.id, 'rejected', e.target.value)}
-                            className="w-24 ml-auto h-10 text-right bg-[#050810] border-[#243050] text-red-400 focus:border-[#D4521A] text-lg font-mono"
+                            className="w-12 mx-auto h-7 text-xs font-mono font-medium text-center bg-red-500/10 border-transparent text-red-400 rounded-md focus:border-red-500 transition-colors px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                           />
                         </td>
                       </>
                     ) : (
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-4 py-3 text-center">
                         <Input 
                           type="number" min="0" value={stage.completed.toString()}
                           onChange={(e) => handleStageUpdate(sched.id, 'completed', e.target.value)}
-                          className="w-24 ml-auto h-10 text-right bg-[#050810] border-[#243050] text-[#EEF3FF] focus:border-[#D4521A] text-lg font-mono"
+                          className="w-12 mx-auto h-7 text-xs font-mono font-medium text-center bg-[#EEF3FF]/10 border-transparent text-[#EEF3FF] rounded-md focus:border-[#D4521A] transition-colors px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         />
                       </td>
                     )}
                     
                     {/* Pending */}
-                    <td className="px-6 py-4 text-right font-mono">
+                    <td className="px-4 py-3 text-center font-mono">
                       <span className={cn(
                         "text-lg font-bold",
                         stage.pending === 0 ? "text-green-400" : "text-red-400"
@@ -437,7 +439,7 @@ export default function ProductionTrackingPage() {
                     </td>
                     
                     {/* Variance */}
-                    <td className="px-6 py-4 text-right font-mono">
+                    <td className="px-4 py-3 text-center font-mono">
                       <span className={cn(
                         "text-lg",
                         stage.variance > 0 ? "text-blue-400" : 

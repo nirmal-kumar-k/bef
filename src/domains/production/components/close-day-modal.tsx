@@ -135,7 +135,7 @@ export function CloseDayModal({ isOpen, schedules, date, onClose, onRefresh }: C
         onClick={onClose}
       />
       
-      <div className="fixed inset-0 z-[101] flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-[101] flex items-start justify-center pt-8 pb-4 px-4">
         <div className="bg-[#0C1221] border border-[#243050] rounded-2xl w-full max-w-[1200px] shadow-2xl flex flex-col overflow-hidden max-h-[90vh]">
           {/* Header */}
           <div className="px-6 py-5 flex items-center justify-between shrink-0">
@@ -175,12 +175,12 @@ export function CloseDayModal({ isOpen, schedules, date, onClose, onRefresh }: C
                          <div className="overflow-x-auto">
                             <table className="w-full text-left border-collapse">
                                <thead>
-                                  <tr className="border-b border-[#243050]">
-                                     <th className="py-3 px-4 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider bg-[#0C1221]/50 first:rounded-tl-lg">Process Stage</th>
+                                  <tr>
+                                     <th className="py-3 px-4 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider bg-[#0C1221]/50 first:rounded-tl-lg">Stage</th>
                                      <th className="py-3 px-4 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider bg-[#0C1221]/50 text-center">Planned</th>
                                      <th className="py-3 px-4 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider bg-[#0C1221]/50">Unit</th>
                                      <th className="py-3 px-4 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider bg-[#0C1221]/50 w-40 text-center">Actual Completed</th>
-                                     <th className="py-3 px-4 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider bg-[#0C1221]/50 text-right last:rounded-tr-lg">Variance</th>
+                                     <th className="py-3 px-4 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider bg-[#0C1221]/50 text-center last:rounded-tr-lg">Variance</th>
                                   </tr>
                                </thead>
                                <tbody className="divide-y divide-[#243050]/50">
@@ -196,17 +196,17 @@ export function CloseDayModal({ isOpen, schedules, date, onClose, onRefresh }: C
                                            <td className="py-2.5 px-4 text-[#EEF3FF] font-medium text-sm">{stageName}</td>
                                            <td className="py-2.5 px-4 text-[#EEF3FF] text-sm text-center font-mono">{stage.planned}</td>
                                            <td className="py-2.5 px-4 text-[#5A6E90] text-xs uppercase tracking-wider">{stage.unit}</td>
-                                           <td className="py-2 px-4">
+                                           <td className="py-2 px-4 text-center">
                                               <Input 
                                                  type="number" 
                                                  min="0"
                                                  value={stage.completed?.toString() || '0'}
                                                  onChange={(e) => handleActualChange(idx, stageKey, e.target.value)}
-                                                 className="h-9 w-full text-sm font-mono text-center bg-[#0C1221] border-[#243050] text-[#EEF3FF] focus:border-[#D4521A] transition-colors group-hover:bg-[#050810]" 
+                                                 className="h-7 w-12 mx-auto text-xs font-mono font-medium text-center bg-[#EEF3FF]/10 border-transparent text-[#EEF3FF] rounded-md focus:border-[#D4521A] focus:bg-[#0C1221] transition-colors px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
                                                  placeholder="0"
                                               />
                                            </td>
-                                           <td className="py-2.5 px-4 text-right">
+                                           <td className="py-2.5 px-4 text-center">
                                               {stage.variance !== 0 ? (
                                                 <span className={cn("text-xs font-mono font-medium px-2 py-1 rounded-md", (stage.variance || 0) > 0 ? "bg-blue-500/10 text-blue-400" : "bg-red-500/10 text-red-400")}>
                                                    {(stage.variance || 0) > 0 ? '+' : ''}{stage.variance || 0}

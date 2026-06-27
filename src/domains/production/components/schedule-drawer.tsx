@@ -61,7 +61,7 @@ export function ScheduleDrawer({
 
   const handleAddOrder = () => {
     if (!selectedOrder) return
-    const order = orders.find(o => o.id === selectedOrder)
+    const order = orders.find(o => (o.id || o._id) === selectedOrder)
     if (!order) return
     
     // Check if already in today's schedule
@@ -74,7 +74,7 @@ export function ScheduleDrawer({
     
     order.cart?.forEach((item: any) => {
        const product = products.find((p: any) => p.name === item.productName || p.code === item.product)
-       const pattern = product?.linkedPattern ? patterns.find((p: any) => p.code === product.linkedPattern) : null
+       const pattern = patterns.find((p: any) => p.mappedProducts?.some((mp: any) => mp.name === product?.name))
        
        const cavities = product?.cavities || 1
        const itemPlannedQty = item.quantity || 0
@@ -139,7 +139,7 @@ export function ScheduleDrawer({
        
        s.cart?.forEach((item: any) => {
           const product = products.find((p: any) => p.name === item.productName || p.code === item.product)
-          const pattern = product?.linkedPattern ? patterns.find((p: any) => p.code === product.linkedPattern) : null
+          const pattern = patterns.find((p: any) => p.mappedProducts?.some((mp: any) => mp.name === product?.name))
           
           const cavities = product?.cavities || 1
           const mappedProduct = pattern?.mappedProducts?.find((mp: any) => mp.name === product?.name)
@@ -230,12 +230,16 @@ export function ScheduleDrawer({
         onClick={onClose}
       />
       
-      <div 
-        className={cn(
-          "fixed inset-y-0 right-0 w-[800px] max-w-[90vw] bg-[#050810] border-l border-[#243050] z-[101] shadow-2xl transition-transform duration-300 ease-out flex flex-col",
-          isOpen ? "translate-x-0" : "translate-x-full"
-        )}
-      >
+      <div className={cn(
+        "fixed inset-0 z-[101] flex items-center justify-center p-4 transition-opacity duration-300",
+        isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+      )}>
+        <div 
+          className={cn(
+            "bg-[#050810] border border-[#243050] rounded-2xl w-full max-w-[900px] shadow-2xl flex flex-col overflow-hidden max-h-[90vh] transition-transform duration-300 ease-out",
+            isOpen ? "scale-100 translate-y-0" : "scale-95 translate-y-4"
+          )}
+        >
         <div className="flex-1 overflow-y-auto">
           {/* Header */}
           <div className="sticky top-0 z-10 bg-[#0C1221]/95 backdrop-blur-md border-b border-[#243050] px-6 py-5 flex items-center justify-between">
@@ -283,8 +287,8 @@ export function ScheduleDrawer({
                   </SelectTrigger>
                   <SelectContent className="bg-[#0C1221] border-[#243050]">
                     {validOrders.map(o => (
-                      <SelectItem key={o.id} value={o.id} className="text-[#EEF3FF] hover:bg-[#1A263D] focus:bg-[#1A263D] focus:text-[#EEF3FF] cursor-pointer">
-                        {o.customerOrderNo} - {o.customer}
+                      <SelectItem key={String(o.id || o._id)} value={String(o.id || o._id)} className="text-[#EEF3FF] hover:bg-[#1A263D] focus:bg-[#1A263D] focus:text-[#EEF3FF] cursor-pointer">
+                        {`${o.customerOrderNo} - ${o.customer}`}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -327,8 +331,8 @@ export function ScheduleDrawer({
                                     type="number" 
                                     value={s.stages[stageKey].planned || ''}
                                     onChange={(e) => updateStagePlanned(idx, stageKey, e.target.value)}
-                                    className="h-8 bg-[#0C1221] border-[#243050] text-[#EEF3FF]" 
-                                    placeholder="Qty"
+                                    className="h-8 w-16 text-sm font-mono font-medium text-center bg-[#EEF3FF]/10 border-transparent text-[#EEF3FF] rounded-md focus:border-[#D4521A] focus:bg-[#0C1221] transition-colors px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
+                                    placeholder="0"
                                  />
                                  <span className="text-[#5A6E90] text-xs w-10">{s.stages[stageKey].unit}</span>
                               </div>
@@ -350,6 +354,7 @@ export function ScheduleDrawer({
           <Button onClick={handleSave} disabled={isSaving} className="bg-[#EEF3FF] text-[#0C1221] hover:bg-white min-w-[120px]">
             {isSaving ? 'Saving...' : 'Save Day Plan'}
           </Button>
+        </div>
         </div>
       </div>
     </>

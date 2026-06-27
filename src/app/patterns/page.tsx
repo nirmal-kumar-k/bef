@@ -21,7 +21,8 @@ import { Check, CaretUpDown, Funnel, Plus, X } from '@phosphor-icons/react'
 import { cn } from '@/shared/lib/utils'
 import { NewPatternModal } from '@/domains/patterns/components/new-pattern-modal'
 import { ProductMappingModal } from '@/domains/patterns/components/product-mapping-modal'
-import { customers, type Pattern, type FilterCategory } from '@/domains/patterns/data/mock'
+import { ViewPatternModal } from '@/domains/patterns/components/view-pattern-modal'
+import { type Pattern, type FilterCategory } from '@/domains/patterns/data/mock'
 import { useRole } from '@/shared/context/role-context'
 import { ShieldWarning } from '@phosphor-icons/react'
 
@@ -31,10 +32,18 @@ export default function PatternsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isMappingModalOpen, setIsMappingModalOpen] = useState(false)
   const [mappingPatternId, setMappingPatternId] = useState<string | null>(null)
+  const [viewPattern, setViewPattern] = useState<any | null>(null)
   const [activeCategory, setActiveCategory] = useState<FilterCategory>('All')
   const [selectedCustomer, setSelectedCustomer] = useState('')
   const [customerOpen, setCustomerOpen] = useState(false)
   const { role } = useRole()
+
+  // Fetched data from API
+  const [customers, setCustomers] = useState<{ value: string; label: string }[]>([])
+
+  useEffect(() => {
+    fetch('/api/customers').then(r => r.json()).then(data => setCustomers(data)).catch(() => {})
+  }, [])
 
 
   const fetchPatterns = useCallback(async () => {
@@ -68,6 +77,40 @@ export default function PatternsPage() {
       }
     } catch (err) {
       console.error('Failed to save pattern:', err)
+    }
+  }
+
+  const handleSaveMapping = async (mappedProducts: any[]) => {
+    if (!mappingPatternId) return
+    try {
+      const res = await fetch(`/api/patterns/${mappingPatternId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mappedProducts }),
+      })
+      if (res.ok) {
+        await fetchPatterns()
+        setIsMappingModalOpen(false)
+      }
+    } catch (err) {
+      console.error('Failed to save mapping:', err)
+    }
+  }
+
+  const handleSavePatternEdit = async (updated: any) => {
+    if (!updated?.id) return
+    try {
+      const res = await fetch(`/api/patterns/${updated.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated),
+      })
+      if (res.ok) {
+        await fetchPatterns()
+        setViewPattern(null)
+      }
+    } catch (err) {
+      console.error('Failed to update pattern:', err)
     }
   }
 
@@ -201,6 +244,7 @@ export default function PatternsPage() {
               return (
                 <Card
                   key={pattern.id}
+                  onClick={() => setViewPattern(pattern)}
                   className="bg-[#0C1221] border border-white/[0.06] rounded-[14px] transition-all duration-150 hover:-translate-y-[2px] hover:shadow-[0_8px_24px_rgba(0,0,0,0.3)] hover:border-white/[0.1] overflow-hidden flex flex-col cursor-pointer"
                 >
                   <div className="p-5 flex-1 space-y-4">
@@ -252,7 +296,8 @@ export default function PatternsPage() {
                   <div className="p-4 bg-[#0C1221]/50 border-t border-sidebar-border">
                     <Button
                       variant="outline"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation()
                         setMappingPatternId(pattern.id)
                         setIsMappingModalOpen(true)
                       }}
@@ -284,6 +329,15 @@ export default function PatternsPage() {
         isOpen={isMappingModalOpen}
         onClose={() => setIsMappingModalOpen(false)}
         patternId={mappingPatternId}
+        onSave={handleSaveMapping}
+        initialMappedProducts={patterns.find(p => p.id === mappingPatternId)?.mappedProducts || []}
+        coreBoxes={patterns.find(p => p.id === mappingPatternId)?.sharedCoreBoxes || []}
+      />
+      <ViewPatternModal
+        pattern={viewPattern}
+        isOpen={!!viewPattern}
+        onClose={() => setViewPattern(null)}
+        onSave={handleSavePatternEdit}
       />
     </div>
   )
