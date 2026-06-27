@@ -106,12 +106,14 @@ export function MouldPlanningModal({
           ? Math.max(...Object.values(workers[code])) 
           : 1
           
+        const existingPlan = dailyPlans.find(p => p.orderId === selectedOrder && p.stage === 'Mould' && p.patternRef === code)
+          
         plansToSave.push({
           orderId: selectedOrder,
           itemId: backlog?.itemId || `${selectedOrder}-0`,
           stage: 'Mould',
           patternRef: code,
-          quantityScheduled: totalScheduled,
+          quantityScheduled: totalScheduled || existingPlan?.quantityScheduled || 0,
           laborersAssigned: maxWorkers,
           workersAssigned: maxWorkers,
           hourlyTargets: hours,
@@ -131,7 +133,12 @@ export function MouldPlanningModal({
   
   const getColTotal = (code: string) => {
     const hours = hourlyMatrix[code] || {}
-    return Object.values(hours).reduce((sum, val) => sum + (val || 0), 0)
+    const sum = Object.values(hours).reduce((sum, val) => sum + (val || 0), 0)
+    if (sum === 0) {
+      const existingPlan = dailyPlans.find(p => p.orderId === selectedOrder && p.stage === 'Mould' && p.patternRef === code)
+      return existingPlan?.quantityScheduled || 0
+    }
+    return sum
   }
 
   const getRowTotal = (timeSlot: string) => {
@@ -144,7 +151,7 @@ export function MouldPlanningModal({
 
   // Hourly input change
   const handleHourlyChange = (code: string, timeSlot: string, value: string) => {
-    const numValue = value === '' ? 0 : parseInt(value, 10)
+    const numValue = value === '' ? undefined : parseInt(value, 10)
     setHourlyMatrix(prev => ({
       ...prev,
       [code]: {
@@ -319,10 +326,12 @@ export function MouldPlanningModal({
                               <Input
                                 type="number"
                                 min="0"
-                                value={val || ''}
+                                value={val === undefined ? 0 : val}
                                 onChange={e => handleHourlyChange(cb.patternRef!, slot, e.target.value)}
-                                className="w-20 h-9 mx-auto bg-[#0C1221] border-transparent hover:border-[#243050] focus:border-[#4285F4] text-[#EEF3FF] font-mono text-center px-2 text-sm shadow-inner"
-                                placeholder="-"
+                                className={cn(
+                                  "w-20 h-9 mx-auto bg-[#0C1221] font-mono text-center px-2 text-sm shadow-inner",
+                                  (val === undefined || val === 0) ? "border-[#243050]/50 text-[#5A6E90]" : "border-[#243050] text-[#EEF3FF]"
+                                )}
                               />
                             </td>,
                             <td key={`${cb.patternRef}-assign`} className="px-2 py-2 text-center">
@@ -430,8 +439,11 @@ export function MouldPlanningModal({
                             min="0"
                             value={act === undefined ? '' : act}
                             onChange={e => setActuals(prev => ({ ...prev, [cb.patternRef!]: e.target.value === '' ? undefined : Number(e.target.value) })) as any}
-                            className="h-8 bg-[#050810] border-[#243050] text-[#EEF3FF] font-mono px-2 text-sm w-full"
-                            placeholder="0"
+                            className={cn(
+                              "h-8 bg-[#050810] text-[#EEF3FF] font-mono px-2 text-sm w-full",
+                              act === undefined ? "border-red-500/50 focus:border-red-500" : "border-[#243050]"
+                            )}
+                            placeholder="Required"
                           />
                         </div>
                         <div className="w-24 text-right ml-auto">

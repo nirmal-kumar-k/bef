@@ -589,15 +589,14 @@ export function NewPatternModal({
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="flex items-center gap-1 text-[#EEF3FF]">Good Cast Wt (kg) <Lock weight="duotone" className="h-3 w-3 text-[#5A6E90]" /></Label>
+                  <Label className="flex items-center gap-1 text-[#EEF3FF]">Good Cast Wt (kg)</Label>
                   <Input
                     type="number"
                     min="0"
-                    min={0}
                     value={goodCastingWeight}
-                    readOnly
+                    onChange={(e) => setGoodCastingWeight(e.target.value === '' ? '' : Number(e.target.value))}
                     placeholder="0.0"
-                    className="bg-[#0C1221]/50 border-[#243050] text-[#5A6E90] cursor-not-allowed"
+                    className="bg-[#0C1221] border-[#243050] text-[#EEF3FF]"
                   />
                 </div>
                 <div className="space-y-2">

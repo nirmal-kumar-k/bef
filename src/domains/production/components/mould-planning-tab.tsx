@@ -15,6 +15,8 @@ interface MouldPlanningTabProps {
 export function MouldPlanningTab({ mouldBacklog, patterns, openOrders, dailyPlans, onSaveDayPlan }: MouldPlanningTabProps) {
   const [viewMode, setViewMode] = useState<'table' | 'calendar'>('table')
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const [draggedType, setDraggedType] = useState<'planned' | 'pending' | null>(null)
+  const [draggedPlans, setDraggedPlans] = useState<any[] | null>(null)
 
   const SHIFT_HOURS = 12.5 // 8:00 AM to 8:30 PM
 
@@ -97,12 +99,43 @@ export function MouldPlanningTab({ mouldBacklog, patterns, openOrders, dailyPlan
               const sum = dayPlans.reduce((s, p) => s + p.quantityScheduled, 0)
               const hasPending = mouldBacklog.some(b => (b.totalRequired - b.totalScheduled) > 0)
 
+              const handleDrop = (e: React.DragEvent) => {
+                e.preventDefault()
+                if (draggedType === 'planned' && draggedPlans && draggedPlans.length > 0 && draggedPlans[0].date !== dateStr) {
+                  const updates = draggedPlans.map(p => ({ ...p, date: dateStr }))
+                  onSaveDayPlan(dateStr, updates)
+                } else if (draggedType === 'pending') {
+                  // Schedule all pending backlog to this date
+                  const newPlans: any[] = []
+                  mouldBacklog.forEach(b => {
+                    const remaining = b.totalRequired - b.totalScheduled
+                    if (remaining > 0) {
+                      newPlans.push({
+                        stage: 'Mould',
+                        date: dateStr,
+                        itemId: b.itemId,
+                        productName: b.productName,
+                        patternRef: b.patternRef,
+                        quantityScheduled: remaining
+                      })
+                    }
+                  })
+                  if (newPlans.length > 0) {
+                    onSaveDayPlan(dateStr, newPlans)
+                  }
+                }
+                setDraggedType(null)
+                setDraggedPlans(null)
+              }
+
               return (
                 <div 
                   key={dateStr}
                   onClick={() => setSelectedDate(dateStr)}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={handleDrop}
                   className={cn(
-                    "bg-[#050810] p-2 hover:bg-[#0C1221] transition-colors cursor-pointer flex flex-col min-h-[120px]",
+                    "bg-[#050810] p-2 hover:bg-[#0C1221] transition-colors cursor-pointer flex flex-col min-h-[120px] border-[1px] border-transparent hover:border-[#D4521A]/20",
                     !isCurrentMonth && "opacity-50"
                   )}
                 >
@@ -117,13 +150,28 @@ export function MouldPlanningTab({ mouldBacklog, patterns, openOrders, dailyPlan
                   
                   <div className="flex-1 space-y-1">
                     {sum > 0 && (
-                      <div className="px-2 py-1 text-[10px] font-bold uppercase rounded-md bg-[#D4521A]/10 text-[#D4521A] border border-[#D4521A]/20 truncate">
+                      <div 
+                        draggable
+                        onDragStart={(e) => {
+                          e.stopPropagation()
+                          setDraggedType('planned')
+                          setDraggedPlans(dayPlans)
+                        }}
+                        className="px-2 py-1 text-[10px] font-bold uppercase rounded-md bg-[#D4521A]/10 text-[#D4521A] border border-[#D4521A]/20 truncate cursor-grab shadow-md"
+                      >
                         Moulds {sum}
                       </div>
                     )}
                     {isToday && hasPending && (
-                      <div className="px-2 py-1 text-[10px] font-bold uppercase rounded-md bg-red-500/10 text-red-500 border border-red-500/20 mt-2 truncate">
-                        Pending
+                      <div 
+                        draggable
+                        onDragStart={(e) => {
+                          e.stopPropagation()
+                          setDraggedType('pending')
+                        }}
+                        className="px-2 py-1 text-[10px] font-bold uppercase rounded-md bg-red-500/10 text-red-500 border border-red-500/20 mt-2 truncate cursor-grab shadow-md"
+                      >
+                        Pending Backlog
                       </div>
                     )}
                   </div>

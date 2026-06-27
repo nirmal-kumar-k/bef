@@ -133,7 +133,7 @@ export default function ProductionPlanningPage() {
             await fetch(`/api/production-plans/${id}`, {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ ...plan, date })
+              body: JSON.stringify({ ...plan, date: plan.date || date })
             })
           }
         } else {
@@ -141,7 +141,7 @@ export default function ProductionPlanningPage() {
           await fetch('/api/production-plans', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ...plan, date })
+            body: JSON.stringify({ ...plan, date: plan.date || date })
           })
         }
       }

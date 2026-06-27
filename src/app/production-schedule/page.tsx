@@ -88,15 +88,20 @@ export default function ProductionSchedulePage() {
 
   // Aggregate schedules by date for the calendar cells
   const schedulesByDate = useMemo(() => {
-    const map = new Map<string, { core: number, melting: number, moulding: number, hasPending: boolean }>()
+    const map = new Map<string, { core: number, melting: number, moulding: number, coreDone: number, meltingDone: number, mouldingDone: number, hasPending: boolean }>()
     schedules.forEach(s => {
       if (!map.has(s.date)) {
-        map.set(s.date, { core: 0, melting: 0, moulding: 0, hasPending: false })
+        map.set(s.date, { core: 0, melting: 0, moulding: 0, coreDone: 0, meltingDone: 0, mouldingDone: 0, hasPending: false })
       }
       const counts = map.get(s.date)!
       counts.core += s.stages?.core?.planned || 0
       counts.melting += s.stages?.melting?.planned || 0
       counts.moulding += s.stages?.moulding?.planned || 0
+      
+      counts.coreDone += s.stages?.core?.completed || 0
+      counts.meltingDone += s.stages?.melting?.completed || 0
+      counts.mouldingDone += s.stages?.moulding?.completed || 0
+
       if (s.remarks?.includes('Carried forward')) {
          counts.hasPending = true
       }
@@ -219,17 +224,17 @@ export default function ProductionSchedulePage() {
                     )}
                     {counts?.core ? (
                       <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20 text-[11px] font-medium justify-center w-full rounded-md py-0.5">
-                        Core {counts.core}
+                        Core {counts.coreDone} / {counts.core}
                       </Badge>
                     ) : null}
                     {counts?.melting ? (
                       <Badge variant="outline" className={cn("text-[11px] font-medium justify-center w-full rounded-md py-0.5", isMeltingOverload ? "bg-red-500/20 text-red-400 border-red-500/30" : "bg-orange-500/10 text-orange-500 border-orange-500/20")}>
-                        Melting {counts.melting}
+                        Melting {counts.meltingDone} / {counts.melting}
                       </Badge>
                     ) : null}
                     {counts?.moulding ? (
                       <Badge variant="outline" className={cn("text-[11px] font-medium justify-center w-full rounded-md py-0.5", isMouldingOverload ? "bg-red-500/20 text-red-400 border-red-500/30" : "bg-blue-500/10 text-blue-500 border-blue-500/20")}>
-                        Moulding {counts.moulding}
+                        Moulding {counts.mouldingDone} / {counts.moulding}
                       </Badge>
                     ) : null}
                   </div>

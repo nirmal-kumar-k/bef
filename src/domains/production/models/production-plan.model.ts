@@ -8,6 +8,28 @@ export interface IProductionPlan extends Document {
   coreBoxCode?: string // Only for 'Core' stage
   quantityScheduled: number
   laborersAssigned: number
+  
+  // Melt-specific fields
+  heatNo?: string
+  grade?: string
+  meltWeight?: number
+  actualQuantity?: number
+  actuals?: {
+    pigIron?: number
+    scrap?: number
+    feMn?: number
+    carburizer?: number
+  }
+  isPending?: boolean
+  plannedCharge?: {
+    pigIron?: number
+    scrap?: number
+    feMn?: number
+    carburizer?: number
+  }
+  startTime?: string
+  endTime?: string
+
   createdAt: Date
   updatedAt: Date
 }
@@ -20,12 +42,37 @@ const ProductionPlanSchema = new Schema<IProductionPlan>(
     stage: { type: String, enum: ['Core', 'Mould', 'Melt'], required: true },
     coreBoxCode: { type: String, default: '' },
     quantityScheduled: { type: Number, required: true, min: 0 },
-    laborersAssigned: { type: Number, required: true, min: 1 },
+    laborersAssigned: { type: Number, default: 1 },
+    
+    // Melt-specific fields
+    heatNo: { type: String },
+    grade: { type: String },
+    meltWeight: { type: Number },
+    actualQuantity: { type: Number },
+    actuals: {
+      pigIron: Number,
+      scrap: Number,
+      feMn: Number,
+      carburizer: Number
+    },
+    isPending: { type: Boolean, default: false },
+    plannedCharge: {
+      pigIron: Number,
+      scrap: Number,
+      feMn: Number,
+      carburizer: Number
+    },
+    startTime: { type: String },
+    endTime: { type: String }
   },
   { timestamps: true }
 )
 
-const ProductionPlan: Model<IProductionPlan> =
-  mongoose.models.ProductionPlan || mongoose.model<IProductionPlan>('ProductionPlan', ProductionPlanSchema)
+if (mongoose.models.ProductionPlan) {
+  delete mongoose.models.ProductionPlan;
+}
+
+const ProductionPlan: Model<IProductionPlan> = mongoose.model<IProductionPlan>('ProductionPlan', ProductionPlanSchema)
 
 export default ProductionPlan
+
