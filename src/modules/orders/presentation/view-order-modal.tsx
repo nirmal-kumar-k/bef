@@ -8,7 +8,7 @@ import { cn } from '@/shared/lib/utils'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { Download, FilePdf, Printer } from '@phosphor-icons/react'
-import { statusColors, type Order } from '@/domains/orders/data/mock'
+import { statusColors, type Order } from '@/modules/orders/domain/order.types'
 import { useRole } from '@/shared/context/role-context'
 import {
   Select,

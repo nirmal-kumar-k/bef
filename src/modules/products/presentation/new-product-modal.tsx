@@ -26,25 +26,22 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/shared/ui/popover'
-import { Check, CaretUpDown, Lock } from '@phosphor-icons/react'
+import { Check, CaretUpDown } from '@phosphor-icons/react'
 import { cn, handleEnterToTab } from '@/shared/lib/utils'
-import { type Product } from '@/domains/products/data/mock'
+import { type Product } from '@/modules/products/domain/product.types'
 import { ImageCarousel } from '@/shared/ui/image-carousel'
 import { useRole } from '@/shared/context/role-context'
 
-export function ViewProductModal({
-  product,
+export function NewProductModal({
   isOpen,
   onClose,
   onSave,
 }: {
-  product: Product | null
   isOpen: boolean
   onClose: () => void
-  onSave?: (product: Product) => void
+  onSave: (product: Omit<Product, 'id'>) => void
 }) {
   const { role } = useRole()
-  
   const [customerOpen, setCustomerOpen] = useState(false)
   const [selectedCustomer, setSelectedCustomer] = useState('')
 
@@ -52,6 +49,11 @@ export function ViewProductModal({
   const [customers, setCustomers] = useState<{ value: string; label: string }[]>([])
   const [grades, setGrades] = useState<{ id: string; code: string; name: string }[]>([])
 
+  useEffect(() => {
+    if (!isOpen) return
+    fetch('/api/customers').then(r => r.json()).then(data => setCustomers(data)).catch(() => {})
+    fetch('/api/grades').then(r => r.json()).then(data => setGrades(data)).catch(() => {})
+  }, [isOpen])
   const [code, setCode] = useState('')
   const [name, setName] = useState('')
   const [weight, setWeight] = useState<string>('')
@@ -66,50 +68,6 @@ export function ViewProductModal({
   const [remarks, setRemarks] = useState('')
   const [images, setImages] = useState<string[]>([])
 
-  const [linkedPattern, setLinkedPattern] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!isOpen) return
-    fetch('/api/customers').then(r => r.json()).then(data => setCustomers(data)).catch(() => {})
-    fetch('/api/grades').then(r => r.json()).then(data => setGrades(data)).catch(() => {})
-  }, [isOpen])
-
-  useEffect(() => {
-    if (product && isOpen) {
-      setCode(product.code || '')
-      setName(product.name || '')
-      setWeight(product.weight?.replace(' kg', '') || '')
-      
-      const c = customers.find(x => x.label === product.customer)
-      setSelectedCustomer(c?.value || '')
-
-      setSelectedGrade(product.grade || '')
-      setRemarks(product.remarks || '')
-      setImages(product.images || [])
-
-      if (product.ratePerKg !== undefined) {
-        setRatePerKgToggle(true)
-        setRatePerKg(product.ratePerKg.toString())
-        setManualUnitPrice('')
-      } else {
-        setRatePerKgToggle(false)
-        setRatePerKg('')
-        setManualUnitPrice(product.unitPrice?.toString() || '')
-      }
-
-      // Fetch linked pattern from DB
-      fetch('/api/patterns')
-        .then(res => res.json())
-        .then(patterns => {
-          const matched = patterns.find((p: any) => 
-            p.mappedProducts?.some((mp: any) => mp.name === product.name)
-          )
-          setLinkedPattern(matched ? `${matched.code} - ${matched.name}` : null)
-        })
-        .catch(err => console.error("Failed to load linked patterns", err))
-    }
-  }, [product, isOpen])
-
   // Auto-calculated Unit Price when toggle is ON
   const calculatedUnitPrice = useMemo(() => {
     const w = Number(weight)
@@ -120,39 +78,56 @@ export function ViewProductModal({
     return '0.00'
   }, [weight, ratePerKg])
 
-  const handleSaveClick = () => {
-    if (!product || !code.trim() || !name.trim() || !onSave) return
+  const resetForm = () => {
+    setCode('')
+    setName('')
+    setWeight('')
+    setSelectedCustomer('')
+    setSelectedGrade('')
+    setRatePerKgToggle(true)
+    setRatePerKg('')
+    setManualUnitPrice('')
+    setRemarks('')
+    setImages([])
+  }
+
+  const handleSave = () => {
+    if (!code.trim() || !name.trim()) return
 
     const customerLabel = customers.find(c => c.value === selectedCustomer)?.label || ''
     const w = Number(weight) || 0
 
     onSave({
-      ...product,
       code: code.trim(),
       name: name.trim(),
       customer: customerLabel,
       grade: selectedGrade || undefined,
       weight: w > 0 ? `${w} kg` : '-',
+      cavities: 0,
       ratePerKg: ratePerKgToggle ? (Number(ratePerKg) || undefined) : undefined,
       unitPrice: ratePerKgToggle ? Number(calculatedUnitPrice) : (Number(manualUnitPrice) || undefined),
       remarks: remarks.trim() || undefined,
       images: images.length > 0 ? images : undefined,
     })
+    resetForm()
   }
 
-  if (!product) return null
+  const handleClose = () => {
+    resetForm()
+    onClose()
+  }
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent 
         className="w-full sm:max-w-4xl bg-[#050810] border-[#243050] text-foreground max-h-[90vh] overflow-hidden flex flex-col"
         onKeyDown={handleEnterToTab}
       >
         <DialogHeader className="shrink-0">
           <DialogTitle className="text-2xl font-bold font-heading text-[#EEF3FF]">
-            Edit Product
+            Add Product
           </DialogTitle>
-          <p className="text-sm text-[#5A6E90] mt-1">Manage details for {product.code}</p>
+          <p className="text-sm text-[#5A6E90] mt-1">Link product to a customer with weight details</p>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto px-1">
@@ -169,13 +144,13 @@ export function ViewProductModal({
               </div>
             </div>
 
-            {/* Row 2: Customer | Grade */}
+            {/* Row 2: Customer | Weight (kg) */}
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider">Customer</Label>
                 <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
                   <PopoverTrigger
-                    className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-[#EEF3FF] bg-[#1A263D] hover:bg-[#1A263D] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#D4521A] transition-colors"
+                    className="w-full flex justify-between items-center h-12 py-2.5 px-4 border border-[#243050] rounded-lg shadow-sm text-sm font-medium text-[#EEF3FF] bg-[#0C1221] hover:bg-[#1A263D] transition-colors"
                     aria-expanded={customerOpen}
                   >
                   {selectedCustomer
@@ -289,7 +264,7 @@ export function ViewProductModal({
               </div>
             </div>
 
-            {/* Row 4: Rate per kg Toggle & Pricing logic */}
+            {/* Row 3: Rate per kg Toggle & Pricing logic */}
             <div className="grid grid-cols-2 gap-6 items-end bg-[#0C1221]/40 p-5 rounded-xl border border-[#243050]">
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -312,9 +287,9 @@ export function ViewProductModal({
                     className="h-12 px-4 rounded-lg bg-[#0C1221] border-[#243050] text-[#EEF3FF] text-[15px] disabled:opacity-50 disabled:cursor-not-allowed"
                   />
               </div>
-              </div>
+            </div>
 
-              <div className="space-y-2">
+            <div className="space-y-2">
                 <Label className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider">Unit Price</Label>
                 {ratePerKgToggle ? (
                   <div className="h-12 px-4 flex items-center bg-[#1A263D]/50 border border-[#243050] rounded-lg text-[#C4D2EE] font-mono text-[15px]">
@@ -333,18 +308,8 @@ export function ViewProductModal({
               </div>
             </div>
 
-            {/* Row 5: Linked Pattern (Read-only) */}
-            <div className="space-y-2">
-              <Label className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
-                Linked Pattern <Lock className="w-3 h-3" />
-              </Label>
-              <div className="h-12 px-4 flex items-center bg-[#1A263D]/30 border border-[#243050] rounded-lg text-[#8B9FC4] text-[15px] cursor-not-allowed">
-                {linkedPattern ? linkedPattern : 'No pattern linked yet'}
-              </div>
-            </div>
-
-            {/* Row 6: Product Image */}
-            <div className="space-y-2 pb-2 mt-4">
+            {/* Row 5: Product Image */}
+            <div className="space-y-2 pb-2">
               <Label className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider mb-2 block">Product Images</Label>
               <ImageCarousel 
                 images={images} 
@@ -358,14 +323,12 @@ export function ViewProductModal({
         </div>
 
         <DialogFooter className="mt-2 shrink-0 border-t border-[#243050] pt-4">
-          <Button variant="ghost" onClick={onClose} className="text-[#8B9FC4] hover:text-[#EEF3FF] hover:bg-[#1C2840]">
-            Close
+          <Button variant="ghost" onClick={handleClose} className="text-[#8B9FC4] hover:text-[#EEF3FF] hover:bg-[#1C2840]">
+            Cancel
           </Button>
-          {onSave && (
-            <Button onClick={handleSaveClick} disabled={!code.trim() || !name.trim()} className="bg-[#D4521A] hover:bg-[#D4521A] text-white disabled:opacity-50">
-              Save Changes
-            </Button>
-          )}
+          <Button onClick={handleSave} disabled={!code.trim() || !name.trim()} className="bg-[#D4521A] hover:bg-[#D4521A] text-white disabled:opacity-50">
+            Save Product
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

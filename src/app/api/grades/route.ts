@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/infrastructure/db'
-import Grade from '@/domains/grade-master/models/grade.model'
+import Grade from '@/modules/grade-master/domain/grade.model'
 
 export async function GET() {
   try {

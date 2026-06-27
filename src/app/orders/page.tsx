@@ -5,9 +5,9 @@ import { Plus } from '@phosphor-icons/react'
 import { Button } from '@/shared/ui/button'
 import { Badge } from '@/shared/ui/badge'
 import { cn } from '@/shared/lib/utils'
-import { NewOrderModal } from '@/domains/orders/components/new-order-modal'
-import { ViewOrderModal } from '@/domains/orders/components/view-order-modal'
-import { categories, statusColors, statusAccentColors, type Order } from '@/domains/orders/data/mock'
+import { NewOrderModal } from '@/modules/orders/presentation/new-order-modal'
+import { ViewOrderModal } from '@/modules/orders/presentation/view-order-modal'
+import { categories, statusColors, statusAccentColors, type Order } from '@/modules/orders/domain/order.types'
 import { useRole } from '@/shared/context/role-context'
 
 export default function OrdersPage() {

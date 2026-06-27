@@ -5,7 +5,7 @@ import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { cn } from '@/shared/lib/utils'
-import { BacklogItem } from '@/domains/production/components/daily-planning-modal'
+import { BacklogItem } from '@/modules/production/presentation/daily-planning-modal'
 
 interface PlanningDrawerProps {
   isOpen: boolean

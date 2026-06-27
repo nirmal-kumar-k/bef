@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/infrastructure/db'
-import ProductionPlan from '@/domains/production/models/production-plan.model'
+import ProductionPlan from '@/modules/production/domain/production-plan.model'
 
 export async function PUT(
   request: NextRequest,

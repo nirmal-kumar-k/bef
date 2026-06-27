@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Switch } from '@/shared/ui/switch'
 import { Label } from '@/shared/ui/label'
 import { Badge } from '@/shared/ui/badge'
-import { ScheduleDrawer } from '@/domains/production/components/schedule-drawer'
+import { ScheduleDrawer } from '@/modules/production/presentation/schedule-drawer'
 import { cn } from '@/shared/lib/utils'
 import { useRole } from '@/shared/context/role-context'
 

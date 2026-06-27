@@ -7,7 +7,7 @@ import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
 import { Textarea } from '@/shared/ui/textarea'
 import { handleEnterToTab } from '@/shared/lib/utils'
-import type { Grade } from '../data/mock'
+import type { Grade } from '../domain/grade.types'
 
 interface GradeModalProps {
   isOpen: boolean

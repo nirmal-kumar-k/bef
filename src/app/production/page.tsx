@@ -8,8 +8,8 @@ import { Badge } from '@/shared/ui/badge'
 import { cn } from '@/shared/lib/utils'
 import { CheckCircle, ClockCounterClockwise, ArrowRight, MagnifyingGlass, Funnel, CalendarCheck } from '@phosphor-icons/react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { CloseDayModal } from '@/domains/production/components/close-day-modal'
-import { OrderTimelineDrawer } from '@/domains/production/components/order-timeline-drawer'
+import { CloseDayModal } from '@/modules/production/presentation/close-day-modal'
+import { OrderTimelineDrawer } from '@/modules/production/presentation/order-timeline-drawer'
 
 export interface IStageData {
   planned: number

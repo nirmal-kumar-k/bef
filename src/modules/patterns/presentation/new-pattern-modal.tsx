@@ -37,7 +37,7 @@ import { ImageCarousel } from '@/shared/ui/image-carousel'
 import { Check, CaretUpDown, CaretLeft, CaretRight, Image as ImageIcon, Lock, Plus, Trash, X, PencilSimple } from '@phosphor-icons/react'
 import { ConfirmDeleteDialog } from '@/shared/ui/confirm-delete-dialog'
 import { cn, handleEnterToTab } from '@/shared/lib/utils'
-import { type Pattern } from '@/domains/patterns/data/mock'
+import { type Pattern } from '@/modules/patterns/domain/pattern.types'
 
 interface CoreBox {
   id: string

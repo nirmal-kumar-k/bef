@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/infrastructure/db'
-import Product from '@/domains/products/models/product.model'
+import Product from '@/modules/products/domain/product.model'
 
 export async function GET() {
   try {

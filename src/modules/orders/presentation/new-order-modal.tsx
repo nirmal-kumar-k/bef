@@ -35,7 +35,7 @@ import {
 } from '@/shared/ui/popover'
 import { Check, CaretUpDown } from '@phosphor-icons/react'
 import { cn, handleEnterToTab } from '@/shared/lib/utils'
-import { type Order } from '@/domains/orders/data/mock'
+import { type Order } from '@/modules/orders/domain/order.types'
 import { useRole } from '@/shared/context/role-context'
 
 interface CartItem {

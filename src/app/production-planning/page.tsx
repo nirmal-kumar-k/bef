@@ -8,11 +8,11 @@ import { Label } from '@/shared/ui/label'
 import { useRole } from '@/shared/context/role-context'
 import { cn } from '@/shared/lib/utils'
 
-import { BacklogItem } from '@/domains/production/components/daily-planning-modal'
-import { CorePlanningTab } from '@/domains/production/components/core-planning-tab'
-import { MouldPlanningTab } from '@/domains/production/components/mould-planning-tab'
-import { MeltPlanningTab } from '@/domains/production/components/melt-planning-tab'
-import { PourPlanningTab } from '@/domains/production/components/pour-planning-tab'
+import { BacklogItem } from '@/modules/production/presentation/daily-planning-modal'
+import { CorePlanningTab } from '@/modules/production/presentation/core-planning-tab'
+import { MouldPlanningTab } from '@/modules/production/presentation/mould-planning-tab'
+import { MeltPlanningTab } from '@/modules/production/presentation/melt-planning-tab'
+import { PourPlanningTab } from '@/modules/production/presentation/pour-planning-tab'
 
 export default function ProductionPlanningPage() {
   const { role } = useRole()

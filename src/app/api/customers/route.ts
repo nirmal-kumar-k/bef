@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/infrastructure/db'
-import Customer from '@/domains/customers/models/customer.model'
+import Customer from '@/modules/customers/domain/customer.model'
 
 export async function GET(request: NextRequest) {
   try {

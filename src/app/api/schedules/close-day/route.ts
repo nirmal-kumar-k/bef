@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/infrastructure/db'
-import Schedule from '@/domains/production/models/schedule.model'
+import Schedule from '@/modules/production/domain/schedule.model'
 
 export async function POST(request: NextRequest) {
   try {

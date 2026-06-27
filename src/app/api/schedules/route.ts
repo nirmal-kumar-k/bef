@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/infrastructure/db'
-import Schedule from '@/domains/production/models/schedule.model'
-import Order from '@/domains/orders/models/order.model'
-import Product from '@/domains/products/models/product.model'
+import Schedule from '@/modules/production/domain/schedule.model'
+import Order from '@/modules/orders/domain/order.model'
+import Product from '@/modules/products/domain/product.model'
 
 export async function GET(request: NextRequest) {
   try {
