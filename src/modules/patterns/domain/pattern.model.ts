@@ -3,7 +3,17 @@ import mongoose, { Schema, Document, Model } from 'mongoose'
 export interface IMappedProduct {
   name: string
   cavities: number
-  selectedCoreBoxes?: { coreBoxCode: string; quantity: number }[]
+  selectedCoreBoxes?: { coreBoxId?: string; coreBoxCode: string; quantity: number }[]
+}
+
+export interface ICoreBox {
+  id: string
+  code: string
+  owner: string
+  images: string[]
+  typeOfCore?: string
+  coreWeight?: number
+  avgCoreProduction?: string
 }
 
 export interface IPattern extends Document {
@@ -16,14 +26,11 @@ export interface IPattern extends Document {
   topMatchplate: boolean
   bottomMatchplate: boolean
   coreBoxes: number
-  sharedCoreBoxes?: { id: string; code: string; owner: string; images: string[] }[]
+  sharedCoreBoxes?: ICoreBox[]
   topOwner?: string
   topImages?: string[]
   bottomOwner?: string
   bottomImages?: string[]
-  typeOfCore?: string
-  coreWeight?: number
-  avgCoreProduction?: string
   avgMouldsPerHour?: number
   patternImages?: string[]
   remarks: string
@@ -34,7 +41,8 @@ export interface IPattern extends Document {
 
 const SelectedCoreBoxSchema = new Schema(
   {
-    coreBoxCode: { type: String, required: true },
+    coreBoxId: { type: String },
+    coreBoxCode: { type: String, required: false },
     quantity: { type: Number, default: 1 },
   },
   { _id: false }
@@ -49,12 +57,15 @@ const MappedProductSchema = new Schema<IMappedProduct>(
   { _id: false }
 )
 
-const CoreBoxSchema = new Schema(
+const CoreBoxSchema = new Schema<ICoreBox>(
   {
     id: { type: String },
     code: { type: String, default: '' },
     owner: { type: String, default: 'Foundry' },
     images: { type: [String], default: [] },
+    typeOfCore: { type: String },
+    coreWeight: { type: Number },
+    avgCoreProduction: { type: String },
   },
   { _id: false }
 )
@@ -75,10 +86,7 @@ const PatternSchema = new Schema<IPattern>(
     topImages: { type: [String], default: [] },
     bottomOwner: { type: String, default: 'Foundry' },
     bottomImages: { type: [String], default: [] },
-    typeOfCore: { type: String, default: '' },
-    coreWeight: { type: Number, default: null },
-    avgCoreProduction: { type: String, default: '' },
-    avgMouldsPerHour: { type: Number, default: null },
+    avgMouldsPerHour: { type: Number },
     patternImages: { type: [String], default: [] },
     remarks: { type: String, default: '' },
     mappedProducts: { type: [MappedProductSchema], default: [] },

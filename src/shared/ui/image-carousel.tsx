@@ -57,17 +57,26 @@ export function ImageCarousel({
     return () => document.removeEventListener('keydown', handleKeyDown, { capture: true })
   }, [images.length, showConfirm])
 
-  const handleAdd = (files: FileList | null) => {
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.readAsDataURL(file)
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = error => reject(error)
+    })
+  }
+
+  const handleAdd = async (files: FileList | null) => {
     if (files && files.length > 0) {
-       const newUrls = Array.from(files).map(file => URL.createObjectURL(file))
+       const newUrls = await Promise.all(Array.from(files).map(file => fileToBase64(file)))
        onImagesChange([...images, ...newUrls])
        setCurrentIndex(0)
     }
   }
 
-  const handleEdit = (file: File | null) => {
+  const handleEdit = async (file: File | null) => {
     if (file && images.length > 0) {
-       const url = URL.createObjectURL(file)
+       const url = await fileToBase64(file)
        const newImgs = [...images]
        newImgs[currentIndex] = url
        onImagesChange(newImgs)

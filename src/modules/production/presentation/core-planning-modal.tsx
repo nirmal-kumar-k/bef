@@ -14,11 +14,8 @@ import { BacklogItem } from './daily-planning-modal'
 import { CubeTransparent, CaretDown, CaretUp } from '@phosphor-icons/react'
 import { cn } from '@/shared/lib/utils'
 
-const TIME_SLOTS = [
-  '08:00 AM', '09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '01:00 PM', 
-  '02:00 PM', '03:00 PM', '04:00 PM', '05:00 PM', '06:00 PM', '07:00 PM'
-]
-const SHIFT_HOURS = 12.5
+import { generateTimeSlots, TimeSlot } from '@/shared/lib/utils'
+import type { Shift } from './shift-master-page'
 
 interface CorePlanningModalProps {
   isOpen: boolean
@@ -47,6 +44,47 @@ export function CorePlanningModal({
   const [hourlyMatrix, setHourlyMatrix] = useState<Record<string, Record<string, number>>>({})
   const [workers, setWorkers] = useState<Record<string, Record<string, number>>>({})
   const [actuals, setActuals] = useState<Record<string, number>>({})
+  
+  // Equipment
+  const [equipments, setEquipments] = useState<any[]>([])
+  const [selectedEquipments, setSelectedEquipments] = useState<Record<string, string>>({})
+  
+  // Shifts
+  const [shifts, setShifts] = useState<Shift[]>([])
+  const [selectedShiftId, setSelectedShiftId] = useState<string>('')
+
+  // Fetch shifts & equipments
+  useEffect(() => {
+    if (isOpen) {
+      if (shifts.length === 0) {
+        fetch('/api/shifts')
+          .then(res => res.json())
+          .then(data => {
+            const activeShifts = data.filter((s: Shift) => s.isActive)
+            setShifts(activeShifts)
+            if (activeShifts.length > 0 && !selectedShiftId) {
+              setSelectedShiftId(activeShifts[0].id)
+            }
+          })
+          .catch(console.error)
+      }
+      if (equipments.length === 0) {
+        fetch('/api/equipment')
+          .then(res => res.json())
+          .then(data => {
+            const coreEquips = data.filter((e: any) => e.type === 'Core Machine' && e.isActive)
+            setEquipments(coreEquips)
+          })
+          .catch(console.error)
+      }
+    }
+  }, [isOpen])
+
+  const selectedShift = shifts.find(s => s.id === selectedShiftId) || shifts[0]
+  const TIME_SLOTS: TimeSlot[] = selectedShift 
+    ? generateTimeSlots(selectedShift.startTime, selectedShift.endTime) 
+    : []
+
 
   // Initialization when order changes or modal opens
   useEffect(() => {
@@ -69,6 +107,7 @@ export function CorePlanningModal({
     const initMatrix: Record<string, Record<string, number>> = {}
     const initWorkers: Record<string, Record<string, number>> = {}
     const initActuals: Record<string, number> = {}
+    const initEquipments: Record<string, string> = {}
 
     // Pre-fill from existing plans
     existingPlans.forEach(p => {
@@ -78,12 +117,16 @@ export function CorePlanningModal({
         if (p.actualQuantity !== undefined && p.actualQuantity !== null) {
           initActuals[p.coreBoxCode] = p.actualQuantity
         }
+        if (p.equipmentId) {
+          initEquipments[p.coreBoxCode] = p.equipmentId
+        }
       }
     })
 
     setHourlyMatrix(initMatrix)
     setWorkers(initWorkers)
     setActuals(initActuals)
+    setSelectedEquipments(initEquipments)
   }, [selectedOrder, dailyPlans, openOrders])
 
   const handleSave = () => {
@@ -116,6 +159,7 @@ export function CorePlanningModal({
           quantityScheduled: totalScheduled || existingPlan?.quantityScheduled || 0,
           laborersAssigned: maxWorkers,
           workersAssigned: maxWorkers,
+          equipmentId: selectedEquipments[code] || '',
           hourlyTargets: hours,
           hourlyWorkers: workers[code] || {},
           actualQuantity: actuals[code]
@@ -174,21 +218,30 @@ export function CorePlanningModal({
     const codeWorkers = workers[code] || {}
     let totalExpected = 0
     TIME_SLOTS.forEach(slot => {
-      const w = codeWorkers[slot] || 0
-      const hours = slot === '07:00 PM' ? 1.5 : 1
-      totalExpected += w * avgProd * hours
+      const w = codeWorkers[slot.time] || 0
+      totalExpected += w * avgProd * slot.hours
     })
-    return totalExpected
+    
+    // Adjust total expected if there is a break in this shift
+    if (selectedShift && selectedShift.breakDurationMins > 0) {
+       // A simple approach: Reduce the totalExpected proportionally by the break duration
+       const totalShiftMins = TIME_SLOTS.reduce((acc, s) => acc + (s.hours * 60), 0)
+       if (totalShiftMins > 0) {
+         const effectiveRatio = Math.max(0, (totalShiftMins - selectedShift.breakDurationMins) / totalShiftMins)
+         totalExpected = totalExpected * effectiveRatio
+       }
+    }
+    return Math.round(totalExpected)
   }
 
   // Section 1: Top-level fill (distributes equally across hours for quick entry)
   const handleFillRemaining = (code: string, remaining: number) => {
     const perHour = Math.floor(remaining / 12)
-    const remainder = remaining % 12
+    let remainder = Math.max(0, remaining - (perHour * TIME_SLOTS.length))
     
     const newHours: Record<string, number> = {}
     TIME_SLOTS.forEach((slot, idx) => {
-      newHours[slot] = perHour + (idx === 0 ? remainder : 0) // dump remainder in first hour
+      newHours[slot.time] = perHour + (idx === 0 ? remainder : 0) // dump remainder in first hour
     })
     
     setHourlyMatrix(prev => ({
@@ -200,8 +253,24 @@ export function CorePlanningModal({
   const dateObj = new Date(date || new Date())
   const dateString = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
 
-  // Active Core Boxes for the table (we show all from the order backlog)
-  const activeCoreBoxes = orderCoreBacklogs
+  // Active Core Boxes for the table: Group by coreBoxCode to avoid duplicate keys and merge requirements
+  const activeCoreBoxes = useMemo(() => {
+    const unique = new Map<string, typeof orderCoreBacklogs[0]>()
+    orderCoreBacklogs.forEach(b => {
+      const code = b.coreBoxCode || 'Unknown'
+      if (!unique.has(code)) {
+        unique.set(code, { ...b, coreBoxCode: code })
+      } else {
+        const existing = unique.get(code)!
+        unique.set(code, {
+          ...existing,
+          totalRequired: existing.totalRequired + b.totalRequired,
+          totalScheduled: existing.totalScheduled + b.totalScheduled,
+        })
+      }
+    })
+    return Array.from(unique.values())
+  }, [orderCoreBacklogs])
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -217,6 +286,20 @@ export function CorePlanningModal({
                 <CubeTransparent weight="bold" className="w-3 h-3" />
                 CORE PLANNING
               </span>
+              {shifts.length > 0 && (
+                <Select value={selectedShiftId} onValueChange={setSelectedShiftId}>
+                  <SelectTrigger className="h-6 px-2 text-[10px] font-bold uppercase rounded-md border border-amber-500/20 bg-amber-500/10 text-amber-500 ml-2 w-auto min-w-[100px] border-none focus:ring-0">
+                    <SelectValue placeholder="Select Shift" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#0C1221] border-[#243050]">
+                    {shifts.map(s => (
+                      <SelectItem key={s.id} value={s.id!} className="text-[#EEF3FF] hover:bg-[#1A263D] focus:bg-[#1A263D] text-xs">
+                        {s.name} ({s.startTime} - {s.endTime})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           </div>
         </DialogHeader>
@@ -301,14 +384,13 @@ export function CorePlanningModal({
                   </thead>
                   <tbody className="divide-y divide-[#243050]">
                     {TIME_SLOTS.map((slot, index) => (
-                      <tr key={slot} className="hover:bg-[#0C1221]/50 transition-colors">
+                      <tr key={slot.time} className="hover:bg-[#0C1221]/50 transition-colors">
                         <td className="px-6 py-3 font-mono font-semibold text-sm text-[#EEF3FF] sticky left-0 bg-[#050810] z-10 whitespace-nowrap">
-                          {slot}
-                          {slot === '07:00 PM' && <span className="text-[10px] text-[#5A6E90] block mt-0.5 font-normal">- 08:30 PM</span>}
+                          {slot.time}
                         </td>
                         {activeCoreBoxes.map(cb => {
-                          const val = hourlyMatrix[cb.coreBoxCode!]?.[slot]
-                          const workerCount = workers[cb.coreBoxCode!]?.[slot] || 0
+                          const val = hourlyMatrix[cb.coreBoxCode!]?.[slot.time]
+                          const workerCount = workers[cb.coreBoxCode!]?.[slot.time] || 0
                           
                           return [
                             <td key={`${cb.coreBoxCode}-input`} className="px-2 py-2 text-center border-r border-[#243050]/20">
@@ -316,7 +398,7 @@ export function CorePlanningModal({
                                 type="number"
                                 min="0"
                                 value={val === undefined ? 0 : val}
-                                onChange={e => handleHourlyChange(cb.coreBoxCode!, slot, e.target.value)}
+                                onChange={e => handleHourlyChange(cb.coreBoxCode!, slot.time, e.target.value)}
                                 className={cn(
                                   "w-20 h-9 mx-auto bg-[#0C1221] font-mono text-center px-2 text-sm shadow-inner",
                                   (val === undefined || val === 0) ? "border-[#243050]/50 text-[#5A6E90]" : "border-[#243050] text-[#EEF3FF]"
@@ -329,7 +411,7 @@ export function CorePlanningModal({
                                   variant="outline" 
                                   size="icon" 
                                   className="h-6 w-6 bg-[#050810] border-[#243050] text-[#EEF3FF] hover:bg-[#1A263D]"
-                                  onClick={() => handleWorkerChange(cb.coreBoxCode!, slot, -1)}
+                                  onClick={() => handleWorkerChange(cb.coreBoxCode!, slot.time, -1)}
                                 >
                                   -
                                 </Button>
@@ -338,7 +420,7 @@ export function CorePlanningModal({
                                   variant="outline" 
                                   size="icon" 
                                   className="h-6 w-6 bg-[#050810] border-[#243050] text-[#EEF3FF] hover:bg-[#1A263D]"
-                                  onClick={() => handleWorkerChange(cb.coreBoxCode!, slot, 1)}
+                                  onClick={() => handleWorkerChange(cb.coreBoxCode!, slot.time, 1)}
                                 >
                                   +
                                 </Button>
@@ -347,7 +429,7 @@ export function CorePlanningModal({
                           ]
                         })}
                         <td className="px-6 py-3 font-mono font-bold text-center text-[#8B9FC4] bg-[#0C1221]/30">
-                          {getRowTotal(slot)}
+                          {getRowTotal(slot.time)}
                         </td>
                       </tr>
                     ))}
@@ -357,7 +439,12 @@ export function CorePlanningModal({
                       {activeCoreBoxes.map(cb => {
                         const plannedTarget = getColTotal(cb.coreBoxCode!)
                         const pattern = patterns.find(p => p.code === cb.patternRef)
-                        const avgProd = Number(pattern?.avgCoreProduction) || 10
+                        const specificCoreBox = pattern?.sharedCoreBoxes?.find((scb: any) => scb.code === cb.coreBoxCode)
+                        
+                        const selectedEqId = selectedEquipments[cb.coreBoxCode!]
+                        const selectedEq = equipments.find(e => e.id === selectedEqId)
+                        const avgProd = selectedEq?.avgPiecesPerHour || Number(specificCoreBox?.avgCoreProduction) || Number((pattern as any)?.avgCoreProduction) || 10
+                        
                         const expectedOutput = getExpectedOutput(cb.coreBoxCode!, avgProd)
                         
                         const isOverrun = expectedOutput > plannedTarget && expectedOutput > 0 && expectedOutput > (plannedTarget * 1.1)
@@ -415,7 +502,23 @@ export function CorePlanningModal({
                     return (
                       <div key={cb.coreBoxCode} className="flex items-center gap-4 p-3 bg-[#0C1221] border border-[#243050] rounded-lg">
                         <div className="w-32">
-                          <h4 className="text-[#EEF3FF] font-mono font-bold text-sm">{cb.coreBoxCode}</h4>
+                          <div className="text-[#EEF3FF] font-bold text-sm bg-[#1A263D] p-2 rounded border border-[#243050]">
+                            {cb.coreBoxCode}
+                            {cb.patternRef && <span className="text-[10px] text-[#5A6E90] ml-2 block">{cb.patternRef}</span>}
+                          </div>
+                          <div className="mt-1">
+                            <Select 
+                              value={selectedEquipments[cb.coreBoxCode!] || ''} 
+                              onValueChange={(val) => setSelectedEquipments(prev => ({...prev, [cb.coreBoxCode!]: val}))}
+                            >
+                              <SelectTrigger className="h-7 text-[10px] bg-[#050810] border-[#243050] text-[#8B9FC4]">
+                                <SelectValue placeholder="Machine" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-[#0C1221] border-[#243050]">
+                                {equipments.map(e => <SelectItem key={e.id} value={e.id!} className="text-[10px]">{e.name}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
                         <div className="w-24">
                           <span className="text-[10px] text-[#8B9FC4] block uppercase font-bold mb-1">Planned</span>

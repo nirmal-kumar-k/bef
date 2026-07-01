@@ -20,7 +20,7 @@
  */
 
 import { Canvas, useFrame } from '@react-three/fiber'
-import { MeshDistortMaterial, Environment } from '@react-three/drei'
+import { MeshDistortMaterial, Environment, Lightformer } from '@react-three/drei'
 import { useRef, useMemo, useEffect, useState, Suspense } from 'react'
 import * as THREE from 'three'
 
@@ -230,8 +230,14 @@ function Scene() {
       {/* Cool steel-blue fill — thin specular catch on dark sphere surface  */}
       <directionalLight position={[4, 6, 3]} intensity={0.45} color="#96B4F0" />
 
-      {/* HDR environment — provides PBR reflections on the sphere (same as Porto) */}
-      <Environment preset="city" />
+      {/* Programmatic environment — avoids external CDN fetches that can fail */}
+      <Environment resolution={256}>
+        <group rotation={[-Math.PI / 2, 0, 0]}>
+          <Lightformer form="rect" intensity={2} color="#96B4F0" position={[5, 5, -10]} scale={[20, 5, 1]} />
+          <Lightformer form="rect" intensity={1} color="#FFFFFF" position={[-5, 5, -10]} scale={[20, 5, 1]} />
+          <Lightformer form="circle" intensity={1.5} color="#D4521A" position={[0, 5, 0]} scale={[10, 10, 1]} />
+        </group>
+      </Environment>
 
       <OrbitalCore />
     </>

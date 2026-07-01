@@ -42,6 +42,9 @@ interface CoreBox {
   code: string
   owner: 'Foundry' | 'Customer'
   images: string[]
+  typeOfCore?: string
+  coreWeight?: number
+  avgCoreProduction?: string
 }
 
 export function ViewPatternModal({
@@ -49,14 +52,17 @@ export function ViewPatternModal({
   isOpen,
   onClose,
   onSave,
+  onDelete,
 }: {
   pattern: any | null
   isOpen: boolean
   onClose: () => void
   onSave?: (updated: any) => void
+  onDelete?: (id: string) => void
 }) {
   const [customerOpen, setCustomerOpen] = useState(false)
   const [coreBoxToDelete, setCoreBoxToDelete] = useState<string | null>(null)
+  const [showDeletePattern, setShowDeletePattern] = useState(false)
   const [selectedCustomer, setSelectedCustomer] = useState('')
   const [customers, setCustomers] = useState<{ value: string; label: string }[]>([])
 
@@ -79,13 +85,9 @@ export function ViewPatternModal({
   const [coreBoxPresent, setCoreBoxPresent] = useState<'Yes' | 'No'>('Yes')
   const [sharedCoreBoxes, setSharedCoreBoxes] = useState<CoreBox[]>([{ id: 'init-shared', code: '', owner: 'Foundry', images: [] }])
 
-  // Core Box Details
-  const [typeOfCoreOptions, setTypeOfCoreOptions] = useState<string[]>(['Oil Core', 'CO2 Core', 'Amine Core'])
-  const [typeOfCore, setTypeOfCore] = useState('')
-  const [typeOfCoreOpen, setTypeOfCoreOpen] = useState(false)
   const [typeOfCoreInput, setTypeOfCoreInput] = useState('')
-  const [coreWeight, setCoreWeight] = useState<number | ''>('')
-  const [avgCoreProduction, setAvgCoreProduction] = useState<number | ''>('')
+
+  // Moulding metrics
   const [avgMouldsPerHour, setAvgMouldsPerHour] = useState<number | ''>('')
 
   // Weights & Images
@@ -131,9 +133,6 @@ export function ViewPatternModal({
         setSharedCoreBoxes([{ id: 'init-shared', code: '', owner: 'Foundry', images: [] }])
       }
 
-      setTypeOfCore(pattern.typeOfCore || '')
-      setCoreWeight(pattern.coreWeight ?? '')
-      setAvgCoreProduction(pattern.avgCoreProduction ?? '')
       setAvgMouldsPerHour(pattern.avgMouldsPerHour ?? '')
     }
   }, [pattern, isOpen])
@@ -163,11 +162,9 @@ export function ViewPatternModal({
       bottomMatchplate: bottomPresent === 'Yes',
       bottomOwner,
       bottomImages,
+      coreBoxes: coreBoxPresent === 'Yes' ? sharedCoreBoxes.length : 0,
       sharedCoreBoxes: coreBoxPresent === 'Yes' ? sharedCoreBoxes : [],
-      typeOfCore,
-      coreWeight,
-      avgCoreProduction: coreBoxPresent === 'Yes' && typeof avgCoreProduction === 'number' ? avgCoreProduction : null,
-      avgMouldsPerHour,
+      avgMouldsPerHour: typeof avgMouldsPerHour === 'number' ? avgMouldsPerHour : null,
       patternImages,
       remarks,
     })
@@ -235,17 +232,30 @@ export function ViewPatternModal({
                 </PopoverContent>
               </Popover>
             </div>
-            <div className="space-y-2">
-              <Label className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider">Category</Label>
-              <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger className="h-12 bg-[#0C1221] border-[#243050] text-[#EEF3FF]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-[#0C1221] border-[#243050]">
-                  <SelectItem value="Machine Moulding">Machine Moulding</SelectItem>
-                  <SelectItem value="Hand Moulding">Hand Moulding</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="category" className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider">Pattern Category</Label>
+                <Select value={category} onValueChange={setCategory}>
+                  <SelectTrigger className="h-12 bg-[#0C1221] border-[#243050] text-[#EEF3FF]">
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#0C1221] border-[#243050]">
+                    <SelectItem value="Machine Moulding">Machine Moulding</SelectItem>
+                    <SelectItem value="Hand Moulding">Hand Moulding</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider">Avg Moulds per Hour</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  placeholder="e.g. 12"
+                  value={avgMouldsPerHour}
+                  onChange={(e) => setAvgMouldsPerHour(e.target.value === '' ? '' : Number(e.target.value))}
+                  className="h-12 bg-[#0C1221] border-[#243050] text-[#EEF3FF]"
+                />
+              </div>
             </div>
           </div>
 
@@ -257,8 +267,6 @@ export function ViewPatternModal({
 
           {/* Section: Matchplates */}
           <div className="space-y-8">
-
-            {/* Top Matchplate / Cope */}
             <div className="space-y-4">
               <h3 className="text-sm font-semibold text-[#8B9FC4] uppercase tracking-wider border-b border-[#243050] pb-2">Top Matchplate / Cope</h3>
               <div className="grid grid-cols-12 gap-4 items-start bg-[#0C1221] p-4 rounded-xl border border-[#243050]">
@@ -289,7 +297,6 @@ export function ViewPatternModal({
               </div>
             </div>
 
-            {/* Bottom Matchplate / Drag */}
             <div className="space-y-4">
               <h3 className="text-sm font-semibold text-[#8B9FC4] uppercase tracking-wider border-b border-[#243050] pb-2">Bottom Matchplate / Drag</h3>
               <div className="grid grid-cols-12 gap-4 items-start bg-[#0C1221] p-4 rounded-xl border border-[#243050]">
@@ -341,96 +348,75 @@ export function ViewPatternModal({
               <div className={cn("transition-opacity duration-300", coreBoxPresent === 'No' && "opacity-50 pointer-events-none")}>
                 <div className="space-y-3">
                   {sharedCoreBoxes.map((cb, index) => (
-                    <div key={cb.id} className="flex items-start gap-4 bg-[#0C1221] p-3 rounded-lg border border-[#243050]">
-                      <div className="flex-1 space-y-1.5">
-                        <Label className="text-xs text-[#8B9FC4]">Code</Label>
-                        <Input
-                          value={cb.code}
-                          onChange={(e) => setSharedCoreBoxes(sharedCoreBoxes.map(b => b.id === cb.id ? { ...b, code: e.target.value } : b))}
-                          placeholder={patternCode ? `${patternCode}-CB${index + 1}` : `CB-${index + 1}`}
-                          className="bg-[#050810]/50 border-[#243050] text-[#EEF3FF] h-9 focus-visible:ring-1 focus-visible:ring-[#D4521A]"
-                        />
+                    <div key={cb.id} className="flex flex-col gap-4 bg-[#0C1221] p-4 rounded-lg border border-[#243050]">
+                      <div className="flex items-start gap-4">
+                        <div className="flex-1 space-y-1.5">
+                          <Label className="text-xs text-[#8B9FC4]">Code</Label>
+                          <Input
+                            value={cb.code}
+                            onChange={(e) => setSharedCoreBoxes(sharedCoreBoxes.map(b => b.id === cb.id ? { ...b, code: e.target.value } : b))}
+                            placeholder={patternCode ? `${patternCode}-CB${index + 1}` : `CB-${index + 1}`}
+                            className="bg-[#050810]/50 border-[#243050] text-[#EEF3FF] h-9 focus-visible:ring-1 focus-visible:ring-[#D4521A]"
+                          />
+                        </div>
+                        <div className="flex-1 space-y-1.5">
+                          <Label className="text-xs text-[#8B9FC4]">Owner</Label>
+                          <Select value={cb.owner} onValueChange={(val: any) => setSharedCoreBoxes(sharedCoreBoxes.map(b => b.id === cb.id ? { ...b, owner: val } : b))}>
+                            <SelectTrigger className="bg-[#050810] border-[#243050] h-9"><SelectValue /></SelectTrigger>
+                            <SelectContent className="bg-[#050810] border-[#243050]">
+                              <SelectItem value="Foundry">Foundry</SelectItem>
+                              <SelectItem value="Customer">Customer</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex-1 space-y-1.5 min-w-[140px]">
+                          <Label className="text-xs text-[#8B9FC4]">Images</Label>
+                          <ImageCarousel images={cb.images} onImagesChange={(imgs) => setSharedCoreBoxes(sharedCoreBoxes.map(b => b.id === cb.id ? { ...b, images: imgs } : b))} disabled={coreBoxPresent === 'No'} size="small" />
+                        </div>
+                        <Button
+                          variant="ghost"
+                          onClick={() => setCoreBoxToDelete(cb.id)}
+                          className="h-9 mt-6 px-3 shrink-0 text-[#5A6E90] hover:text-red-400 hover:bg-red-400/10"
+                          disabled={sharedCoreBoxes.length <= 1}
+                        >
+                          <Trash className="w-4 h-4" />
+                        </Button>
                       </div>
-                      <div className="flex-1 space-y-1.5">
-                        <Label className="text-xs text-[#8B9FC4]">Owner</Label>
-                        <Select value={cb.owner} onValueChange={(val: any) => setSharedCoreBoxes(sharedCoreBoxes.map(b => b.id === cb.id ? { ...b, owner: val } : b))}>
-                          <SelectTrigger className="bg-[#050810] border-[#243050] h-9"><SelectValue /></SelectTrigger>
-                          <SelectContent className="bg-[#050810] border-[#243050]">
-                            <SelectItem value="Foundry">Foundry</SelectItem>
-                            <SelectItem value="Customer">Customer</SelectItem>
-                          </SelectContent>
-                        </Select>
+
+                      {/* Core Box Attributes */}
+                      <div className="grid grid-cols-3 gap-4 pt-2 border-t border-[#243050]">
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-[#8B9FC4]">Type of Core</Label>
+                          <Input
+                            value={cb.typeOfCore || ''}
+                            onChange={(e) => setSharedCoreBoxes(sharedCoreBoxes.map(b => b.id === cb.id ? { ...b, typeOfCore: e.target.value } : b))}
+                            placeholder="e.g. Shell"
+                            className="bg-[#050810]/50 border-[#243050] text-[#EEF3FF] h-9 focus-visible:ring-1 focus-visible:ring-[#D4521A]"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-[#8B9FC4]">Core Wt (kg)</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            value={cb.coreWeight || ''}
+                            onChange={(e) => setSharedCoreBoxes(sharedCoreBoxes.map(b => b.id === cb.id ? { ...b, coreWeight: e.target.value === '' ? undefined : Number(e.target.value) } : b))}
+                            placeholder="0.0"
+                            className="bg-[#050810]/50 border-[#243050] text-[#EEF3FF] h-9 focus-visible:ring-1 focus-visible:ring-[#D4521A]"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-[#8B9FC4]">Avg Core/hr</Label>
+                          <Input
+                            value={cb.avgCoreProduction || ''}
+                            onChange={(e) => setSharedCoreBoxes(sharedCoreBoxes.map(b => b.id === cb.id ? { ...b, avgCoreProduction: e.target.value } : b))}
+                            placeholder="e.g. 10"
+                            className="bg-[#050810]/50 border-[#243050] text-[#EEF3FF] h-9 focus-visible:ring-1 focus-visible:ring-[#D4521A]"
+                          />
+                        </div>
                       </div>
-                      <div className="flex-1 space-y-1.5 min-w-[140px]">
-                        <Label className="text-xs text-[#8B9FC4]">Images</Label>
-                        <ImageCarousel images={cb.images} onImagesChange={(imgs) => setSharedCoreBoxes(sharedCoreBoxes.map(b => b.id === cb.id ? { ...b, images: imgs } : b))} disabled={coreBoxPresent === 'No'} size="small" />
-                      </div>
-                      <Button
-                        variant="ghost"
-                        onClick={() => setCoreBoxToDelete(cb.id)}
-                        className="h-9 mt-6 px-3 shrink-0 text-[#5A6E90] hover:text-red-400 hover:bg-red-400/10"
-                        disabled={sharedCoreBoxes.length <= 1}
-                      >
-                        <Trash className="w-4 h-4" />
-                      </Button>
                     </div>
                   ))}
-                </div>
-              </div>
-
-              {/* Core Box Extra Fields */}
-              <div className={cn("grid grid-cols-2 gap-4 pt-2 transition-opacity duration-300", coreBoxPresent === 'No' && "opacity-50 pointer-events-none")}>
-                <div className="space-y-2">
-                  <Label className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider">Type of Core</Label>
-                  <Popover open={typeOfCoreOpen} onOpenChange={setTypeOfCoreOpen}>
-                    <PopoverTrigger className="flex h-10 w-full items-center justify-between rounded-md border border-[#243050] bg-[#0C1221] px-3 py-2 text-sm hover:bg-[#1A263D] hover:text-white">
-                      {typeOfCore || <span className="text-[#5A6E90]">Select or add type...</span>}
-                      <CaretUpDown weight="duotone" className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[260px] p-0 bg-[#0C1221] border-[#243050]">
-                      <Command className="bg-transparent">
-                        <CommandInput placeholder="Search or type new..." value={typeOfCoreInput} onValueChange={setTypeOfCoreInput} className="text-[#EEF3FF]" />
-                        <CommandList>
-                          <CommandEmpty>
-                            {typeOfCoreInput.trim() ? (
-                              <button type="button" className="w-full text-left px-4 py-2 text-sm text-[#D4521A] hover:bg-[#1A263D]"
-                                onClick={() => {
-                                  const newOption = typeOfCoreInput.trim()
-                                  if (!typeOfCoreOptions.includes(newOption)) setTypeOfCoreOptions([...typeOfCoreOptions, newOption])
-                                  setTypeOfCore(newOption)
-                                  setTypeOfCoreInput('')
-                                  setTypeOfCoreOpen(false)
-                                }}>
-                                + Add "{typeOfCoreInput.trim()}"
-                              </button>
-                            ) : <span className="px-4 py-2 text-sm text-[#5A6E90]">No options found.</span>}
-                          </CommandEmpty>
-                          <CommandGroup>
-                            {typeOfCoreOptions.map((opt) => (
-                              <CommandItem key={opt} value={opt} keywords={[opt]}
-                                onSelect={() => { setTypeOfCore(opt); setTypeOfCoreInput(''); setTypeOfCoreOpen(false) }}
-                                className="text-[#EEF3FF] hover:bg-[#1A263D] cursor-pointer">
-                                <Check weight="duotone" className={cn('mr-2 h-4 w-4', typeOfCore === opt ? 'opacity-100 text-[#D4521A]' : 'opacity-0')} />
-                                {opt}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider">Core Weight (kg)</Label>
-                  <Input type="number" min="0" placeholder="0.0" value={coreWeight} onChange={(e) => setCoreWeight(e.target.value === '' ? '' : Number(e.target.value))} className="bg-[#0C1221] border-[#243050] text-[#EEF3FF] h-10" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider">Avg Core Production (per hour)</Label>
-                  <Input type="number" min="0" placeholder="e.g. 10" value={avgCoreProduction} onChange={(e) => setAvgCoreProduction(e.target.value === '' ? '' : Number(e.target.value))} className="bg-[#0C1221] border-[#243050] text-[#EEF3FF] h-10" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider">Avg Moulds per Hour</Label>
-                  <Input type="number" min="0" placeholder="e.g. 12" value={avgMouldsPerHour} onChange={(e) => setAvgMouldsPerHour(e.target.value === '' ? '' : Number(e.target.value))} className="bg-[#0C1221] border-[#243050] text-[#EEF3FF] h-10" />
                 </div>
               </div>
             </div>
@@ -463,6 +449,15 @@ export function ViewPatternModal({
         </div>
 
         <DialogFooter className="mt-4 border-t border-[#243050] pt-4">
+          {onDelete && (
+            <Button
+              variant="ghost"
+              onClick={() => setShowDeletePattern(true)}
+              className="text-red-400 hover:text-red-300 hover:bg-red-400/10 mr-auto"
+            >
+              Delete Pattern
+            </Button>
+          )}
           <Button variant="ghost" onClick={onClose} className="text-[#8B9FC4] hover:bg-[#1A263D] hover:text-[#EEF3FF]">Cancel</Button>
           <Button onClick={handleSaveClick} disabled={!patternCode.trim() || !patternName.trim()} className="bg-[#D4521A] hover:bg-[#D4521A]/90 text-white shadow-lg shadow-[#D4521A]/20 disabled:opacity-50 font-semibold px-6">
             Save Pattern
@@ -479,6 +474,19 @@ export function ViewPatternModal({
         }}
         title="Remove Core Box?"
         description="Are you sure you want to remove this core box?"
+      />
+      <ConfirmDeleteDialog
+        open={showDeletePattern}
+        onOpenChange={setShowDeletePattern}
+        onConfirm={() => {
+          if (pattern?.id && onDelete) {
+            onDelete(pattern.id)
+            onClose()
+          }
+        }}
+        title="Delete Pattern?"
+        description="This will permanently delete the pattern and cannot be undone."
+        itemName={pattern?.code || pattern?.name}
       />
     </Dialog>
   )

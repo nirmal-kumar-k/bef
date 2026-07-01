@@ -17,8 +17,7 @@ interface CorePlanningTabProps {
 export function CorePlanningTab({ coreBacklog, patterns, openOrders, dailyPlans, onSaveDayPlan }: CorePlanningTabProps) {
   const [viewMode, setViewMode] = useState<'table' | 'calendar'>('table')
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
-  const [draggedType, setDraggedType] = useState<'planned' | 'pending' | null>(null)
-  const [draggedPlans, setDraggedPlans] = useState<any[] | null>(null)
+
   
   // Workers state per core box code
   const [workersPerBox, setWorkersPerBox] = useState<Record<string, number>>({})
@@ -54,9 +53,9 @@ export function CorePlanningTab({ coreBacklog, patterns, openOrders, dailyPlans,
       if (!b.coreBoxCode) return
       
       const pattern = patterns.find(p => p.code === b.patternRef)
-      // Wait, is avgCoreProduction per core box or per pattern?
-      // The prompt says "Average Core Production per person per hour from Pattern".
-      const avgProd = Number(pattern?.avgCoreProduction) || 10 // fallback to 10 if not set
+      const specificCoreBox = pattern?.sharedCoreBoxes?.find((scb: any) => scb.code === b.coreBoxCode)
+      // Check core box first, then fallback to pattern level
+      const avgProd = Number(specificCoreBox?.avgCoreProduction) || Number((pattern as any)?.avgCoreProduction) || 10
 
       if (!boxMap.has(b.coreBoxCode)) {
         boxMap.set(b.coreBoxCode, { totalRequired: 0, avgProduction: avgProd, patternRef: b.patternRef })
@@ -120,49 +119,68 @@ export function CorePlanningTab({ coreBacklog, patterns, openOrders, dailyPlans,
               
               const dayPlans = dailyPlans.filter(p => p.date === dateStr && p.stage === 'Core')
               const sum = dayPlans.reduce((s, p) => s + p.quantityScheduled, 0)
-              const hasPending = coreBacklog.some(b => (b.totalRequired - b.totalScheduled) > 0)
+              const pendingAmount = coreBacklog.reduce((s, b) => s + Math.max(0, b.totalRequired - b.totalScheduled), 0)
+              const hasPending = pendingAmount > 0
 
               const handleDrop = (e: React.DragEvent) => {
                 e.preventDefault()
-                if (draggedType === 'planned' && draggedPlans && draggedPlans.length > 0 && draggedPlans[0].date !== dateStr) {
-                  const updates = draggedPlans.map(p => ({ ...p, date: dateStr }))
-                  onSaveDayPlan(dateStr, updates)
-                } else if (draggedType === 'pending') {
-                  const newPlans: any[] = []
-                  coreBacklog.forEach(b => {
-                    const remaining = b.totalRequired - b.totalScheduled
-                    if (remaining > 0) {
-                      newPlans.push({
-                        stage: 'Core',
-                        date: dateStr,
-                        itemId: b.itemId,
-                        productName: b.productName,
-                        patternRef: b.patternRef,
-                        coreBoxCode: b.coreBoxCode,
-                        quantityScheduled: remaining
-                      })
+                try {
+                  const dataStr = e.dataTransfer.getData('text/plain')
+                  if (!dataStr) return
+                  const data = JSON.parse(dataStr)
+
+                  if (data.type === 'planned' && data.plans && data.plans.length > 0 && data.plans[0].date !== dateStr) {
+                    const updates = data.plans.map((p: any) => ({ ...p, date: dateStr }))
+                    onSaveDayPlan(dateStr, updates)
+                  } else if (data.type === 'pending') {
+                    const newPlans: any[] = []
+                    coreBacklog.forEach(b => {
+                      const remaining = b.totalRequired - b.totalScheduled
+                      if (remaining > 0) {
+                        newPlans.push({
+                          stage: 'Core',
+                          date: dateStr,
+                          itemId: b.itemId,
+                          productName: b.productName,
+                          patternRef: b.patternRef,
+                          coreBoxCode: b.coreBoxCode,
+                          quantityScheduled: remaining
+                        })
+                      }
+                    })
+                    if (newPlans.length > 0) {
+                      onSaveDayPlan(dateStr, newPlans)
                     }
-                  })
-                  if (newPlans.length > 0) {
-                    onSaveDayPlan(dateStr, newPlans)
                   }
+                } catch (err) {
+                  console.error('Drop parse error', err)
                 }
-                setDraggedType(null)
-                setDraggedPlans(null)
               }
 
               const prevDate = new Date(date)
               prevDate.setDate(date.getDate() - 1)
               const prevDateStr = prevDate.toISOString().split('T')[0]
               const prevDayPlans = dailyPlans.filter(p => p.date === prevDateStr && p.stage === 'Core')
-              const hasCarryForward = prevDayPlans.some(p => p.actualQuantity !== undefined && p.actualQuantity < p.quantityScheduled)
+              const carryForwardAmount = prevDayPlans.reduce((s, p) => s + (p.actualQuantity !== undefined && p.actualQuantity < p.quantityScheduled ? p.quantityScheduled - p.actualQuantity : 0), 0)
+              const hasCarryForward = carryForwardAmount > 0
 
               return (
                 <div 
                   key={dateStr}
                   onClick={() => setSelectedDate(dateStr)}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={handleDrop}
+                  onDragOver={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    e.dataTransfer.dropEffect = 'move'
+                  }}
+                  onDragEnter={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                  }}
+                  onDrop={(e) => {
+                    e.stopPropagation()
+                    handleDrop(e)
+                  }}
                   className={cn(
                     "bg-[#050810] p-2 hover:bg-[#0C1221] transition-colors cursor-pointer flex flex-col min-h-[120px] border-[1px] border-transparent hover:border-[#D4521A]/20",
                     !isCurrentMonth && "opacity-50"
@@ -183,8 +201,8 @@ export function CorePlanningTab({ coreBacklog, patterns, openOrders, dailyPlans,
                         draggable
                         onDragStart={(e) => {
                           e.stopPropagation()
-                          setDraggedType('planned')
-                          setDraggedPlans(dayPlans)
+                          e.dataTransfer.effectAllowed = 'move'
+                          e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'planned', plans: dayPlans }))
                         }}
                         className="px-2 py-1 text-[10px] font-bold uppercase rounded-md bg-[#4285F4]/10 text-[#4285F4] border border-[#4285F4]/20 truncate cursor-grab shadow-md"
                       >
@@ -196,11 +214,12 @@ export function CorePlanningTab({ coreBacklog, patterns, openOrders, dailyPlans,
                         draggable
                         onDragStart={(e) => {
                           e.stopPropagation()
-                          setDraggedType('pending')
+                          e.dataTransfer.effectAllowed = 'move'
+                          e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'pending' }))
                         }}
                         className="px-2 py-1 text-[10px] font-bold uppercase rounded-md bg-red-500/10 text-red-500 border border-red-500/20 mt-2 truncate cursor-grab shadow-md"
                       >
-                        Pending Backlog
+                        Pending {pendingAmount}
                       </div>
                     )}
                     {hasCarryForward && (
@@ -208,11 +227,12 @@ export function CorePlanningTab({ coreBacklog, patterns, openOrders, dailyPlans,
                         draggable
                         onDragStart={(e) => {
                           e.stopPropagation()
-                          setDraggedType('pending')
+                          e.dataTransfer.effectAllowed = 'move'
+                          e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'pending' }))
                         }}
                         className="px-2 py-1 text-[10px] font-bold uppercase rounded-md bg-red-500/10 text-red-500 border border-red-500/20 mt-2 truncate cursor-grab shadow-md"
                       >
-                        PENDING
+                        Pending {carryForwardAmount}
                       </div>
                     )}
                   </div>

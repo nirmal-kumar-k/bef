@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { Button } from '@/shared/ui/button'
 import { cn } from '@/shared/lib/utils'
@@ -55,9 +55,9 @@ export function ScheduleDrawer({
     }
   }, [isOpen, schedules])
 
-  const validOrders = orders.filter(
-    o => o.status === 'Received' || o.status === 'In Progress'
-  )
+  const validOrders = useMemo(() => {
+    return orders.filter((o: any) => o.status === 'Received' || o.status === 'In Progress')
+  }, [orders])
 
   const handleAddOrder = () => {
     if (!selectedOrder) return

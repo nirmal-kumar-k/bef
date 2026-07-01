@@ -8,6 +8,10 @@ export interface IProductionPlan extends Document {
   coreBoxCode?: string // Only for 'Core' stage
   quantityScheduled: number
   laborersAssigned: number
+  workersAssigned?: number
+  equipmentId?: string
+  hourlyTargets?: Record<string, number>
+  hourlyWorkers?: Record<string, number>
   
   // Melt-specific fields
   heatNo?: string
@@ -43,6 +47,10 @@ const ProductionPlanSchema = new Schema<IProductionPlan>(
     coreBoxCode: { type: String, default: '' },
     quantityScheduled: { type: Number, required: true, min: 0 },
     laborersAssigned: { type: Number, default: 1 },
+    workersAssigned: { type: Number },
+    equipmentId: { type: String },
+    hourlyTargets: { type: Map, of: Number },
+    hourlyWorkers: { type: Map, of: Number },
     
     // Melt-specific fields
     heatNo: { type: String },

@@ -14,11 +14,8 @@ import { BacklogItem } from './daily-planning-modal'
 import { CubeTransparent, CaretDown, CaretUp } from '@phosphor-icons/react'
 import { cn } from '@/shared/lib/utils'
 
-const TIME_SLOTS = [
-  '08:00 AM', '09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '01:00 PM', 
-  '02:00 PM', '03:00 PM', '04:00 PM', '05:00 PM', '06:00 PM', '07:00 PM'
-]
-const SHIFT_HOURS = 12.5
+import { generateTimeSlots, TimeSlot } from '@/shared/lib/utils'
+import type { Shift } from './shift-master-page'
 
 interface MouldPlanningModalProps {
   isOpen: boolean
@@ -47,6 +44,46 @@ export function MouldPlanningModal({
   const [hourlyMatrix, setHourlyMatrix] = useState<Record<string, Record<string, number>>>({})
   const [workers, setWorkers] = useState<Record<string, Record<string, number>>>({})
   const [actuals, setActuals] = useState<Record<string, number>>({})
+  
+  // Equipment
+  const [equipments, setEquipments] = useState<any[]>([])
+  const [selectedEquipments, setSelectedEquipments] = useState<Record<string, string>>({})
+  
+  // Shifts
+  const [shifts, setShifts] = useState<Shift[]>([])
+  const [selectedShiftId, setSelectedShiftId] = useState<string>('')
+
+  // Fetch shifts & equipments
+  useEffect(() => {
+    if (isOpen) {
+      if (shifts.length === 0) {
+        fetch('/api/shifts')
+          .then(res => res.json())
+          .then(data => {
+            const activeShifts = data.filter((s: Shift) => s.isActive)
+            setShifts(activeShifts)
+            if (activeShifts.length > 0 && !selectedShiftId) {
+              setSelectedShiftId(activeShifts[0].id)
+            }
+          })
+          .catch(console.error)
+      }
+      if (equipments.length === 0) {
+        fetch('/api/equipment')
+          .then(res => res.json())
+          .then(data => {
+            const mouldEquips = data.filter((e: any) => e.type === 'Moulding Machine' && e.isActive)
+            setEquipments(mouldEquips)
+          })
+          .catch(console.error)
+      }
+    }
+  }, [isOpen])
+
+  const selectedShift = shifts.find(s => s.id === selectedShiftId) || shifts[0]
+  const TIME_SLOTS: TimeSlot[] = selectedShift 
+    ? generateTimeSlots(selectedShift.startTime, selectedShift.endTime) 
+    : []
 
   // Initialization when order changes or modal opens
   useEffect(() => {
@@ -69,6 +106,7 @@ export function MouldPlanningModal({
     const initMatrix: Record<string, Record<string, number>> = {}
     const initWorkers: Record<string, Record<string, number>> = {}
     const initActuals: Record<string, number> = {}
+    const initEquipments: Record<string, string> = {}
 
     // Pre-fill from existing plans
     existingPlans.forEach(p => {
@@ -78,12 +116,16 @@ export function MouldPlanningModal({
         if (p.actualQuantity !== undefined && p.actualQuantity !== null) {
           initActuals[p.patternRef] = p.actualQuantity
         }
+        if (p.equipmentId) {
+          initEquipments[p.patternRef] = p.equipmentId
+        }
       }
     })
 
     setHourlyMatrix(initMatrix)
     setWorkers(initWorkers)
     setActuals(initActuals)
+    setSelectedEquipments(initEquipments)
   }, [selectedOrder, dailyPlans, openOrders])
 
   const handleSave = () => {
@@ -116,6 +158,7 @@ export function MouldPlanningModal({
           quantityScheduled: totalScheduled || existingPlan?.quantityScheduled || 0,
           laborersAssigned: maxWorkers,
           workersAssigned: maxWorkers,
+          equipmentId: selectedEquipments[code] || '',
           hourlyTargets: hours,
           hourlyWorkers: workers[code] || {},
           actualQuantity: actuals[code]
@@ -174,21 +217,28 @@ export function MouldPlanningModal({
     const codeWorkers = workers[code] || {}
     let totalExpected = 0
     TIME_SLOTS.forEach(slot => {
-      const w = codeWorkers[slot] || 0
-      const hours = slot === '07:00 PM' ? 1.5 : 1
-      totalExpected += w * avgProd * hours
+      const w = codeWorkers[slot.time] || 0
+      totalExpected += w * avgProd * slot.hours
     })
-    return totalExpected
+    
+    // Adjust total expected if there is a break in this shift
+    if (selectedShift && selectedShift.breakDurationMins > 0) {
+       const totalShiftMins = TIME_SLOTS.reduce((acc, s) => acc + (s.hours * 60), 0)
+       if (totalShiftMins > 0) {
+         const effectiveRatio = Math.max(0, (totalShiftMins - selectedShift.breakDurationMins) / totalShiftMins)
+         totalExpected = totalExpected * effectiveRatio
+       }
+    }
+    return Math.round(totalExpected)
   }
 
-  // Section 1: Top-level fill (distributes equally across hours for quick entry)
   const handleFillRemaining = (code: string, remaining: number) => {
     const perHour = Math.floor(remaining / 12)
-    const remainder = remaining % 12
+    let remainder = Math.max(0, remaining - (perHour * TIME_SLOTS.length))
     
     const newHours: Record<string, number> = {}
     TIME_SLOTS.forEach((slot, idx) => {
-      newHours[slot] = perHour + (idx === 0 ? remainder : 0) // dump remainder in first hour
+      newHours[slot.time] = perHour + (idx === 0 ? remainder : 0) // dump remainder in first hour
     })
     
     setHourlyMatrix(prev => ({
@@ -200,8 +250,21 @@ export function MouldPlanningModal({
   const dateObj = new Date(date || new Date())
   const dateString = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
 
-  // Active Patternes for the table (we show all from the order backlog)
-  const activeMoulds = orderMouldBacklogs
+  // Active Patternes for the table (group by patternRef to avoid duplicate keys)
+  const activeMoulds = useMemo(() => {
+    const grouped = new Map<string, typeof orderMouldBacklogs[0]>()
+    orderMouldBacklogs.forEach(b => {
+      if (!b.patternRef) return
+      if (grouped.has(b.patternRef)) {
+        const existing = grouped.get(b.patternRef)!
+        existing.totalRequired += b.totalRequired
+        existing.totalScheduled += b.totalScheduled
+      } else {
+        grouped.set(b.patternRef, { ...b })
+      }
+    })
+    return Array.from(grouped.values())
+  }, [orderMouldBacklogs])
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -217,6 +280,20 @@ export function MouldPlanningModal({
                 <CubeTransparent weight="bold" className="w-3 h-3" />
                 MOULD PLANNING
               </span>
+              {shifts.length > 0 && (
+                <Select value={selectedShiftId} onValueChange={setSelectedShiftId}>
+                  <SelectTrigger className="h-6 px-2 text-[10px] font-bold uppercase rounded-md border border-amber-500/20 bg-amber-500/10 text-amber-500 ml-2 w-auto min-w-[100px] border-none focus:ring-0">
+                    <SelectValue placeholder="Select Shift" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#0C1221] border-[#243050]">
+                    {shifts.map(s => (
+                      <SelectItem key={s.id} value={s.id!} className="text-[#EEF3FF] hover:bg-[#1A263D] focus:bg-[#1A263D] text-xs">
+                        {s.name} ({s.startTime} - {s.endTime})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           </div>
         </DialogHeader>
@@ -252,11 +329,26 @@ export function MouldPlanningModal({
                   return (
                     <div key={cb.patternRef} className="bg-gradient-to-br from-[#0C1221] to-[#1A263D] p-5 rounded-xl border border-[#243050] min-w-[280px] flex-1 shadow-md">
                       <div className="flex justify-between items-start mb-4">
-                        <div>
-                          <h4 className="text-[#EEF3FF] font-mono font-bold text-base">{cb.patternRef}</h4>
-                          <span className="text-[10px] text-[#4285F4] uppercase font-bold tracking-wider">{mouldingType}</span>
+                        <div className="flex flex-col gap-1">
+                          <div className="text-[#EEF3FF] font-bold text-sm bg-[#1A263D] p-2 rounded border border-[#243050]">
+                            {cb.patternRef}
+                            {cb.itemId && <span className="text-[10px] text-[#5A6E90] ml-2 block">Item: {cb.itemId}</span>}
+                          </div>
+                          <div>
+                            <Select 
+                              value={selectedEquipments[cb.patternRef!] || ''} 
+                              onValueChange={(val) => setSelectedEquipments(prev => ({...prev, [cb.patternRef!]: val}))}
+                            >
+                              <SelectTrigger className="h-7 text-[10px] bg-[#050810] border-[#243050] text-[#8B9FC4]">
+                                <SelectValue placeholder="Machine" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-[#0C1221] border-[#243050]">
+                                {equipments.map(e => <SelectItem key={e.id} value={e.id!} className="text-[10px]">{e.name}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
-                        <span className="text-xs font-medium text-[#8B9FC4] bg-[#050810] px-2.5 py-1 rounded-md border border-[#243050]">Remaining: {remaining}</span>
+                        <div className="mt-1 text-xs font-medium text-[#8B9FC4] bg-[#050810] px-2.5 py-1 rounded-md border border-[#243050]">Remaining: {remaining}</div>
                       </div>
                       <div className="flex items-center gap-3">
                         <div className="flex-1 text-sm text-[#8B9FC4]">Planned Today:</div>
@@ -312,14 +404,13 @@ export function MouldPlanningModal({
                   </thead>
                   <tbody className="divide-y divide-[#243050]">
                     {TIME_SLOTS.map((slot, index) => (
-                      <tr key={slot} className="hover:bg-[#0C1221]/50 transition-colors">
+                      <tr key={slot.time} className="hover:bg-[#0C1221]/50 transition-colors">
                         <td className="px-6 py-3 font-mono font-semibold text-sm text-[#EEF3FF] sticky left-0 bg-[#050810] z-10 whitespace-nowrap">
-                          {slot}
-                          {slot === '07:00 PM' && <span className="text-[10px] text-[#5A6E90] block mt-0.5 font-normal">- 08:30 PM</span>}
+                          {slot.time}
                         </td>
                         {activeMoulds.map(cb => {
-                          const val = hourlyMatrix[cb.patternRef!]?.[slot]
-                          const workerCount = workers[cb.patternRef!]?.[slot] || 0
+                          const val = hourlyMatrix[cb.patternRef!]?.[slot.time]
+                          const workerCount = workers[cb.patternRef!]?.[slot.time] || 0
                           
                           return [
                             <td key={`${cb.patternRef}-input`} className="px-2 py-2 text-center border-r border-[#243050]/20">
@@ -327,7 +418,7 @@ export function MouldPlanningModal({
                                 type="number"
                                 min="0"
                                 value={val === undefined ? 0 : val}
-                                onChange={e => handleHourlyChange(cb.patternRef!, slot, e.target.value)}
+                                onChange={e => handleHourlyChange(cb.patternRef!, slot.time, e.target.value)}
                                 className={cn(
                                   "w-20 h-9 mx-auto bg-[#0C1221] font-mono text-center px-2 text-sm shadow-inner",
                                   (val === undefined || val === 0) ? "border-[#243050]/50 text-[#5A6E90]" : "border-[#243050] text-[#EEF3FF]"
@@ -340,7 +431,7 @@ export function MouldPlanningModal({
                                   variant="outline" 
                                   size="icon" 
                                   className="h-6 w-6 bg-[#050810] border-[#243050] text-[#EEF3FF] hover:bg-[#1A263D]"
-                                  onClick={() => handleWorkerChange(cb.patternRef!, slot, -1)}
+                                  onClick={() => handleWorkerChange(cb.patternRef!, slot.time, -1)}
                                 >
                                   -
                                 </Button>
@@ -349,7 +440,7 @@ export function MouldPlanningModal({
                                   variant="outline" 
                                   size="icon" 
                                   className="h-6 w-6 bg-[#050810] border-[#243050] text-[#EEF3FF] hover:bg-[#1A263D]"
-                                  onClick={() => handleWorkerChange(cb.patternRef!, slot, 1)}
+                                  onClick={() => handleWorkerChange(cb.patternRef!, slot.time, 1)}
                                 >
                                   +
                                 </Button>
@@ -358,7 +449,7 @@ export function MouldPlanningModal({
                           ]
                         })}
                         <td className="px-6 py-3 font-mono font-bold text-center text-[#8B9FC4] bg-[#0C1221]/30">
-                          {getRowTotal(slot)}
+                          {getRowTotal(slot.time)}
                         </td>
                       </tr>
                     ))}
@@ -368,7 +459,11 @@ export function MouldPlanningModal({
                       {activeMoulds.map(cb => {
                         const plannedTarget = getColTotal(cb.patternRef!)
                         const pattern = patterns.find(p => p.code === cb.patternRef)
-                        const avgProd = Number(pattern?.avgMouldsPerHour) || 10
+                        
+                        const selectedEqId = selectedEquipments[cb.patternRef!]
+                        const selectedEq = equipments.find(e => e.id === selectedEqId)
+                        const avgProd = selectedEq?.avgPiecesPerHour || Number(pattern?.avgMouldsPerHour) || 10
+                        
                         const expectedOutput = getExpectedOutput(cb.patternRef!, avgProd)
                         
                         const isOverrun = expectedOutput > plannedTarget && expectedOutput > 0 && expectedOutput > (plannedTarget * 1.1)

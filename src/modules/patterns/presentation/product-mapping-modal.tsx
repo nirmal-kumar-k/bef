@@ -30,6 +30,7 @@ import { cn, handleEnterToTab } from '@/shared/lib/utils'
 
 
 interface CoreBoxEntry {
+  coreBoxId: string
   coreBoxCode: string
   quantity: number | string
 }
@@ -56,7 +57,7 @@ export function ProductMappingModal({
   patternId: string | null
   onSave?: (mappedProducts: any[]) => void
   initialMappedProducts?: any[]
-  coreBoxes?: { id: string; code: string; owner: string }[]
+  coreBoxes?: { id: string; code: string; owner: string; typeOfCore?: string; coreWeight?: number; avgCoreProduction?: string }[]
 }) {
   const [lines, setLines] = useState<MappingLine[]>([
     { id: 1, productCode: '', selectedProductId: '', cavities: '', selectedCoreBoxes: [] }
@@ -81,7 +82,12 @@ export function ProductMappingModal({
           productCode: matchedProd ? matchedProd.code : '',
           selectedProductId: matchedProd ? matchedProd.id : '',
           cavities: String(mp.cavities || ''),
-          selectedCoreBoxes: mp.selectedCoreBoxes || []
+          selectedCoreBoxes: (mp.selectedCoreBoxes || []).map((cb: any) => {
+            if (cb.coreBoxId) return cb
+            // Fallback for old data: find matching core box from the pattern
+            const match = coreBoxes.find(c => c.code === cb.coreBoxCode)
+            return { ...cb, coreBoxId: match ? match.id : cb.coreBoxCode }
+          })
         }
       }))
     } else if (products.length > 0) {
@@ -124,26 +130,26 @@ export function ProductMappingModal({
   }
 
   // Toggle a core box on/off for a line; adds with qty=1 or removes it
-  const toggleCoreBox = (lineId: number, coreBoxCode: string) => {
+  const toggleCoreBox = (lineId: number, coreBoxId: string, coreBoxCode: string) => {
     setLines(lines.map(l => {
       if (l.id !== lineId) return l
-      const exists = l.selectedCoreBoxes.find(cb => cb.coreBoxCode === coreBoxCode)
+      const exists = l.selectedCoreBoxes.some(cb => cb.coreBoxId === coreBoxId)
       if (exists) {
-        return { ...l, selectedCoreBoxes: l.selectedCoreBoxes.filter(cb => cb.coreBoxCode !== coreBoxCode) }
+        return { ...l, selectedCoreBoxes: l.selectedCoreBoxes.filter(cb => cb.coreBoxId !== coreBoxId) }
       } else {
-        return { ...l, selectedCoreBoxes: [...l.selectedCoreBoxes, { coreBoxCode, quantity: 1 }] }
+        return { ...l, selectedCoreBoxes: [...l.selectedCoreBoxes, { coreBoxId, coreBoxCode, quantity: 1 }] }
       }
     }))
   }
 
   // Update quantity for a specific core box within a line
-  const updateCoreBoxQty = (lineId: number, coreBoxCode: string, qty: number | string) => {
+  const updateCoreBoxQty = (lineId: number, coreBoxId: string, coreBoxCode: string, qty: number | string) => {
     setLines(lines.map(l => {
       if (l.id !== lineId) return l
       return {
         ...l,
         selectedCoreBoxes: l.selectedCoreBoxes.map(cb =>
-          cb.coreBoxCode === coreBoxCode ? { ...cb, quantity: qty } : cb
+          (cb.coreBoxId === coreBoxId) ? { ...cb, quantity: qty } : cb
         )
       }
     }))
@@ -159,6 +165,7 @@ export function ProductMappingModal({
           name: prod ? prod.name : l.productCode,
           cavities: Number(l.cavities) || 1,
           selectedCoreBoxes: l.selectedCoreBoxes.map(cb => ({
+            coreBoxId: cb.coreBoxId,
             coreBoxCode: cb.coreBoxCode,
             quantity: typeof cb.quantity === 'number' ? cb.quantity : (Number(cb.quantity) || 1)
           }))
@@ -216,7 +223,7 @@ export function ProductMappingModal({
                   </div>
 
                   {/* Product Combobox */}
-                  <div className="col-span-5 space-y-2">
+                  <div className="col-span-6 space-y-2">
                     <Label className="text-[#8B9FC4]">Product</Label>
                     <ProductCombobox 
                       products={products}
@@ -226,7 +233,7 @@ export function ProductMappingModal({
                   </div>
 
                   {/* Cavities */}
-                  <div className="col-span-3 space-y-2">
+                  <div className="col-span-2 space-y-2">
                     <Label className="text-[#8B9FC4]">Cavities</Label>
                     <Input 
                       type="number" 
@@ -265,8 +272,8 @@ export function ProductMappingModal({
                     <CoreBoxMultiSelect
                       coreBoxes={coreBoxes}
                       selected={line.selectedCoreBoxes}
-                      onToggle={(code) => toggleCoreBox(line.id, code)}
-                      onQtyChange={(code, qty) => updateCoreBoxQty(line.id, code, qty)}
+                      onToggle={(id, code) => toggleCoreBox(line.id, id, code)}
+                      onQtyChange={(id, code, qty) => updateCoreBoxQty(line.id, id, code, qty)}
                     />
                   )}
                 </div>
@@ -314,88 +321,107 @@ function CoreBoxMultiSelect({
   onToggle,
   onQtyChange,
 }: {
-  coreBoxes: { id: string; code: string; owner: string }[]
+  coreBoxes: { id: string; code: string; owner: string; typeOfCore?: string; coreWeight?: number; avgCoreProduction?: string }[]
   selected: CoreBoxEntry[]
-  onToggle: (code: string) => void
-  onQtyChange: (code: string, qty: number | string) => void
+  onToggle: (id: string, code: string) => void
+  onQtyChange: (id: string, code: string, qty: number | string) => void
 }) {
-  const [open, setOpen] = useState(false)
-
   return (
-    <div className="space-y-2">
-      {/* Dropdown trigger */}
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger className="flex h-10 w-full items-center justify-between rounded-md border border-[#243050] bg-[#050810] px-3 py-2 text-sm text-[#EEF3FF] hover:bg-[#1A263D]">
-          <span className="text-[#8B9FC4]">
-            {selected.length === 0
-              ? 'Select core boxes...'
-              : `${selected.length} core box${selected.length > 1 ? 'es' : ''} selected`}
-          </span>
-          <CaretUpDown weight="duotone" className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </PopoverTrigger>
-        <PopoverContent className="w-[320px] p-0 bg-[#0C1221] border-[#243050]">
-          <Command className="bg-transparent">
-            <CommandInput placeholder="Search core boxes..." className="text-[#EEF3FF]" />
-            <CommandList>
-              <CommandEmpty className="text-[#8B9FC4] p-4 text-center text-sm">No core boxes found.</CommandEmpty>
-              <CommandGroup>
-                {coreBoxes.map((cb) => {
-                  const isSelected = selected.some(s => s.coreBoxCode === cb.code)
-                  return (
-                    <CommandItem
-                      key={cb.id}
-                      value={cb.code}
-                      onSelect={() => onToggle(cb.code)}
-                      className="text-[#EEF3FF] hover:bg-[#1A263D] cursor-pointer"
-                    >
-                      <Check
-                        weight="duotone"
-                        className={cn('mr-2 h-4 w-4 flex-shrink-0', isSelected ? 'opacity-100 text-[#D4521A]' : 'opacity-0')}
-                      />
-                      <span className="font-mono text-[#D4521A] mr-2">{cb.code}</span>
-                      <span className="text-[#8B9FC4] text-xs ml-auto">{cb.owner}</span>
-                    </CommandItem>
-                  )
-                })}
-              </CommandGroup>
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
+    <div className="space-y-2 mt-2">
+      {coreBoxes.map((cb, idx) => {
+        // Fallback for visual display if code is empty
+        const displayCode = cb.code || `CB-${idx + 1}`
+        
+        const isSelected = selected.some((s) => s.coreBoxId === cb.id)
+        const selectedEntry = selected.find((s) => s.coreBoxId === cb.id)
 
-      {/* Per-box quantity inputs */}
-      {selected.length > 0 && (
-        <div className="space-y-2 mt-3">
-          {selected.map((s) => (
-            <div key={s.coreBoxCode} className="flex items-center gap-4 bg-[#050810]/50 border border-[#243050]/50 rounded-lg p-3">
-              <div className="flex-1">
-                <span className="text-[#8B9FC4] text-[11px] font-semibold uppercase tracking-wider block mb-1">Core Box</span>
-                <span className="font-mono text-[#D4521A] text-sm font-medium">{s.coreBoxCode}</span>
+        return (
+          <div
+            key={cb.id}
+            className={cn(
+              'flex items-center gap-4 border rounded-lg p-3 transition-colors',
+              isSelected
+                ? 'bg-[#050810]/80 border-[#D4521A]/50'
+                : 'bg-[#0C1221] border-[#243050] hover:border-[#2E3C5C]'
+            )}
+          >
+            {/* Custom Checkbox */}
+            <button
+              type="button"
+              onClick={() => onToggle(cb.id, cb.code)}
+              className={cn(
+                'flex items-center justify-center w-5 h-5 rounded border transition-colors',
+                isSelected
+                  ? 'bg-[#D4521A] border-[#D4521A] text-white'
+                  : 'bg-[#050810] border-[#5A6E90] text-transparent hover:border-[#8B9FC4]'
+              )}
+            >
+              <Check weight="bold" className="w-3.5 h-3.5" />
+            </button>
+
+            {/* Core Box Info */}
+            <div className="flex-1 cursor-pointer" onClick={() => onToggle(cb.id, cb.code)}>
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <span className="text-[#8B9FC4] text-[11px] font-semibold uppercase tracking-wider block mb-0.5">
+                    Core Box Code
+                  </span>
+                  <span
+                    className={cn(
+                      'font-mono text-sm font-medium',
+                      isSelected ? 'text-[#D4521A]' : 'text-[#EEF3FF]',
+                      !cb.code && 'italic opacity-60'
+                    )}
+                  >
+                    {displayCode}
+                  </span>
+                </div>
+                {/* Core Box Details summary badges */}
+                <div className="flex gap-2 text-xs">
+                  {cb.owner && (
+                    <span className="bg-[#1A263D] text-[#8B9FC4] px-2 py-0.5 rounded border border-[#243050]">
+                      {cb.owner}
+                    </span>
+                  )}
+                  {cb.typeOfCore && (
+                    <span className="bg-[#1A263D] text-[#8B9FC4] px-2 py-0.5 rounded border border-[#243050]">
+                      {cb.typeOfCore}
+                    </span>
+                  )}
+                  {cb.coreWeight != null && (
+                    <span className="bg-[#1A263D] text-[#8B9FC4] px-2 py-0.5 rounded border border-[#243050]">
+                      {cb.coreWeight} kg
+                    </span>
+                  )}
+                  {cb.avgCoreProduction && (
+                    <span className="bg-[#1A263D] text-[#8B9FC4] px-2 py-0.5 rounded border border-[#243050]">
+                      {cb.avgCoreProduction}/hr
+                    </span>
+                  )}
+                </div>
               </div>
-              <div className="w-32">
-                <Label className="text-[#8B9FC4] text-[11px] font-semibold uppercase tracking-wider block mb-1">Quantity</Label>
+            </div>
+
+            {/* Quantity Input */}
+            {isSelected && (
+              <div className="w-20 animate-in fade-in zoom-in-95 duration-200">
+                <Label className="text-[#8B9FC4] text-[11px] font-semibold uppercase tracking-wider block mb-1 text-center">
+                  Quantity
+                </Label>
                 <Input
                   type="number"
                   min="1"
-                  value={s.quantity}
-                  onChange={(e) => onQtyChange(s.coreBoxCode, e.target.value === '' ? '' : Number(e.target.value))}
-                  className="h-9 w-full bg-[#0C1221] border-[#243050] text-[#EEF3FF]"
+                  value={selectedEntry?.quantity || ''}
+                  onChange={(e) =>
+                    onQtyChange(cb.id, cb.code, e.target.value === '' ? '' : Number(e.target.value))
+                  }
+                  className="h-9 w-full bg-[#0C1221] border-[#243050] text-[#EEF3FF] focus-visible:ring-1 focus-visible:ring-[#D4521A] text-center"
                 />
               </div>
-              <div className="pt-5">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => onToggle(s.coreBoxCode)}
-                  className="h-9 w-9 text-[#5A6E90] hover:text-red-400 hover:bg-red-400/10"
-                >
-                  <Trash weight="duotone" className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }

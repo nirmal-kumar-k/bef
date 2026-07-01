@@ -14,7 +14,8 @@ import {
   X,
   CalendarBlank,
   Factory,
-  Fire
+  Fire,
+  Wrench
 } from '@phosphor-icons/react'
 import { useRole } from '@/shared/context/role-context'
 
@@ -36,6 +37,8 @@ const navGroups = [
       { href: '/products', label: 'Products', icon: <Package weight="duotone" className="w-[18px] h-[18px] opacity-80 group-hover:opacity-100 transition-opacity" /> },
       { href: '/customers', label: 'Customers', icon: <Users weight="duotone" className="w-[18px] h-[18px] opacity-80 group-hover:opacity-100 transition-opacity" /> },
       { href: '/grade-master', label: 'Grade Master', icon: <List weight="duotone" className="w-[18px] h-[18px] opacity-80 group-hover:opacity-100 transition-opacity" /> },
+      { href: '/shift-master', label: 'Shift Master', icon: <CalendarBlank weight="duotone" className="w-[18px] h-[18px] opacity-80 group-hover:opacity-100 transition-opacity" /> },
+      { href: '/equipment-master', label: 'Equipment Master', icon: <Wrench weight="duotone" className="w-[18px] h-[18px] opacity-80 group-hover:opacity-100 transition-opacity" /> },
     ]
   },
 
