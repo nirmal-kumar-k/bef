@@ -83,25 +83,25 @@ export function EquipmentMasterPage() {
     <div className="p-8 max-w-6xl mx-auto">
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-[#EEF3FF] tracking-tight font-heading">Equipment Master</h1>
-          <p className="text-sm text-[#8B9FC4] mt-1">Manage factory equipment and their parameters</p>
+          <h1 className="text-2xl font-bold text-[#172554] tracking-tight font-heading">Equipment Master</h1>
+          <p className="text-sm text-[#64748B] mt-1">Manage factory equipment and their parameters</p>
         </div>
         <Button 
           onClick={() => {
             setSelectedEquipment(null)
             setIsModalOpen(true)
           }}
-          className="bg-[#D4521A] hover:bg-[#D4521A]/90 text-white font-medium"
+          className="bg-[#4F46E5] hover:bg-[#4F46E5]/90 text-white font-medium"
         >
           <Plus weight="bold" className="mr-2" />
           Add Equipment
         </Button>
       </div>
 
-      <div className="bg-[#050810] border border-[#243050] rounded-xl overflow-hidden shadow-xl">
+      <div className="bg-[#F4F6FB] border border-[#E0E7FF] rounded-xl overflow-hidden shadow-xl">
         <div className="w-full">
-          <div className="px-6 py-4 border-b border-[#243050] bg-[#0C1221]">
-            <div className="flex bg-[#050810] border border-[#243050] p-1 rounded-md w-fit">
+          <div className="px-6 py-4 border-b border-[#E0E7FF] bg-[#FFFFFF]">
+            <div className="flex bg-[#F4F6FB] border border-[#E0E7FF] p-1 rounded-md w-fit">
               {equipmentTypes.map(type => (
                 <button 
                   key={type}
@@ -109,8 +109,8 @@ export function EquipmentMasterPage() {
                   className={cn(
                     "px-4 py-1.5 text-sm font-medium rounded-sm transition-colors",
                     activeTab === type 
-                      ? "bg-[#D4521A] text-white" 
-                      : "text-[#8B9FC4] hover:bg-[#1A263D] hover:text-[#EEF3FF]"
+                      ? "bg-[#4F46E5] text-white" 
+                      : "text-[#64748B] hover:bg-[#EEF2FF] hover:text-[#172554]"
                   )}
                 >
                   {type}
@@ -121,15 +121,15 @@ export function EquipmentMasterPage() {
 
           <div className="m-0">
             {isLoading ? (
-              <div className="p-12 text-center text-[#5A6E90] animate-pulse">Loading...</div>
+              <div className="p-12 text-center text-[#94A3B8] animate-pulse">Loading...</div>
             ) : equipmentList.filter(e => e.type === activeTab).length === 0 ? (
-              <div className="p-12 text-center text-[#5A6E90] italic">
+              <div className="p-12 text-center text-[#94A3B8] italic">
                 No {activeTab}s configured yet. Click "Add Equipment" to create one.
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left">
-                  <thead className="bg-[#0C1221] text-[#8B9FC4] font-semibold text-xs uppercase tracking-wider border-b border-[#243050]">
+                  <thead className="bg-[#FFFFFF] text-[#64748B] font-semibold text-xs uppercase tracking-wider border-b border-[#E0E7FF]">
                     <tr>
                       <th className="px-6 py-4">Name</th>
                       <th className="px-6 py-4">Weight Capacity</th>
@@ -146,29 +146,29 @@ export function EquipmentMasterPage() {
                       <th className="px-6 py-4 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#243050]">
+                  <tbody className="divide-y divide-[#E0E7FF]">
                     {equipmentList.filter(e => e.type === activeTab).map((eq) => (
-                      <tr key={eq.id} className={cn("group hover:bg-[#0C1221]/50 transition-colors", !eq.isActive && "opacity-50")}>
+                      <tr key={eq.id} className={cn("group hover:bg-[#FFFFFF]/50 transition-colors", !eq.isActive && "opacity-50")}>
                         <td className="px-6 py-4">
-                          <div className="font-medium text-[#EEF3FF]">{eq.name}</div>
+                          <div className="font-medium text-[#172554]">{eq.name}</div>
                         </td>
-                        <td className="px-6 py-4 text-[#8B9FC4] font-mono">
+                        <td className="px-6 py-4 text-[#64748B] font-mono">
                           {eq.weightCapacity ? `${eq.weightCapacity} kg` : '-'}
                         </td>
                         
                         {activeTab === 'Furnace' && (
                           <>
-                            <td className="px-6 py-4 text-center text-[#8B9FC4] font-mono">
+                            <td className="px-6 py-4 text-center text-[#64748B] font-mono">
                               {eq.firstHeatDurationMins} min
                             </td>
-                            <td className="px-6 py-4 text-center text-[#8B9FC4] font-mono">
+                            <td className="px-6 py-4 text-center text-[#64748B] font-mono">
                               {eq.regularHeatDurationMins} min
                             </td>
                           </>
                         )}
                         
                         {(activeTab === 'Knockout' || activeTab === 'Core Machine' || activeTab === 'Moulding Machine') && (
-                          <td className="px-6 py-4 text-center text-[#8B9FC4] font-mono">
+                          <td className="px-6 py-4 text-center text-[#64748B] font-mono">
                             {eq.avgPiecesPerHour || '-'}
                           </td>
                         )}
@@ -179,7 +179,7 @@ export function EquipmentMasterPage() {
                               "text-xs font-semibold px-2 py-0.5 rounded-full border",
                               eq.isActive 
                                 ? "bg-[#10B981]/10 text-[#10B981] border-[#10B981]/20" 
-                                : "bg-[#5A6E90]/10 text-[#5A6E90] border-[#5A6E90]/20"
+                                : "bg-[#94A3B8]/10 text-[#94A3B8] border-[#94A3B8]/20"
                             )}>
                               {eq.isActive ? 'Active' : 'Inactive'}
                             </span>
@@ -196,7 +196,7 @@ export function EquipmentMasterPage() {
                               variant="ghost" 
                               size="icon"
                               onClick={() => handleEdit(eq)}
-                              className="h-8 w-8 text-[#8B9FC4] hover:text-[#EEF3FF] hover:bg-[#243050]"
+                              className="h-8 w-8 text-[#64748B] hover:text-[#172554] hover:bg-[#E0E7FF]"
                             >
                               <PencilSimple weight="bold" />
                             </Button>
@@ -204,7 +204,7 @@ export function EquipmentMasterPage() {
                               variant="ghost" 
                               size="icon"
                               onClick={() => handleDelete(eq.id!)}
-                              className="h-8 w-8 text-[#8B9FC4] hover:text-red-400 hover:bg-red-400/10"
+                              className="h-8 w-8 text-[#64748B] hover:text-red-400 hover:bg-red-400/10"
                             >
                               <Trash weight="bold" />
                             </Button>

@@ -135,7 +135,7 @@ export default function PatternsPage() {
         </div>
         <Button
           onClick={() => setIsModalOpen(true)}
-          className="bg-[#D4521A] text-white transition-all hover:bg-[#D4521A] hover:shadow-[0_4px_14px_rgba(232,88,26,0.35)] hover:-translate-y-[1px]"
+          className="bg-[#4F46E5] text-white transition-all hover:bg-[#4F46E5] hover:shadow-[0_4px_14px_rgba(232,88,26,0.35)] hover:-translate-y-[1px]"
         >
           <Plus weight="bold" className="mr-2 h-4 w-4" />
           New Pattern
@@ -143,7 +143,7 @@ export default function PatternsPage() {
       </div>
 
       {/* Filter Bar */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between py-6 px-6 bg-[#0C1221] border border-white/[0.06] rounded-[14px] min-h-[80px]">
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between py-6 px-6 bg-[#FFFFFF] border border-black/[0.04] rounded-[14px] min-h-[80px]">
         <div className="flex flex-wrap gap-3">
           {(['All', 'Machine Moulding', 'Hand Moulding'] as const).map(
             (cat) => (
@@ -153,8 +153,8 @@ export default function PatternsPage() {
                 className={cn(
                   'cursor-pointer h-12 px-8 text-[15px] font-medium transition-colors border border-sidebar-border rounded-lg min-w-[120px] flex items-center justify-center',
                   activeCategory === cat
-                    ? 'bg-[#D4521A]/20 border-[#D4521A]/40 text-[#D4521A]'
-                    : 'bg-transparent text-[#8B9FC4] hover:border-[#2E3C5C] hover:text-[#EEF3FF]'
+                    ? 'bg-[#4F46E5]/20 border-[#4F46E5]/40 text-[#4F46E5]'
+                    : 'bg-transparent text-[#64748B] hover:border-[#C7D2FE] hover:text-[#172554]'
                 )}
                 onClick={() => setActiveCategory(cat)}
               >
@@ -168,7 +168,7 @@ export default function PatternsPage() {
           <Funnel weight="duotone" className="h-4 w-4 text-muted-foreground hidden sm:block" />
           <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
             <PopoverTrigger
-              className="flex h-10 w-full sm:w-[240px] items-center justify-between rounded-md border border-sidebar-border bg-[#0C1221] px-3 py-2 text-sm hover:bg-[#1A263D] hover:text-white"
+              className="flex h-10 w-full sm:w-[240px] items-center justify-between rounded-md border border-sidebar-border bg-[#FFFFFF] px-3 py-2 text-sm hover:bg-[#EEF2FF] hover:text-white"
               aria-expanded={customerOpen}
             >
               {selectedCustomer
@@ -176,7 +176,7 @@ export default function PatternsPage() {
                 : 'Filter by customer...'}
               <CaretUpDown weight="duotone" className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </PopoverTrigger>
-            <PopoverContent className="w-[240px] p-0 bg-[#0C1221] border-sidebar-border">
+            <PopoverContent className="w-[240px] p-0 bg-[#FFFFFF] border-sidebar-border">
               <Command className="bg-transparent">
                 <CommandInput placeholder="Search customer..." />
                 <CommandList>
@@ -188,7 +188,7 @@ export default function PatternsPage() {
                         setSelectedCustomer('')
                         setCustomerOpen(false)
                       }}
-                      className="text-white hover:bg-[#1A263D]"
+                      className="text-white hover:bg-[#EEF2FF]"
                     >
                       All Customers
                     </CommandItem>
@@ -202,7 +202,7 @@ export default function PatternsPage() {
                           )
                           setCustomerOpen(false)
                         }}
-                        className="text-white hover:bg-[#1A263D]"
+                        className="text-white hover:bg-[#EEF2FF]"
                       >
                         <Check weight="duotone"
                           className={cn(
@@ -226,12 +226,12 @@ export default function PatternsPage() {
       {/* Card Grid or Empty/Loading State */}
       {loading ? (
         <div className="py-20 text-center">
-          <p className="text-[#8B9FC4] text-lg animate-pulse">Loading patterns...</p>
+          <p className="text-[#64748B] text-lg animate-pulse">Loading patterns...</p>
         </div>
       ) : patterns.length === 0 && activeCategory === 'All' && selectedCustomer === '' ? (
-        <div className="py-20 text-center border border-dashed border-[#243050] rounded-xl bg-[#0C1221]/30">
-          <p className="text-[#8B9FC4] text-lg font-medium">No patterns yet</p>
-          <p className="text-[#5A6E90] text-sm mt-1">Click &quot;New Pattern&quot; to add your first pattern</p>
+        <div className="py-20 text-center border border-dashed border-[#E0E7FF] rounded-xl bg-[#FFFFFF]/30">
+          <p className="text-[#64748B] text-lg font-medium">No patterns yet</p>
+          <p className="text-[#94A3B8] text-sm mt-1">Click &quot;New Pattern&quot; to add your first pattern</p>
         </div>
       ) : (
         <>
@@ -245,7 +245,7 @@ export default function PatternsPage() {
                 <Card
                   key={pattern.id}
                   onClick={() => setViewPattern(pattern)}
-                  className="bg-[#0C1221] border border-white/[0.06] rounded-[14px] transition-all duration-150 hover:-translate-y-[2px] hover:shadow-[0_8px_24px_rgba(0,0,0,0.3)] hover:border-white/[0.1] overflow-hidden flex flex-col cursor-pointer"
+                  className="bg-[#FFFFFF] border border-black/[0.04] rounded-[14px] transition-all duration-150 hover:-translate-y-[2px] hover:shadow-[0_8px_24px_rgba(0,0,0,0.3)] hover:border-white/[0.1] overflow-hidden flex flex-col cursor-pointer"
                 >
                   <div className="p-5 flex-1 space-y-4">
                     <div className="flex justify-between items-start gap-2">
@@ -253,7 +253,7 @@ export default function PatternsPage() {
                         <p className="text-[15px] font-mono text-muted-foreground">{pattern.code}</p>
                         <h3 className="font-bold text-xl text-foreground mt-1 line-clamp-1">{pattern.name}</h3>
                       </div>
-                      <Badge variant="outline" className="shrink-0 bg-[#0C1221] border-sidebar-border text-[13px]">{pattern.category}</Badge>
+                      <Badge variant="outline" className="shrink-0 bg-[#FFFFFF] border-sidebar-border text-[13px]">{pattern.category}</Badge>
                     </div>
                     <div className="text-[15px] text-sidebar-foreground/80">
                       <span className="text-muted-foreground mr-2">Customer:</span>{pattern.customer}
@@ -285,7 +285,7 @@ export default function PatternsPage() {
                         <p className="text-[13px] text-muted-foreground uppercase tracking-wider">Mapped Products</p>
                         <div className="flex flex-wrap gap-2">
                           {pattern.mappedProducts.map((prod, idx) => (
-                            <Badge key={idx} variant="secondary" className="bg-[#0C1221] text-foreground border-sidebar-border/50 font-normal">
+                            <Badge key={idx} variant="secondary" className="bg-[#FFFFFF] text-foreground border-sidebar-border/50 font-normal">
                               {prod.name}<span className="ml-2 text-muted-foreground font-mono">×{prod.cavities}</span>
                             </Badge>
                           ))}
@@ -293,7 +293,7 @@ export default function PatternsPage() {
                       </div>
                     )}
                   </div>
-                  <div className="p-4 bg-[#0C1221]/50 border-t border-sidebar-border">
+                  <div className="p-4 bg-[#FFFFFF]/50 border-t border-sidebar-border">
                     <Button
                       variant="outline"
                       onClick={(e) => {
@@ -301,7 +301,7 @@ export default function PatternsPage() {
                         setMappingPatternId(pattern.id)
                         setIsMappingModalOpen(true)
                       }}
-                      className="w-full bg-transparent border-sidebar-border text-[#8B9FC4] transition-colors hover:bg-[#1C2840] hover:text-[#EEF3FF] hover:border-[#2E3C5C]"
+                      className="w-full bg-transparent border-sidebar-border text-[#64748B] transition-colors hover:bg-[#EEF2FF] hover:text-[#172554] hover:border-[#C7D2FE]"
                     >
                       Map Products
                     </Button>

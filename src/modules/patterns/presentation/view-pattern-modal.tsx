@@ -175,14 +175,14 @@ export function ViewPatternModal({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
-        className="w-full sm:max-w-3xl md:max-w-4xl lg:max-w-5xl bg-[#050810] border-[#243050] text-foreground overflow-y-auto max-h-[90vh]"
+        className="w-full sm:max-w-3xl md:max-w-4xl lg:max-w-5xl bg-[#F4F6FB] border-[#E0E7FF] text-foreground overflow-y-auto max-h-[90vh]"
         onKeyDown={handleEnterToTab}
       >
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold font-heading text-[#EEF3FF]">
+          <DialogTitle className="text-2xl font-bold font-heading text-[#172554]">
             Edit Pattern
           </DialogTitle>
-          <p className="text-sm text-[#5A6E90] mt-1">Manage details for {pattern.code}</p>
+          <p className="text-sm text-[#94A3B8] mt-1">Manage details for {pattern.code}</p>
         </DialogHeader>
 
         <div className="grid gap-6 py-4">
@@ -190,29 +190,29 @@ export function ViewPatternModal({
           {/* Row 1: Pattern Code | Pattern Name */}
           <div className="grid grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider">Pattern Code</Label>
-              <Input value={patternCode} onChange={e => setPatternCode(e.target.value)} placeholder="e.g. PAT-001" className="h-12 bg-[#0C1221] border-[#243050] text-[#EEF3FF] text-[15px]" />
+              <Label className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">Pattern Code</Label>
+              <Input value={patternCode} onChange={e => setPatternCode(e.target.value)} placeholder="e.g. PAT-001" className="h-12 bg-[#FFFFFF] border-[#E0E7FF] text-[#172554] text-[15px]" />
             </div>
             <div className="space-y-2">
-              <Label className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider">Pattern Name</Label>
-              <Input value={patternName} onChange={e => setPatternName(e.target.value)} placeholder="e.g. Pump Housing" className="h-12 bg-[#0C1221] border-[#243050] text-[#EEF3FF] text-[15px]" />
+              <Label className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">Pattern Name</Label>
+              <Input value={patternName} onChange={e => setPatternName(e.target.value)} placeholder="e.g. Pump Housing" className="h-12 bg-[#FFFFFF] border-[#E0E7FF] text-[#172554] text-[15px]" />
             </div>
           </div>
 
           {/* Row 2: Customer | Category */}
           <div className="grid grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider">Customer</Label>
+              <Label className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">Customer</Label>
               <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
-                <PopoverTrigger className="flex h-12 w-full items-center justify-between rounded-lg border border-[#243050] bg-[#0C1221] px-4 text-sm hover:bg-[#1A263D] hover:text-white">
-                  {selectedCustomer ? customers.find(c => c.value === selectedCustomer)?.label : <span className="text-[#5A6E90]">Select customer...</span>}
+                <PopoverTrigger className="flex h-12 w-full items-center justify-between rounded-lg border border-[#E0E7FF] bg-[#FFFFFF] px-4 text-sm hover:bg-[#EEF2FF] hover:text-white">
+                  {selectedCustomer ? customers.find(c => c.value === selectedCustomer)?.label : <span className="text-[#94A3B8]">Select customer...</span>}
                   <CaretUpDown weight="duotone" className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </PopoverTrigger>
-                <PopoverContent className="w-[320px] p-0 bg-[#0C1221] border-[#243050]">
+                <PopoverContent className="w-[320px] p-0 bg-[#FFFFFF] border-[#E0E7FF]">
                   <Command className="bg-transparent">
-                    <CommandInput placeholder="Search customers..." className="text-[#EEF3FF]" />
+                    <CommandInput placeholder="Search customers..." className="text-[#172554]" />
                     <CommandList>
-                      <CommandEmpty className="p-4 text-center text-sm text-[#8B9FC4]">No customer found.</CommandEmpty>
+                      <CommandEmpty className="p-4 text-center text-sm text-[#64748B]">No customer found.</CommandEmpty>
                       <CommandGroup>
                         {customers.map(customer => (
                           <CommandItem
@@ -220,9 +220,9 @@ export function ViewPatternModal({
                             value={customer.value}
                             keywords={[customer.label]}
                             onSelect={() => { setSelectedCustomer(customer.value); setCustomerOpen(false) }}
-                            className="text-[#EEF3FF] hover:bg-[#1A263D] cursor-pointer"
+                            className="text-[#172554] hover:bg-[#EEF2FF] cursor-pointer"
                           >
-                            <Check weight="duotone" className={cn('mr-2 h-4 w-4', selectedCustomer === customer.value ? 'opacity-100 text-[#D4521A]' : 'opacity-0')} />
+                            <Check weight="duotone" className={cn('mr-2 h-4 w-4', selectedCustomer === customer.value ? 'opacity-100 text-[#4F46E5]' : 'opacity-0')} />
                             {customer.label}
                           </CommandItem>
                         ))}
@@ -234,94 +234,94 @@ export function ViewPatternModal({
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="category" className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider">Pattern Category</Label>
+                <Label htmlFor="category" className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">Pattern Category</Label>
                 <Select value={category} onValueChange={setCategory}>
-                  <SelectTrigger className="h-12 bg-[#0C1221] border-[#243050] text-[#EEF3FF]">
+                  <SelectTrigger className="h-12 bg-[#FFFFFF] border-[#E0E7FF] text-[#172554]">
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#0C1221] border-[#243050]">
+                  <SelectContent className="bg-[#FFFFFF] border-[#E0E7FF]">
                     <SelectItem value="Machine Moulding">Machine Moulding</SelectItem>
                     <SelectItem value="Hand Moulding">Hand Moulding</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider">Avg Moulds per Hour</Label>
+                <Label className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">Avg Moulds per Hour</Label>
                 <Input
                   type="number"
                   min="0"
                   placeholder="e.g. 12"
                   value={avgMouldsPerHour}
                   onChange={(e) => setAvgMouldsPerHour(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="h-12 bg-[#0C1221] border-[#243050] text-[#EEF3FF]"
+                  className="h-12 bg-[#FFFFFF] border-[#E0E7FF] text-[#172554]"
                 />
               </div>
             </div>
           </div>
 
           {/* Pattern Images */}
-          <div className="space-y-2 pt-2 border-t border-[#243050]">
-            <Label className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider mb-2 block">Pattern Images</Label>
+          <div className="space-y-2 pt-2 border-t border-[#E0E7FF]">
+            <Label className="text-[#64748B] text-xs font-semibold uppercase tracking-wider mb-2 block">Pattern Images</Label>
             <ImageCarousel images={patternImages} onImagesChange={setPatternImages} size="small" previewPosition="right" />
           </div>
 
           {/* Section: Matchplates */}
           <div className="space-y-8">
             <div className="space-y-4">
-              <h3 className="text-sm font-semibold text-[#8B9FC4] uppercase tracking-wider border-b border-[#243050] pb-2">Top Matchplate / Cope</h3>
-              <div className="grid grid-cols-12 gap-4 items-start bg-[#0C1221] p-4 rounded-xl border border-[#243050]">
+              <h3 className="text-sm font-semibold text-[#64748B] uppercase tracking-wider border-b border-[#E0E7FF] pb-2">Top Matchplate / Cope</h3>
+              <div className="grid grid-cols-12 gap-4 items-start bg-[#FFFFFF] p-4 rounded-xl border border-[#E0E7FF]">
                 <div className="col-span-4 space-y-2">
-                  <Label className="text-[#EEF3FF]">Top Matchplate / Cope</Label>
+                  <Label className="text-[#172554]">Top Matchplate / Cope</Label>
                   <Select value={topPresent} onValueChange={setTopPresent as any}>
-                    <SelectTrigger className="bg-[#050810] border-[#243050]"><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-[#050810] border-[#243050]">
+                    <SelectTrigger className="bg-[#F4F6FB] border-[#E0E7FF]"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-[#F4F6FB] border-[#E0E7FF]">
                       <SelectItem value="Yes">Yes</SelectItem>
                       <SelectItem value="No">No</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className={cn("col-span-4 space-y-2 transition-opacity duration-300", topPresent === 'No' && "opacity-50 pointer-events-none")}>
-                  <Label className="text-[#8B9FC4]">Owner</Label>
+                  <Label className="text-[#64748B]">Owner</Label>
                   <Select value={topOwner} onValueChange={setTopOwner as any} disabled={topPresent === 'No'}>
-                    <SelectTrigger className="bg-[#050810] border-[#243050] disabled:opacity-100"><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-[#050810] border-[#243050]">
+                    <SelectTrigger className="bg-[#F4F6FB] border-[#E0E7FF] disabled:opacity-100"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-[#F4F6FB] border-[#E0E7FF]">
                       <SelectItem value="Foundry">Foundry</SelectItem>
                       <SelectItem value="Customer">Customer</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className={cn("col-span-4 space-y-2 transition-opacity duration-300", topPresent === 'No' && "opacity-50 pointer-events-none")}>
-                  <Label className="text-[#8B9FC4]">Image</Label>
+                  <Label className="text-[#64748B]">Image</Label>
                   <ImageCarousel images={topImages} onImagesChange={setTopImages} disabled={topPresent === 'No'} size="large" />
                 </div>
               </div>
             </div>
 
             <div className="space-y-4">
-              <h3 className="text-sm font-semibold text-[#8B9FC4] uppercase tracking-wider border-b border-[#243050] pb-2">Bottom Matchplate / Drag</h3>
-              <div className="grid grid-cols-12 gap-4 items-start bg-[#0C1221] p-4 rounded-xl border border-[#243050]">
+              <h3 className="text-sm font-semibold text-[#64748B] uppercase tracking-wider border-b border-[#E0E7FF] pb-2">Bottom Matchplate / Drag</h3>
+              <div className="grid grid-cols-12 gap-4 items-start bg-[#FFFFFF] p-4 rounded-xl border border-[#E0E7FF]">
                 <div className="col-span-4 space-y-2">
-                  <Label className="text-[#EEF3FF]">Bottom Matchplate / Drag</Label>
+                  <Label className="text-[#172554]">Bottom Matchplate / Drag</Label>
                   <Select value={bottomPresent} onValueChange={setBottomPresent as any}>
-                    <SelectTrigger className="bg-[#050810] border-[#243050]"><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-[#050810] border-[#243050]">
+                    <SelectTrigger className="bg-[#F4F6FB] border-[#E0E7FF]"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-[#F4F6FB] border-[#E0E7FF]">
                       <SelectItem value="Yes">Yes</SelectItem>
                       <SelectItem value="No">No</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className={cn("col-span-4 space-y-2 transition-opacity duration-300", bottomPresent === 'No' && "opacity-50 pointer-events-none")}>
-                  <Label className="text-[#8B9FC4]">Owner</Label>
+                  <Label className="text-[#64748B]">Owner</Label>
                   <Select value={bottomOwner} onValueChange={setBottomOwner as any} disabled={bottomPresent === 'No'}>
-                    <SelectTrigger className="bg-[#050810] border-[#243050] disabled:opacity-100"><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-[#050810] border-[#243050]">
+                    <SelectTrigger className="bg-[#F4F6FB] border-[#E0E7FF] disabled:opacity-100"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-[#F4F6FB] border-[#E0E7FF]">
                       <SelectItem value="Foundry">Foundry</SelectItem>
                       <SelectItem value="Customer">Customer</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className={cn("col-span-4 space-y-2 transition-opacity duration-300", bottomPresent === 'No' && "opacity-50 pointer-events-none")}>
-                  <Label className="text-[#8B9FC4]">Image</Label>
+                  <Label className="text-[#64748B]">Image</Label>
                   <ImageCarousel images={bottomImages} onImagesChange={setBottomImages} disabled={bottomPresent === 'No'} size="large" />
                 </div>
               </div>
@@ -329,18 +329,18 @@ export function ViewPatternModal({
 
             {/* Shared Core Box */}
             <div className="space-y-4">
-              <div className="flex items-center justify-between border-b border-[#243050] pb-2">
+              <div className="flex items-center justify-between border-b border-[#E0E7FF] pb-2">
                 <div className="flex items-center gap-4">
-                  <h3 className="text-sm font-semibold text-[#8B9FC4] uppercase tracking-wider">Core Box Details</h3>
+                  <h3 className="text-sm font-semibold text-[#64748B] uppercase tracking-wider">Core Box Details</h3>
                   <Select value={coreBoxPresent} onValueChange={(val: 'Yes' | 'No') => setCoreBoxPresent(val)}>
-                    <SelectTrigger className="h-7 text-xs bg-[#0C1221] border-[#243050] w-[80px]"><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-[#050810] border-[#243050]">
+                    <SelectTrigger className="h-7 text-xs bg-[#FFFFFF] border-[#E0E7FF] w-[80px]"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-[#F4F6FB] border-[#E0E7FF]">
                       <SelectItem value="Yes" className="text-xs">Yes</SelectItem>
                       <SelectItem value="No" className="text-xs">No</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                <Button size="sm" variant="ghost" onClick={() => setSharedCoreBoxes([...sharedCoreBoxes, { id: Date.now().toString(), code: '', owner: 'Foundry', images: [] }])} disabled={coreBoxPresent === 'No'} className="text-[#D4521A] hover:bg-[#D4521A]/10 hover:text-[#D4521A]">
+                <Button size="sm" variant="ghost" onClick={() => setSharedCoreBoxes([...sharedCoreBoxes, { id: Date.now().toString(), code: '', owner: 'Foundry', images: [] }])} disabled={coreBoxPresent === 'No'} className="text-[#4F46E5] hover:bg-[#4F46E5]/10 hover:text-[#4F46E5]">
                   <Plus className="w-4 h-4 mr-1" /> Add Core Box
                 </Button>
               </div>
@@ -348,35 +348,35 @@ export function ViewPatternModal({
               <div className={cn("transition-opacity duration-300", coreBoxPresent === 'No' && "opacity-50 pointer-events-none")}>
                 <div className="space-y-3">
                   {sharedCoreBoxes.map((cb, index) => (
-                    <div key={cb.id} className="flex flex-col gap-4 bg-[#0C1221] p-4 rounded-lg border border-[#243050]">
+                    <div key={cb.id} className="flex flex-col gap-4 bg-[#FFFFFF] p-4 rounded-lg border border-[#E0E7FF]">
                       <div className="flex items-start gap-4">
                         <div className="flex-1 space-y-1.5">
-                          <Label className="text-xs text-[#8B9FC4]">Code</Label>
+                          <Label className="text-xs text-[#64748B]">Code</Label>
                           <Input
                             value={cb.code}
                             onChange={(e) => setSharedCoreBoxes(sharedCoreBoxes.map(b => b.id === cb.id ? { ...b, code: e.target.value } : b))}
                             placeholder={patternCode ? `${patternCode}-CB${index + 1}` : `CB-${index + 1}`}
-                            className="bg-[#050810]/50 border-[#243050] text-[#EEF3FF] h-9 focus-visible:ring-1 focus-visible:ring-[#D4521A]"
+                            className="bg-[#F4F6FB]/50 border-[#E0E7FF] text-[#172554] h-9 focus-visible:ring-1 focus-visible:ring-[#4F46E5]"
                           />
                         </div>
                         <div className="flex-1 space-y-1.5">
-                          <Label className="text-xs text-[#8B9FC4]">Owner</Label>
+                          <Label className="text-xs text-[#64748B]">Owner</Label>
                           <Select value={cb.owner} onValueChange={(val: any) => setSharedCoreBoxes(sharedCoreBoxes.map(b => b.id === cb.id ? { ...b, owner: val } : b))}>
-                            <SelectTrigger className="bg-[#050810] border-[#243050] h-9"><SelectValue /></SelectTrigger>
-                            <SelectContent className="bg-[#050810] border-[#243050]">
+                            <SelectTrigger className="bg-[#F4F6FB] border-[#E0E7FF] h-9"><SelectValue /></SelectTrigger>
+                            <SelectContent className="bg-[#F4F6FB] border-[#E0E7FF]">
                               <SelectItem value="Foundry">Foundry</SelectItem>
                               <SelectItem value="Customer">Customer</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
                         <div className="flex-1 space-y-1.5 min-w-[140px]">
-                          <Label className="text-xs text-[#8B9FC4]">Images</Label>
+                          <Label className="text-xs text-[#64748B]">Images</Label>
                           <ImageCarousel images={cb.images} onImagesChange={(imgs) => setSharedCoreBoxes(sharedCoreBoxes.map(b => b.id === cb.id ? { ...b, images: imgs } : b))} disabled={coreBoxPresent === 'No'} size="small" />
                         </div>
                         <Button
                           variant="ghost"
                           onClick={() => setCoreBoxToDelete(cb.id)}
-                          className="h-9 mt-6 px-3 shrink-0 text-[#5A6E90] hover:text-red-400 hover:bg-red-400/10"
+                          className="h-9 mt-6 px-3 shrink-0 text-[#94A3B8] hover:text-red-400 hover:bg-red-400/10"
                           disabled={sharedCoreBoxes.length <= 1}
                         >
                           <Trash className="w-4 h-4" />
@@ -384,34 +384,34 @@ export function ViewPatternModal({
                       </div>
 
                       {/* Core Box Attributes */}
-                      <div className="grid grid-cols-3 gap-4 pt-2 border-t border-[#243050]">
+                      <div className="grid grid-cols-3 gap-4 pt-2 border-t border-[#E0E7FF]">
                         <div className="space-y-1.5">
-                          <Label className="text-xs text-[#8B9FC4]">Type of Core</Label>
+                          <Label className="text-xs text-[#64748B]">Type of Core</Label>
                           <Input
                             value={cb.typeOfCore || ''}
                             onChange={(e) => setSharedCoreBoxes(sharedCoreBoxes.map(b => b.id === cb.id ? { ...b, typeOfCore: e.target.value } : b))}
                             placeholder="e.g. Shell"
-                            className="bg-[#050810]/50 border-[#243050] text-[#EEF3FF] h-9 focus-visible:ring-1 focus-visible:ring-[#D4521A]"
+                            className="bg-[#F4F6FB]/50 border-[#E0E7FF] text-[#172554] h-9 focus-visible:ring-1 focus-visible:ring-[#4F46E5]"
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <Label className="text-xs text-[#8B9FC4]">Core Wt (kg)</Label>
+                          <Label className="text-xs text-[#64748B]">Core Wt (kg)</Label>
                           <Input
                             type="number"
                             min="0"
                             value={cb.coreWeight || ''}
                             onChange={(e) => setSharedCoreBoxes(sharedCoreBoxes.map(b => b.id === cb.id ? { ...b, coreWeight: e.target.value === '' ? undefined : Number(e.target.value) } : b))}
                             placeholder="0.0"
-                            className="bg-[#050810]/50 border-[#243050] text-[#EEF3FF] h-9 focus-visible:ring-1 focus-visible:ring-[#D4521A]"
+                            className="bg-[#F4F6FB]/50 border-[#E0E7FF] text-[#172554] h-9 focus-visible:ring-1 focus-visible:ring-[#4F46E5]"
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <Label className="text-xs text-[#8B9FC4]">Avg Core/hr</Label>
+                          <Label className="text-xs text-[#64748B]">Avg Core/hr</Label>
                           <Input
                             value={cb.avgCoreProduction || ''}
                             onChange={(e) => setSharedCoreBoxes(sharedCoreBoxes.map(b => b.id === cb.id ? { ...b, avgCoreProduction: e.target.value } : b))}
                             placeholder="e.g. 10"
-                            className="bg-[#050810]/50 border-[#243050] text-[#EEF3FF] h-9 focus-visible:ring-1 focus-visible:ring-[#D4521A]"
+                            className="bg-[#F4F6FB]/50 border-[#E0E7FF] text-[#172554] h-9 focus-visible:ring-1 focus-visible:ring-[#4F46E5]"
                           />
                         </div>
                       </div>
@@ -424,31 +424,31 @@ export function ViewPatternModal({
 
           {/* Weights & Remarks */}
           <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-[#8B9FC4] uppercase tracking-wider border-b border-[#243050] pb-2">Weights & Additional Info</h3>
+            <h3 className="text-sm font-semibold text-[#64748B] uppercase tracking-wider border-b border-[#E0E7FF] pb-2">Weights & Additional Info</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="flex items-center gap-1 text-[#EEF3FF]">Good Cast Wt (kg)</Label>
-                <Input type="number" min="0" value={goodCastingWeight} onChange={(e) => setGoodCastingWeight(e.target.value === '' ? '' : Number(e.target.value))} placeholder="0.0" className="bg-[#0C1221] border-[#243050] text-[#EEF3FF]" />
+                <Label className="flex items-center gap-1 text-[#172554]">Good Cast Wt (kg)</Label>
+                <Input type="number" min="0" value={goodCastingWeight} onChange={(e) => setGoodCastingWeight(e.target.value === '' ? '' : Number(e.target.value))} placeholder="0.0" className="bg-[#FFFFFF] border-[#E0E7FF] text-[#172554]" />
               </div>
               <div className="space-y-2">
                 <Label className="text-amber-500">Yield %</Label>
-                <div className="h-10 px-3 flex items-center bg-[#1A263D]/30 border border-[#243050] rounded-md text-amber-400 font-mono text-sm">{yieldPercentage}</div>
+                <div className="h-10 px-3 flex items-center bg-[#EEF2FF]/30 border border-[#E0E7FF] rounded-md text-amber-400 font-mono text-sm">{yieldPercentage}</div>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-[#EEF3FF]">Total Box Wt (kg)</Label>
-                <Input type="number" min={0} value={totalBoxWeight} onChange={(e) => setTotalBoxWeight(e.target.value === '' ? '' : Number(e.target.value))} placeholder="0.0" className="bg-[#0C1221] border-[#243050] text-[#EEF3FF]" />
+                <Label className="text-[#172554]">Total Box Wt (kg)</Label>
+                <Input type="number" min={0} value={totalBoxWeight} onChange={(e) => setTotalBoxWeight(e.target.value === '' ? '' : Number(e.target.value))} placeholder="0.0" className="bg-[#FFFFFF] border-[#E0E7FF] text-[#172554]" />
               </div>
             </div>
             <div className="space-y-2 pt-2">
-              <Label className="text-[#EEF3FF]">Remarks</Label>
-              <Textarea placeholder="Any additional notes..." value={remarks} onChange={e => setRemarks(e.target.value)} className="bg-[#0C1221] border-[#243050] resize-none h-24 text-[#EEF3FF]" />
+              <Label className="text-[#172554]">Remarks</Label>
+              <Textarea placeholder="Any additional notes..." value={remarks} onChange={e => setRemarks(e.target.value)} className="bg-[#FFFFFF] border-[#E0E7FF] resize-none h-24 text-[#172554]" />
             </div>
           </div>
         </div>
 
-        <DialogFooter className="mt-4 border-t border-[#243050] pt-4">
+        <DialogFooter className="mt-4 border-t border-[#E0E7FF] pt-4">
           {onDelete && (
             <Button
               variant="ghost"
@@ -458,8 +458,8 @@ export function ViewPatternModal({
               Delete Pattern
             </Button>
           )}
-          <Button variant="ghost" onClick={onClose} className="text-[#8B9FC4] hover:bg-[#1A263D] hover:text-[#EEF3FF]">Cancel</Button>
-          <Button onClick={handleSaveClick} disabled={!patternCode.trim() || !patternName.trim()} className="bg-[#D4521A] hover:bg-[#D4521A]/90 text-white shadow-lg shadow-[#D4521A]/20 disabled:opacity-50 font-semibold px-6">
+          <Button variant="ghost" onClick={onClose} className="text-[#64748B] hover:bg-[#EEF2FF] hover:text-[#172554]">Cancel</Button>
+          <Button onClick={handleSaveClick} disabled={!patternCode.trim() || !patternName.trim()} className="bg-[#4F46E5] hover:bg-[#4F46E5]/90 text-white shadow-lg shadow-[#4F46E5]/20 disabled:opacity-50 font-semibold px-6">
             Save Pattern
           </Button>
         </DialogFooter>

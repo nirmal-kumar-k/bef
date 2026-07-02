@@ -26,7 +26,7 @@ import * as THREE from 'three'
 
 // ─────────────────────────────────────────────────────────────────────────────
 const RING_R   = 1.08   // outer radius of each ring
-const ORANGE   = '#D4521A'
+const ORANGE   = '#4F46E5'
 
 // ─────────────────────────────────────────────────────────────────────────────
 function OrbitalCore() {
@@ -235,7 +235,7 @@ function Scene() {
         <group rotation={[-Math.PI / 2, 0, 0]}>
           <Lightformer form="rect" intensity={2} color="#96B4F0" position={[5, 5, -10]} scale={[20, 5, 1]} />
           <Lightformer form="rect" intensity={1} color="#FFFFFF" position={[-5, 5, -10]} scale={[20, 5, 1]} />
-          <Lightformer form="circle" intensity={1.5} color="#D4521A" position={[0, 5, 0]} scale={[10, 10, 1]} />
+          <Lightformer form="circle" intensity={1.5} color="#4F46E5" position={[0, 5, 0]} scale={[10, 10, 1]} />
         </group>
       </Environment>
 
@@ -255,7 +255,7 @@ export function IngotLoader() {
   }, [])
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: '#080C14', overflow: 'hidden' }}>
+    <div style={{ position: 'fixed', inset: 0, background: '#F8FAFC', overflow: 'hidden' }}>
 
       <Canvas
         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
@@ -268,7 +268,7 @@ export function IngotLoader() {
           toneMappingExposure: 1.12,
         }}
       >
-        <color attach="background" args={['#080C14']} />
+        <color attach="background" args={['#F8FAFC']} />
         <Suspense fallback={null}>
           <Scene />
         </Suspense>
@@ -347,10 +347,10 @@ export function IngotLoader() {
             to right,
             rgba(232, 88, 26, 0),
             rgba(232, 88, 26, 0.6) 35%,
-            #D4521A 80%,
+            #4F46E5 80%,
             #FF9058 100%
           );
-          box-shadow:       0 0 8px rgba(232, 88, 26, 0.7), 0 0 2px #D4521A;
+          box-shadow:       0 0 8px rgba(232, 88, 26, 0.7), 0 0 2px #4F46E5;
           animation:        befSweep 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
         @keyframes befSweep {

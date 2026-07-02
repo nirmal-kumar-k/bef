@@ -87,31 +87,31 @@ export function CorePlanningTab({ coreBacklog, patterns, openOrders, dailyPlans,
   return (
     <div className="space-y-6">
       <div className="flex justify-end">
-        <div className="flex items-center gap-3 bg-[#0C1221] px-4 py-2 border border-[#243050] rounded-xl">
-          <Label htmlFor="view-mode" className={cn("text-sm font-semibold cursor-pointer", viewMode === 'table' ? 'text-white' : 'text-[#5A6E90]')} onClick={() => setViewMode('table')}>Table</Label>
+        <div className="flex items-center gap-3 bg-[#FFFFFF] px-4 py-2 border border-[#E0E7FF] rounded-xl">
+          <Label htmlFor="view-mode" className={cn("text-sm font-semibold cursor-pointer", viewMode === 'table' ? 'text-white' : 'text-[#94A3B8]')} onClick={() => setViewMode('table')}>Table</Label>
           <div 
-            className="w-12 h-6 bg-[#050810] rounded-full relative cursor-pointer border border-[#243050]"
+            className="w-12 h-6 bg-[#F4F6FB] rounded-full relative cursor-pointer border border-[#E0E7FF]"
             onClick={() => setViewMode(v => v === 'table' ? 'calendar' : 'table')}
           >
             <div className={cn(
-              "w-4 h-4 bg-[#D4521A] rounded-full absolute top-0.5 transition-all duration-300",
+              "w-4 h-4 bg-[#4F46E5] rounded-full absolute top-0.5 transition-all duration-300",
               viewMode === 'calendar' ? "left-[26px]" : "left-1"
             )} />
           </div>
-          <Label htmlFor="view-mode" className={cn("text-sm font-semibold cursor-pointer", viewMode === 'calendar' ? 'text-white' : 'text-[#5A6E90]')} onClick={() => setViewMode('calendar')}>Calendar</Label>
+          <Label htmlFor="view-mode" className={cn("text-sm font-semibold cursor-pointer", viewMode === 'calendar' ? 'text-white' : 'text-[#94A3B8]')} onClick={() => setViewMode('calendar')}>Calendar</Label>
         </div>
       </div>
 
       {viewMode === 'calendar' ? (
-        <div className="bg-[#050810] border border-[#243050] rounded-xl overflow-hidden relative flex flex-col">
-          <div className="grid grid-cols-7 border-b border-[#243050] bg-[#0C1221]">
+        <div className="bg-[#F4F6FB] border border-[#E0E7FF] rounded-xl overflow-hidden relative flex flex-col">
+          <div className="grid grid-cols-7 border-b border-[#E0E7FF] bg-[#FFFFFF]">
             {weekDays.map(day => (
-              <div key={day} className="py-3 text-center text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider">
+              <div key={day} className="py-3 text-center text-xs font-semibold text-[#64748B] uppercase tracking-wider">
                 {day}
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-7 bg-[#243050] gap-[1px] flex-1">
+          <div className="grid grid-cols-7 bg-[#E0E7FF] gap-[1px] flex-1">
             {days.map((date, i) => {
               const dateStr = date.toISOString().split('T')[0]
               const isToday = new Date().toISOString().split('T')[0] === dateStr
@@ -182,14 +182,14 @@ export function CorePlanningTab({ coreBacklog, patterns, openOrders, dailyPlans,
                     handleDrop(e)
                   }}
                   className={cn(
-                    "bg-[#050810] p-2 hover:bg-[#0C1221] transition-colors cursor-pointer flex flex-col min-h-[120px] border-[1px] border-transparent hover:border-[#D4521A]/20",
+                    "bg-[#F4F6FB] p-2 hover:bg-[#FFFFFF] transition-colors cursor-pointer flex flex-col min-h-[120px] border-[1px] border-transparent hover:border-[#4F46E5]/20",
                     !isCurrentMonth && "opacity-50"
                   )}
                 >
                   <div className="flex justify-between items-start mb-2">
                     <span className={cn(
                       "text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full",
-                      isToday ? "bg-[#D4521A] text-white" : "text-[#8B9FC4]"
+                      isToday ? "bg-[#4F46E5] text-white" : "text-[#64748B]"
                     )}>
                       {date.getDate()}
                     </span>
@@ -255,10 +255,10 @@ export function CorePlanningTab({ coreBacklog, patterns, openOrders, dailyPlans,
       ) : (
         <div className="space-y-8">
           {/* Table View */}
-          <div className="bg-[#050810] border border-[#243050] rounded-xl overflow-hidden">
+          <div className="bg-[#F4F6FB] border border-[#E0E7FF] rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
-            <thead className="bg-[#0C1221] border-b border-[#243050] text-[#8B9FC4] text-[11px] uppercase tracking-wider font-bold">
+            <thead className="bg-[#FFFFFF] border-b border-[#E0E7FF] text-[#64748B] text-[11px] uppercase tracking-wider font-bold">
               <tr>
                 <th className="px-6 py-4 text-center">Order No</th>
                 <th className="px-6 py-4 text-center">Pattern Ref</th>
@@ -268,15 +268,15 @@ export function CorePlanningTab({ coreBacklog, patterns, openOrders, dailyPlans,
                 <th className="px-6 py-4 text-center">Remaining</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#243050] text-[#EEF3FF]">
+            <tbody className="divide-y divide-[#E0E7FF] text-[#172554]">
               {coreBacklog.map((b) => {
                 const remaining = b.totalRequired - b.totalScheduled
                 const isPending = remaining > 0
                 return (
-                  <tr key={`${b.itemId}-${b.coreBoxCode}`} className="hover:bg-[#0C1221]/50 transition-colors">
+                  <tr key={`${b.itemId}-${b.coreBoxCode}`} className="hover:bg-[#FFFFFF]/50 transition-colors">
                     <td className="px-6 py-4 text-center font-mono font-medium">{b.orderNo}</td>
-                    <td className="px-6 py-4 text-center font-mono text-[#8B9FC4]">{b.patternRef}</td>
-                    <td className="px-6 py-4 text-center font-mono text-[#D4521A]">{b.coreBoxCode || 'Common'}</td>
+                    <td className="px-6 py-4 text-center font-mono text-[#64748B]">{b.patternRef}</td>
+                    <td className="px-6 py-4 text-center font-mono text-[#4F46E5]">{b.coreBoxCode || 'Common'}</td>
                     <td className="px-6 py-4 text-center font-mono">{b.totalRequired}</td>
                     <td className="px-6 py-4 text-center font-mono text-[#4285F4]">{b.totalScheduled}</td>
                     <td className={cn(
@@ -290,7 +290,7 @@ export function CorePlanningTab({ coreBacklog, patterns, openOrders, dailyPlans,
               })}
               {coreBacklog.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-[#5A6E90] italic">
+                  <td colSpan={6} className="px-6 py-12 text-center text-[#94A3B8] italic">
                     No core planning data available
                   </td>
                 </tr>

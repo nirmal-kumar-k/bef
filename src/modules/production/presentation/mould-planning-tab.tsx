@@ -64,31 +64,31 @@ export function MouldPlanningTab({ mouldBacklog, patterns, openOrders, dailyPlan
   return (
     <div className="space-y-6">
       <div className="flex justify-end">
-        <div className="flex items-center gap-3 bg-[#0C1221] px-4 py-2 border border-[#243050] rounded-xl">
-          <Label htmlFor="view-mode" className={cn("text-sm font-semibold cursor-pointer", viewMode === 'table' ? 'text-white' : 'text-[#5A6E90]')} onClick={() => setViewMode('table')}>Table</Label>
+        <div className="flex items-center gap-3 bg-[#FFFFFF] px-4 py-2 border border-[#E0E7FF] rounded-xl">
+          <Label htmlFor="view-mode" className={cn("text-sm font-semibold cursor-pointer", viewMode === 'table' ? 'text-white' : 'text-[#94A3B8]')} onClick={() => setViewMode('table')}>Table</Label>
           <div 
-            className="w-12 h-6 bg-[#050810] rounded-full relative cursor-pointer border border-[#243050]"
+            className="w-12 h-6 bg-[#F4F6FB] rounded-full relative cursor-pointer border border-[#E0E7FF]"
             onClick={() => setViewMode(v => v === 'table' ? 'calendar' : 'table')}
           >
             <div className={cn(
-              "w-4 h-4 bg-[#D4521A] rounded-full absolute top-0.5 transition-all duration-300",
+              "w-4 h-4 bg-[#4F46E5] rounded-full absolute top-0.5 transition-all duration-300",
               viewMode === 'calendar' ? "left-[26px]" : "left-1"
             )} />
           </div>
-          <Label htmlFor="view-mode" className={cn("text-sm font-semibold cursor-pointer", viewMode === 'calendar' ? 'text-white' : 'text-[#5A6E90]')} onClick={() => setViewMode('calendar')}>Calendar</Label>
+          <Label htmlFor="view-mode" className={cn("text-sm font-semibold cursor-pointer", viewMode === 'calendar' ? 'text-white' : 'text-[#94A3B8]')} onClick={() => setViewMode('calendar')}>Calendar</Label>
         </div>
       </div>
 
       {viewMode === 'calendar' ? (
-        <div className="bg-[#050810] border border-[#243050] rounded-xl overflow-hidden relative flex flex-col">
-          <div className="grid grid-cols-7 border-b border-[#243050] bg-[#0C1221]">
+        <div className="bg-[#F4F6FB] border border-[#E0E7FF] rounded-xl overflow-hidden relative flex flex-col">
+          <div className="grid grid-cols-7 border-b border-[#E0E7FF] bg-[#FFFFFF]">
             {weekDays.map(day => (
-              <div key={day} className="py-3 text-center text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider">
+              <div key={day} className="py-3 text-center text-xs font-semibold text-[#64748B] uppercase tracking-wider">
                 {day}
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-7 bg-[#243050] gap-[1px] flex-1">
+          <div className="grid grid-cols-7 bg-[#E0E7FF] gap-[1px] flex-1">
             {days.map((date, i) => {
               const dateStr = date.toISOString().split('T')[0]
               const isToday = new Date().toISOString().split('T')[0] === dateStr
@@ -152,14 +152,14 @@ export function MouldPlanningTab({ mouldBacklog, patterns, openOrders, dailyPlan
                     handleDrop(e)
                   }}
                   className={cn(
-                    "bg-[#050810] p-2 hover:bg-[#0C1221] transition-colors cursor-pointer flex flex-col min-h-[120px] border-[1px] border-transparent hover:border-[#D4521A]/20",
+                    "bg-[#F4F6FB] p-2 hover:bg-[#FFFFFF] transition-colors cursor-pointer flex flex-col min-h-[120px] border-[1px] border-transparent hover:border-[#4F46E5]/20",
                     !isCurrentMonth && "opacity-50"
                   )}
                 >
                   <div className="flex justify-between items-start mb-2">
                     <span className={cn(
                       "text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full",
-                      isToday ? "bg-[#D4521A] text-white" : "text-[#8B9FC4]"
+                      isToday ? "bg-[#4F46E5] text-white" : "text-[#64748B]"
                     )}>
                       {date.getDate()}
                     </span>
@@ -174,7 +174,7 @@ export function MouldPlanningTab({ mouldBacklog, patterns, openOrders, dailyPlan
                           e.dataTransfer.effectAllowed = 'move'
                           e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'planned', plans: dayPlans }))
                         }}
-                        className="px-2 py-1 text-[10px] font-bold uppercase rounded-md bg-[#D4521A]/10 text-[#D4521A] border border-[#D4521A]/20 truncate cursor-grab shadow-md"
+                        className="px-2 py-1 text-[10px] font-bold uppercase rounded-md bg-[#4F46E5]/10 text-[#4F46E5] border border-[#4F46E5]/20 truncate cursor-grab shadow-md"
                       >
                         Moulds {sum}
                       </div>
@@ -212,10 +212,10 @@ export function MouldPlanningTab({ mouldBacklog, patterns, openOrders, dailyPlan
       ) : (
         <div className="space-y-8">
           {/* Table View */}
-          <div className="bg-[#050810] border border-[#243050] rounded-xl overflow-hidden">
+          <div className="bg-[#F4F6FB] border border-[#E0E7FF] rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
-            <thead className="bg-[#0C1221] border-b border-[#243050] text-[#8B9FC4] text-[11px] uppercase tracking-wider font-bold">
+            <thead className="bg-[#FFFFFF] border-b border-[#E0E7FF] text-[#64748B] text-[11px] uppercase tracking-wider font-bold">
               <tr>
                 <th className="px-6 py-4 text-center">Order No</th>
                 <th className="px-6 py-4 text-center">Pattern Ref</th>
@@ -226,7 +226,7 @@ export function MouldPlanningTab({ mouldBacklog, patterns, openOrders, dailyPlan
                 <th className="px-6 py-4 text-center">Remaining</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#243050] text-[#EEF3FF]">
+            <tbody className="divide-y divide-[#E0E7FF] text-[#172554]">
               {mouldBacklog.map((b) => {
                 const remaining = b.totalRequired - b.totalScheduled
                 const isPending = remaining > 0
@@ -234,11 +234,11 @@ export function MouldPlanningTab({ mouldBacklog, patterns, openOrders, dailyPlan
                 const avgPerHour = pattern?.avgMouldsPerHour || '-'
 
                 return (
-                  <tr key={b.itemId} className="hover:bg-[#0C1221]/50 transition-colors">
+                  <tr key={b.itemId} className="hover:bg-[#FFFFFF]/50 transition-colors">
                     <td className="px-6 py-4 text-center font-mono font-medium">{b.orderNo}</td>
-                    <td className="px-6 py-4 text-center font-mono text-[#8B9FC4]">{b.patternRef}</td>
+                    <td className="px-6 py-4 text-center font-mono text-[#64748B]">{b.patternRef}</td>
                     <td className="px-6 py-4 text-center font-medium">{b.productName}</td>
-                    <td className="px-6 py-4 text-center font-mono text-[#5A6E90]">{avgPerHour}</td>
+                    <td className="px-6 py-4 text-center font-mono text-[#94A3B8]">{avgPerHour}</td>
                     <td className="px-6 py-4 text-center font-mono">{b.totalRequired}</td>
                     <td className="px-6 py-4 text-center font-mono text-[#4285F4]">{b.totalScheduled}</td>
                     <td className={cn(
@@ -252,7 +252,7 @@ export function MouldPlanningTab({ mouldBacklog, patterns, openOrders, dailyPlan
               })}
               {mouldBacklog.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-[#5A6E90] italic">
+                  <td colSpan={7} className="px-6 py-12 text-center text-[#94A3B8] italic">
                     No mould planning data available
                   </td>
                 </tr>
@@ -264,29 +264,29 @@ export function MouldPlanningTab({ mouldBacklog, patterns, openOrders, dailyPlan
 
       {/* Capacity Indicator */}
       {mouldBacklog.length > 0 && (
-        <div className="bg-[#0C1221] border border-[#243050] rounded-xl p-6">
+        <div className="bg-[#FFFFFF] border border-[#E0E7FF] rounded-xl p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-[#EEF3FF] font-semibold flex items-center gap-2">
+              <h3 className="text-[#172554] font-semibold flex items-center gap-2">
                 Moulding Line Capacity
               </h3>
-              <p className="text-xs text-[#8B9FC4] mt-1">Based on {SHIFT_HOURS} hr shift and avg {averageMouldsPerHour.toFixed(1)} moulds/hr</p>
+              <p className="text-xs text-[#64748B] mt-1">Based on {SHIFT_HOURS} hr shift and avg {averageMouldsPerHour.toFixed(1)} moulds/hr</p>
             </div>
             <div className="text-right">
-              <span className="text-2xl font-bold font-mono text-[#EEF3FF]">{totalRemainingMoulds}</span>
-              <span className="text-[#8B9FC4] text-sm ml-2">remaining</span>
+              <span className="text-2xl font-bold font-mono text-[#172554]">{totalRemainingMoulds}</span>
+              <span className="text-[#64748B] text-sm ml-2">remaining</span>
             </div>
           </div>
 
-          <div className="relative h-4 bg-[#050810] rounded-full overflow-hidden border border-[#243050]">
+          <div className="relative h-4 bg-[#F4F6FB] rounded-full overflow-hidden border border-[#E0E7FF]">
             <div 
-              className="absolute top-0 left-0 h-full bg-[#D4521A] transition-all"
+              className="absolute top-0 left-0 h-full bg-[#4F46E5] transition-all"
               style={{ width: `${Math.min(100, (totalRemainingMoulds / (shiftCapacity * 10)) * 100)}%` }}
             />
           </div>
           
-          <div className="flex justify-between mt-2 text-xs text-[#5A6E90]">
-            <span>1 Shift Capacity: <strong className="text-[#EEF3FF] font-mono">{shiftCapacity.toFixed(0)}</strong> moulds</span>
+          <div className="flex justify-between mt-2 text-xs text-[#94A3B8]">
+            <span>1 Shift Capacity: <strong className="text-[#172554] font-mono">{shiftCapacity.toFixed(0)}</strong> moulds</span>
             <span>Est. Time to Complete: <strong className="text-[#4285F4] font-mono">{daysToComplete}</strong> shifts</span>
           </div>
           </div>

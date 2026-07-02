@@ -128,19 +128,19 @@ export function PlanningPopupCard({
 
     if (stage === 'Core') {
       const coreBacklogs = backlogData.filter(b => b.orderNo === order.customerOrderNo)
-      if (coreBacklogs.length === 0) return <p className="text-sm text-[#5A6E90]">No core boxes found for this order.</p>
+      if (coreBacklogs.length === 0) return <p className="text-sm text-[#94A3B8]">No core boxes found for this order.</p>
 
       return (
         <div className="space-y-4 mt-6">
-          <Label className="text-xs text-[#8B9FC4] font-semibold uppercase tracking-wider">Assign Core Quantities</Label>
+          <Label className="text-xs text-[#64748B] font-semibold uppercase tracking-wider">Assign Core Quantities</Label>
           <div className="space-y-3">
             {coreBacklogs.map(cb => {
               const remaining = Math.max(0, cb.totalRequired - cb.totalScheduled)
               return (
-                <div key={cb.coreBoxCode} className="flex items-center justify-between bg-[#1A263D] p-3 rounded-lg border border-[#243050]">
+                <div key={cb.coreBoxCode} className="flex items-center justify-between bg-[#EEF2FF] p-3 rounded-lg border border-[#E0E7FF]">
                   <div>
-                    <h4 className="text-[#EEF3FF] font-mono font-bold text-sm">{cb.coreBoxCode}</h4>
-                    <p className="text-[10px] text-[#8B9FC4]">Remaining: {remaining}</p>
+                    <h4 className="text-[#172554] font-mono font-bold text-sm">{cb.coreBoxCode}</h4>
+                    <p className="text-[10px] text-[#64748B]">Remaining: {remaining}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <Input
@@ -148,7 +148,7 @@ export function PlanningPopupCard({
                       min="0"
                       value={quantities[cb.coreBoxCode!] === 0 && !quantities[cb.coreBoxCode!] ? '' : quantities[cb.coreBoxCode!] || ''}
                       onChange={(e) => setQuantities({ ...quantities, [cb.coreBoxCode!]: Number(e.target.value) })}
-                      className="w-24 bg-[#0C1221] border-[#243050] text-[#EEF3FF] font-mono h-9"
+                      className="w-24 bg-[#FFFFFF] border-[#E0E7FF] text-[#172554] font-mono h-9"
                       placeholder="0"
                     />
                     <Button 
@@ -175,11 +175,11 @@ export function PlanningPopupCard({
 
     return (
       <div className="space-y-4 mt-6">
-        <Label className="text-xs text-[#8B9FC4] font-semibold uppercase tracking-wider">Assign {label}</Label>
-        <div className="flex items-center justify-between bg-[#1A263D] p-4 rounded-lg border border-[#243050]">
+        <Label className="text-xs text-[#64748B] font-semibold uppercase tracking-wider">Assign {label}</Label>
+        <div className="flex items-center justify-between bg-[#EEF2FF] p-4 rounded-lg border border-[#E0E7FF]">
           <div>
-            <h4 className="text-[#EEF3FF] font-mono font-bold text-sm">Target Quantity</h4>
-            <p className="text-[10px] text-[#8B9FC4]">Remaining: {remaining}</p>
+            <h4 className="text-[#172554] font-mono font-bold text-sm">Target Quantity</h4>
+            <p className="text-[10px] text-[#64748B]">Remaining: {remaining}</p>
           </div>
           <div className="flex items-center gap-2">
             <Input
@@ -187,7 +187,7 @@ export function PlanningPopupCard({
               min="0"
               value={quantities['total'] === 0 && !quantities['total'] ? '' : quantities['total'] || ''}
               onChange={(e) => setQuantities({ total: Number(e.target.value) })}
-              className="w-32 bg-[#0C1221] border-[#243050] text-[#EEF3FF] font-mono h-10"
+              className="w-32 bg-[#FFFFFF] border-[#E0E7FF] text-[#172554] font-mono h-10"
               placeholder="0"
             />
             <Button 
@@ -207,14 +207,14 @@ export function PlanningPopupCard({
   // Styles based on stage
   const stageColors = {
     Core: 'text-[#4285F4] border-[#4285F4]/20 bg-[#4285F4]/10',
-    Mould: 'text-[#D4521A] border-[#D4521A]/20 bg-[#D4521A]/10',
+    Mould: 'text-[#4F46E5] border-[#4F46E5]/20 bg-[#4F46E5]/10',
     Melt: 'text-[#EAB308] border-[#EAB308]/20 bg-[#EAB308]/10'
   }
   const StageIcon = stage === 'Core' ? CubeTransparent : stage === 'Mould' ? Cube : Fire
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="w-full sm:max-w-md bg-[#050810] border-[#243050] text-foreground">
+      <DialogContent className="w-full sm:max-w-md bg-[#F4F6FB] border-[#E0E7FF] text-foreground">
         <DialogHeader>
           <div className="flex items-center justify-between pr-4">
             <div>
@@ -233,17 +233,17 @@ export function PlanningPopupCard({
 
         <div className="py-4">
           <div className="space-y-2">
-            <Label className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider">Select Order</Label>
+            <Label className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">Select Order</Label>
             <Select value={selectedOrder} onValueChange={setSelectedOrder}>
-              <SelectTrigger className="bg-[#0C1221] border-[#243050] text-[#EEF3FF]">
+              <SelectTrigger className="bg-[#FFFFFF] border-[#E0E7FF] text-[#172554]">
                 <SelectValue placeholder="Select active customer order..." />
               </SelectTrigger>
-              <SelectContent className="bg-[#0C1221] border-[#243050] max-h-60">
+              <SelectContent className="bg-[#FFFFFF] border-[#E0E7FF] max-h-60">
                 {openOrders.map(o => {
                   const hasBacklog = backlogData.some(b => b.orderNo === o.customerOrderNo && (b.totalRequired - b.totalScheduled) > 0)
                   if (!hasBacklog) return null
                   return (
-                    <SelectItem key={o.id} value={o.id} className="text-[#EEF3FF]">
+                    <SelectItem key={o.id} value={o.id} className="text-[#172554]">
                       <span className="font-mono text-[#4285F4] mr-2">{o.customerOrderNo}</span> {o.customer}
                     </SelectItem>
                   )
@@ -258,11 +258,11 @@ export function PlanningPopupCard({
           {getRemainingContext()}
         </div>
 
-        <DialogFooter className="border-t border-[#243050] pt-4 mt-2">
-          <Button variant="ghost" onClick={onClose} className="text-[#8B9FC4] hover:text-[#EEF3FF] hover:bg-[#1A263D]">
+        <DialogFooter className="border-t border-[#E0E7FF] pt-4 mt-2">
+          <Button variant="ghost" onClick={onClose} className="text-[#64748B] hover:text-[#172554] hover:bg-[#EEF2FF]">
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={!selectedOrder} className="bg-[#D4521A] hover:bg-[#b04213] text-white">
+          <Button onClick={handleSave} disabled={!selectedOrder} className="bg-[#4F46E5] hover:bg-[#b04213] text-white">
             Save Day Plan
           </Button>
         </DialogFooter>

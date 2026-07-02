@@ -80,7 +80,7 @@ export default function ShiftMasterPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold font-heading text-white">Shift Master</h1>
-          <p className="text-[#8B9FC4] mt-1">Manage production shifts and timings.</p>
+          <p className="text-[#64748B] mt-1">Manage production shifts and timings.</p>
         </div>
         <Button onClick={openAddModal} className="bg-amber-500 hover:bg-amber-600 text-black font-semibold">
           <Plus className="w-4 h-4 mr-2" />
@@ -88,10 +88,10 @@ export default function ShiftMasterPage() {
         </Button>
       </div>
 
-      <div className="rounded-[14px] border border-white/[0.06] bg-[#0C1221] overflow-hidden">
+      <div className="rounded-[14px] border border-black/[0.04] bg-[#FFFFFF] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-[15px] text-left">
-            <thead className="bg-[#0C1221] border-b border-[#243050] text-[#8B9FC4] text-[13px] uppercase tracking-wider font-heading">
+            <thead className="bg-[#FFFFFF] border-b border-[#E0E7FF] text-[#64748B] text-[13px] uppercase tracking-wider font-heading">
               <tr>
                 <th className="px-6 py-4 font-medium">Shift Name</th>
                 <th className="px-6 py-4 font-medium">Start Time</th>
@@ -101,36 +101,36 @@ export default function ShiftMasterPage() {
                 <th className="px-6 py-4 font-medium text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#243050]">
+            <tbody className="divide-y divide-[#E0E7FF]">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-[#8B9FC4]">
+                  <td colSpan={6} className="px-6 py-12 text-center text-[#64748B]">
                     <div className="flex flex-col items-center gap-3">
-                      <div className="w-6 h-6 border-2 border-[#243050] border-t-[#D4521A] rounded-full animate-spin" />
+                      <div className="w-6 h-6 border-2 border-[#E0E7FF] border-t-[#4F46E5] rounded-full animate-spin" />
                       Loading shifts...
                     </div>
                   </td>
                 </tr>
               ) : shifts.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-[#5A6E90]">
+                  <td colSpan={6} className="px-6 py-12 text-center text-[#94A3B8]">
                     No shifts found. Create one to get started.
                   </td>
                 </tr>
               ) : (
                 shifts.map((shift) => (
-                  <tr key={shift.id} className="hover:bg-[#1A263D]/50 transition-colors group">
+                  <tr key={shift.id} className="hover:bg-[#EEF2FF]/50 transition-colors group">
                     <td className="px-6 py-4 font-medium text-white">{shift.name}</td>
-                    <td className="px-6 py-4 text-[#EEF3FF] font-mono">{shift.startTime}</td>
-                    <td className="px-6 py-4 text-[#EEF3FF] font-mono">{shift.endTime}</td>
-                    <td className="px-6 py-4 text-[#EEF3FF]">{shift.breakDurationMins}</td>
+                    <td className="px-6 py-4 text-[#172554] font-mono">{shift.startTime}</td>
+                    <td className="px-6 py-4 text-[#172554] font-mono">{shift.endTime}</td>
+                    <td className="px-6 py-4 text-[#172554]">{shift.breakDurationMins}</td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                          <Switch 
                            checked={shift.isActive} 
                            onCheckedChange={() => toggleActive(shift)}
                          />
-                         <span className="text-xs text-[#8B9FC4]">
+                         <span className="text-xs text-[#64748B]">
                            {shift.isActive ? 'Active' : 'Inactive'}
                          </span>
                       </div>
@@ -140,7 +140,7 @@ export default function ShiftMasterPage() {
                         variant="ghost"
                         size="icon"
                         onClick={() => openEditModal(shift)}
-                        className="text-[#8B9FC4] hover:text-[#EEF3FF] hover:bg-[#243050]"
+                        className="text-[#64748B] hover:text-[#172554] hover:bg-[#E0E7FF]"
                       >
                         <PencilSimple className="w-4 h-4" />
                       </Button>

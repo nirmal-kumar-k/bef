@@ -274,9 +274,9 @@ export function CorePlanningModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="w-[95vw] sm:max-w-[95vw] md:max-w-[800px] lg:max-w-[1000px] xl:max-w-[1200px] min-h-[60vh] max-h-[90vh] bg-[#050810] border-[#243050] text-foreground p-0 shadow-2xl">
+      <DialogContent className="w-[95vw] sm:max-w-[95vw] md:max-w-[800px] lg:max-w-[1000px] xl:max-w-[1200px] min-h-[60vh] max-h-[90vh] bg-[#F4F6FB] border-[#E0E7FF] text-foreground p-0 shadow-2xl">
         <div className="flex flex-col w-full max-h-[90vh]">
-          <DialogHeader className="p-6 pb-4 border-b border-[#243050] shrink-0">
+          <DialogHeader className="p-6 pb-4 border-b border-[#E0E7FF] shrink-0">
           <div>
             <DialogTitle className="text-xl font-heading text-white">
               {dateString}
@@ -291,9 +291,9 @@ export function CorePlanningModal({
                   <SelectTrigger className="h-6 px-2 text-[10px] font-bold uppercase rounded-md border border-amber-500/20 bg-amber-500/10 text-amber-500 ml-2 w-auto min-w-[100px] border-none focus:ring-0">
                     <SelectValue placeholder="Select Shift" />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#0C1221] border-[#243050]">
+                  <SelectContent className="bg-[#FFFFFF] border-[#E0E7FF]">
                     {shifts.map(s => (
-                      <SelectItem key={s.id} value={s.id!} className="text-[#EEF3FF] hover:bg-[#1A263D] focus:bg-[#1A263D] text-xs">
+                      <SelectItem key={s.id} value={s.id!} className="text-[#172554] hover:bg-[#EEF2FF] focus:bg-[#EEF2FF] text-xs">
                         {s.name} ({s.startTime} - {s.endTime})
                       </SelectItem>
                     ))}
@@ -308,14 +308,14 @@ export function CorePlanningModal({
           {/* SECTION 1: Order & Core Boxes */}
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider">Select Order</Label>
+              <Label className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">Select Order</Label>
               <Select value={selectedOrder} onValueChange={setSelectedOrder}>
-                <SelectTrigger className="w-full max-w-2xl h-12 text-base bg-[#0C1221] border-[#243050] text-[#EEF3FF] shadow-sm">
+                <SelectTrigger className="w-full max-w-2xl h-12 text-base bg-[#FFFFFF] border-[#E0E7FF] text-[#172554] shadow-sm">
                   <SelectValue placeholder="Select active customer order..." />
                 </SelectTrigger>
-                <SelectContent className="bg-[#0C1221] border-[#243050] max-h-60">
+                <SelectContent className="bg-[#FFFFFF] border-[#E0E7FF] max-h-60">
                   {openOrders.map(o => (
-                    <SelectItem key={o.id} value={o.id} className="text-[#EEF3FF] hover:bg-[#1A263D] focus:bg-[#1A263D]">
+                    <SelectItem key={o.id} value={o.id} className="text-[#172554] hover:bg-[#EEF2FF] focus:bg-[#EEF2FF]">
                       <span className="font-mono text-[#4285F4] mr-2">{o.customerOrderNo}</span> {o.customer}
                     </SelectItem>
                   ))}
@@ -330,13 +330,13 @@ export function CorePlanningModal({
                   const plannedForDay = getColTotal(cb.coreBoxCode!)
                   
                   return (
-                    <div key={cb.coreBoxCode} className="bg-gradient-to-br from-[#0C1221] to-[#1A263D] p-5 rounded-xl border border-[#243050] min-w-[280px] flex-1 shadow-md">
+                    <div key={cb.coreBoxCode} className="bg-gradient-to-br from-[#FFFFFF] to-[#EEF2FF] p-5 rounded-xl border border-[#E0E7FF] min-w-[280px] flex-1 shadow-md">
                       <div className="flex justify-between items-start mb-4">
-                        <h4 className="text-[#EEF3FF] font-mono font-bold text-base">{cb.coreBoxCode}</h4>
-                        <span className="text-xs font-medium text-[#8B9FC4] bg-[#050810] px-2.5 py-1 rounded-md border border-[#243050]">Remaining: {remaining}</span>
+                        <h4 className="text-[#172554] font-mono font-bold text-base">{cb.coreBoxCode}</h4>
+                        <span className="text-xs font-medium text-[#64748B] bg-[#F4F6FB] px-2.5 py-1 rounded-md border border-[#E0E7FF]">Remaining: {remaining}</span>
                       </div>
                       <div className="flex items-center gap-3">
-                        <div className="flex-1 text-sm text-[#8B9FC4]">Planned Today:</div>
+                        <div className="flex-1 text-sm text-[#64748B]">Planned Today:</div>
                         <span className="font-mono text-[#4285F4] font-bold text-2xl">{plannedForDay}</span>
                         {remaining > 0 && plannedForDay === 0 && (
                           <Button 
@@ -355,37 +355,37 @@ export function CorePlanningModal({
               </div>
             )}
             {selectedOrder && activeCoreBoxes.length === 0 && (
-              <p className="text-sm text-[#5A6E90] italic">No core boxes mapped for this order.</p>
+              <p className="text-sm text-[#94A3B8] italic">No core boxes mapped for this order.</p>
             )}
           </div>
 
           {/* SECTION 2: Shift Time Table */}
           {selectedOrder && activeCoreBoxes.length > 0 && (
             <div className="space-y-3">
-              <Label className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider">Shift Time Table</Label>
-              <div className="border border-[#243050] rounded-xl overflow-x-auto bg-[#050810]">
+              <Label className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">Shift Time Table</Label>
+              <div className="border border-[#E0E7FF] rounded-xl overflow-x-auto bg-[#F4F6FB]">
                 <table className="w-full text-xs text-left whitespace-nowrap">
-                  <thead className="bg-[#0C1221] border-b border-[#243050] text-[#8B9FC4] uppercase tracking-wider font-bold">
+                  <thead className="bg-[#FFFFFF] border-b border-[#E0E7FF] text-[#64748B] uppercase tracking-wider font-bold">
                     <tr>
-                      <th rowSpan={2} className="px-6 py-4 sticky left-0 bg-[#0C1221] z-10 w-40 whitespace-nowrap text-xs align-bottom pb-6">Time Slot</th>
+                      <th rowSpan={2} className="px-6 py-4 sticky left-0 bg-[#FFFFFF] z-10 w-40 whitespace-nowrap text-xs align-bottom pb-6">Time Slot</th>
                       {activeCoreBoxes.map(cb => (
-                        <th key={cb.coreBoxCode} colSpan={2} className="px-4 py-3 text-center text-[#4285F4] font-mono text-base border-b border-[#243050]/50">
+                        <th key={cb.coreBoxCode} colSpan={2} className="px-4 py-3 text-center text-[#4285F4] font-mono text-base border-b border-[#E0E7FF]/50">
                           {cb.coreBoxCode}
                         </th>
                       ))}
-                      <th rowSpan={2} className="px-6 py-4 text-center text-[#EEF3FF] whitespace-nowrap w-40 align-bottom pb-6">Slot Total</th>
+                      <th rowSpan={2} className="px-6 py-4 text-center text-[#172554] whitespace-nowrap w-40 align-bottom pb-6">Slot Total</th>
                     </tr>
                     <tr>
                       {activeCoreBoxes.map(cb => [
-                        <th key={`${cb.coreBoxCode}-hourly`} className="px-2 py-2 text-center text-[10px] text-[#5A6E90] w-32 font-medium border-r border-[#243050]/20">HOURLY PLAN</th>,
-                        <th key={`${cb.coreBoxCode}-assign`} className="px-2 py-2 text-center text-[10px] text-[#5A6E90] w-56 font-medium">LABOURER ASSIGNMENT</th>
+                        <th key={`${cb.coreBoxCode}-hourly`} className="px-2 py-2 text-center text-[10px] text-[#94A3B8] w-32 font-medium border-r border-[#E0E7FF]/20">HOURLY PLAN</th>,
+                        <th key={`${cb.coreBoxCode}-assign`} className="px-2 py-2 text-center text-[10px] text-[#94A3B8] w-56 font-medium">LABOURER ASSIGNMENT</th>
                       ])}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#243050]">
+                  <tbody className="divide-y divide-[#E0E7FF]">
                     {TIME_SLOTS.map((slot, index) => (
-                      <tr key={slot.time} className="hover:bg-[#0C1221]/50 transition-colors">
-                        <td className="px-6 py-3 font-mono font-semibold text-sm text-[#EEF3FF] sticky left-0 bg-[#050810] z-10 whitespace-nowrap">
+                      <tr key={slot.time} className="hover:bg-[#FFFFFF]/50 transition-colors">
+                        <td className="px-6 py-3 font-mono font-semibold text-sm text-[#172554] sticky left-0 bg-[#F4F6FB] z-10 whitespace-nowrap">
                           {slot.time}
                         </td>
                         {activeCoreBoxes.map(cb => {
@@ -393,15 +393,15 @@ export function CorePlanningModal({
                           const workerCount = workers[cb.coreBoxCode!]?.[slot.time] || 0
                           
                           return [
-                            <td key={`${cb.coreBoxCode}-input`} className="px-2 py-2 text-center border-r border-[#243050]/20">
+                            <td key={`${cb.coreBoxCode}-input`} className="px-2 py-2 text-center border-r border-[#E0E7FF]/20">
                               <Input
                                 type="number"
                                 min="0"
                                 value={val === undefined ? 0 : val}
                                 onChange={e => handleHourlyChange(cb.coreBoxCode!, slot.time, e.target.value)}
                                 className={cn(
-                                  "w-20 h-9 mx-auto bg-[#0C1221] font-mono text-center px-2 text-sm shadow-inner",
-                                  (val === undefined || val === 0) ? "border-[#243050]/50 text-[#5A6E90]" : "border-[#243050] text-[#EEF3FF]"
+                                  "w-20 h-9 mx-auto bg-[#FFFFFF] font-mono text-center px-2 text-sm shadow-inner",
+                                  (val === undefined || val === 0) ? "border-[#E0E7FF]/50 text-[#94A3B8]" : "border-[#E0E7FF] text-[#172554]"
                                 )}
                               />
                             </td>,
@@ -410,16 +410,16 @@ export function CorePlanningModal({
                                 <Button 
                                   variant="outline" 
                                   size="icon" 
-                                  className="h-6 w-6 bg-[#050810] border-[#243050] text-[#EEF3FF] hover:bg-[#1A263D]"
+                                  className="h-6 w-6 bg-[#F4F6FB] border-[#E0E7FF] text-[#172554] hover:bg-[#EEF2FF]"
                                   onClick={() => handleWorkerChange(cb.coreBoxCode!, slot.time, -1)}
                                 >
                                   -
                                 </Button>
-                                <span className="font-mono font-medium text-[#EEF3FF] w-4 text-center text-sm">{workerCount}</span>
+                                <span className="font-mono font-medium text-[#172554] w-4 text-center text-sm">{workerCount}</span>
                                 <Button 
                                   variant="outline" 
                                   size="icon" 
-                                  className="h-6 w-6 bg-[#050810] border-[#243050] text-[#EEF3FF] hover:bg-[#1A263D]"
+                                  className="h-6 w-6 bg-[#F4F6FB] border-[#E0E7FF] text-[#172554] hover:bg-[#EEF2FF]"
                                   onClick={() => handleWorkerChange(cb.coreBoxCode!, slot.time, 1)}
                                 >
                                   +
@@ -428,14 +428,14 @@ export function CorePlanningModal({
                             </td>
                           ]
                         })}
-                        <td className="px-6 py-3 font-mono font-bold text-center text-[#8B9FC4] bg-[#0C1221]/30">
+                        <td className="px-6 py-3 font-mono font-bold text-center text-[#64748B] bg-[#FFFFFF]/30">
                           {getRowTotal(slot.time)}
                         </td>
                       </tr>
                     ))}
                     {/* Totals Row */}
-                    <tr className="bg-[#1A263D] border-t-2 border-[#243050]">
-                      <td className="px-6 py-4 font-bold text-sm text-[#EEF3FF] sticky left-0 bg-[#1A263D] z-10">COLUMN TOTAL</td>
+                    <tr className="bg-[#EEF2FF] border-t-2 border-[#E0E7FF]">
+                      <td className="px-6 py-4 font-bold text-sm text-[#172554] sticky left-0 bg-[#EEF2FF] z-10">COLUMN TOTAL</td>
                       {activeCoreBoxes.map(cb => {
                         const plannedTarget = getColTotal(cb.coreBoxCode!)
                         const pattern = patterns.find(p => p.code === cb.patternRef)
@@ -453,14 +453,14 @@ export function CorePlanningModal({
                         const totalWorkers = Math.max(0, ...Object.values(workers[cb.coreBoxCode!] || {}))
 
                         return [
-                          <td key={`${cb.coreBoxCode}-total`} className="px-4 py-4 text-center font-mono font-bold text-lg text-[#4285F4] border-r border-[#243050]/20">
+                          <td key={`${cb.coreBoxCode}-total`} className="px-4 py-4 text-center font-mono font-bold text-lg text-[#4285F4] border-r border-[#E0E7FF]/20">
                             {plannedTarget}
                           </td>,
-                          <td key={`${cb.coreBoxCode}-expected`} className="bg-[#1A263D] px-2 py-4 align-middle">
+                          <td key={`${cb.coreBoxCode}-expected`} className="bg-[#EEF2FF] px-2 py-4 align-middle">
                             <div className="flex flex-col items-center justify-center space-y-1.5">
-                              <span className="text-[10px] text-[#EEF3FF] font-mono font-bold">Exp: {expectedOutput.toFixed(0)}</span>
+                              <span className="text-[10px] text-[#172554] font-mono font-bold">Exp: {expectedOutput.toFixed(0)}</span>
                               {totalWorkers === 0 ? (
-                                <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-[#050810] text-[#8B9FC4] border border-[#243050]">Unassigned</span>
+                                <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-[#F4F6FB] text-[#64748B] border border-[#E0E7FF]">Unassigned</span>
                               ) : isOnTrack ? (
                                 <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/20">On Track</span>
                               ) : isOverrun ? (
@@ -472,7 +472,7 @@ export function CorePlanningModal({
                           </td>
                         ]
                       })}
-                      <td className="px-6 py-4 font-mono font-bold text-center text-[#EEF3FF] text-xl bg-[#D4521A]/20">
+                      <td className="px-6 py-4 font-mono font-bold text-center text-[#172554] text-xl bg-[#4F46E5]/20">
                         {getGrandTotal()}
                       </td>
                     </tr>
@@ -484,15 +484,15 @@ export function CorePlanningModal({
 
           {/* SECTION 4: Actual Entry */}
           {selectedOrder && activeCoreBoxes.length > 0 && (
-            <div className="border border-[#243050] rounded-xl overflow-hidden mt-8">
-              <div className="w-full flex items-center justify-between bg-[#1A263D] p-4 text-[#EEF3FF]">
+            <div className="border border-[#E0E7FF] rounded-xl overflow-hidden mt-8">
+              <div className="w-full flex items-center justify-between bg-[#EEF2FF] p-4 text-[#172554]">
                 <div className="flex items-center gap-2">
                   <h3 className="font-bold text-sm">End of Day — Actual Entry</h3>
-                  <span className="text-xs text-[#8B9FC4]">Enter produced quantities</span>
+                  <span className="text-xs text-[#64748B]">Enter produced quantities</span>
                 </div>
               </div>
               
-              <div className="p-4 bg-[#050810] space-y-3">
+              <div className="p-4 bg-[#F4F6FB] space-y-3">
                   {activeCoreBoxes.map(cb => {
                     const planned = getColTotal(cb.coreBoxCode!)
                     const act = actuals[cb.coreBoxCode!]
@@ -500,29 +500,29 @@ export function CorePlanningModal({
                     const variance = hasAct ? act - planned : 0
                     
                     return (
-                      <div key={cb.coreBoxCode} className="flex items-center gap-4 p-3 bg-[#0C1221] border border-[#243050] rounded-lg">
+                      <div key={cb.coreBoxCode} className="flex items-center gap-4 p-3 bg-[#FFFFFF] border border-[#E0E7FF] rounded-lg">
                         <div className="w-32">
-                          <div className="text-[#EEF3FF] font-bold text-sm bg-[#1A263D] p-2 rounded border border-[#243050]">
+                          <div className="text-[#172554] font-bold text-sm bg-[#EEF2FF] p-2 rounded border border-[#E0E7FF]">
                             {cb.coreBoxCode}
-                            {cb.patternRef && <span className="text-[10px] text-[#5A6E90] ml-2 block">{cb.patternRef}</span>}
+                            {cb.patternRef && <span className="text-[10px] text-[#94A3B8] ml-2 block">{cb.patternRef}</span>}
                           </div>
                           <div className="mt-1">
                             <Select 
                               value={selectedEquipments[cb.coreBoxCode!] || ''} 
                               onValueChange={(val) => setSelectedEquipments(prev => ({...prev, [cb.coreBoxCode!]: val}))}
                             >
-                              <SelectTrigger className="h-7 text-[10px] bg-[#050810] border-[#243050] text-[#8B9FC4]">
+                              <SelectTrigger className="h-7 text-[10px] bg-[#F4F6FB] border-[#E0E7FF] text-[#64748B]">
                                 <SelectValue placeholder="Machine" />
                               </SelectTrigger>
-                              <SelectContent className="bg-[#0C1221] border-[#243050]">
+                              <SelectContent className="bg-[#FFFFFF] border-[#E0E7FF]">
                                 {equipments.map(e => <SelectItem key={e.id} value={e.id!} className="text-[10px]">{e.name}</SelectItem>)}
                               </SelectContent>
                             </Select>
                           </div>
                         </div>
                         <div className="w-24">
-                          <span className="text-[10px] text-[#8B9FC4] block uppercase font-bold mb-1">Planned</span>
-                          <span className="font-mono text-[#EEF3FF]">{planned}</span>
+                          <span className="text-[10px] text-[#64748B] block uppercase font-bold mb-1">Planned</span>
+                          <span className="font-mono text-[#172554]">{planned}</span>
                         </div>
                         <div className="w-32">
                           <span className="text-[10px] text-[#4285F4] block uppercase font-bold mb-1">Actual</span>
@@ -532,29 +532,29 @@ export function CorePlanningModal({
                             value={act === undefined ? '' : act}
                             onChange={e => setActuals(prev => ({ ...prev, [cb.coreBoxCode!]: e.target.value === '' ? undefined : Number(e.target.value) })) as any}
                             className={cn(
-                              "h-8 bg-[#050810] text-[#EEF3FF] font-mono px-2 text-sm w-full",
-                              act === undefined ? "border-red-500/50 focus:border-red-500" : "border-[#243050]"
+                              "h-8 bg-[#F4F6FB] text-[#172554] font-mono px-2 text-sm w-full",
+                              act === undefined ? "border-red-500/50 focus:border-red-500" : "border-[#E0E7FF]"
                             )}
                             placeholder="Required"
                           />
                         </div>
                         <div className="w-24 text-right ml-auto">
-                          <span className="text-[10px] text-[#8B9FC4] block uppercase font-bold mb-1">Variance</span>
+                          <span className="text-[10px] text-[#64748B] block uppercase font-bold mb-1">Variance</span>
                           {hasAct ? (
                             <span className={cn(
                               "font-mono font-bold text-lg",
-                              variance > 0 ? "text-green-500" : variance < 0 ? "text-red-500" : "text-[#8B9FC4]"
+                              variance > 0 ? "text-green-500" : variance < 0 ? "text-red-500" : "text-[#64748B]"
                             )}>
                               {variance > 0 ? '+' : ''}{variance}
                             </span>
                           ) : (
-                            <span className="text-[#5A6E90]">-</span>
+                            <span className="text-[#94A3B8]">-</span>
                           )}
                         </div>
                       </div>
                     )
                   })}
-                  <p className="text-[10px] text-[#8B9FC4] italic mt-2">
+                  <p className="text-[10px] text-[#64748B] italic mt-2">
                     * If Actual &lt; Planned, the deficit will be carried forward to tomorrow as Pending.
                   </p>
                 </div>
@@ -562,9 +562,9 @@ export function CorePlanningModal({
           )}
         </div>
 
-        <DialogFooter className="m-0 p-4 border-t border-[#243050] bg-[#0C1221] shrink-0 rounded-b-xl sm:justify-end">
-          <Button variant="outline" onClick={onClose} className="border-[#243050] text-[#8B9FC4] hover:text-[#EEF3FF]">Cancel</Button>
-          <Button onClick={handleSave} className="bg-[#D4521A] text-white hover:bg-[#D4521A]/90 shadow-[0_0_15px_rgba(212,82,26,0.3)]">Save Day Plan</Button>
+        <DialogFooter className="m-0 p-4 border-t border-[#E0E7FF] bg-[#FFFFFF] shrink-0 rounded-b-xl sm:justify-end">
+          <Button variant="outline" onClick={onClose} className="border-[#E0E7FF] text-[#64748B] hover:text-[#172554]">Cancel</Button>
+          <Button onClick={handleSave} className="bg-[#4F46E5] text-white hover:bg-[#4F46E5]/90 shadow-[0_0_15px_rgba(212,82,26,0.3)]">Save Day Plan</Button>
         </DialogFooter>
         </div>
       </DialogContent>

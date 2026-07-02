@@ -148,38 +148,38 @@ export default function ProductionSchedulePage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-[#EEF3FF] font-heading tracking-tight">Day-Wise Schedule</h1>
-          <p className="text-[#8B9FC4] mt-1 text-sm">Assign daily production quotas across 9 stages</p>
+          <h1 className="text-3xl font-bold text-[#172554] font-heading tracking-tight">Day-Wise Schedule</h1>
+          <p className="text-[#64748B] mt-1 text-sm">Assign daily production quotas across 9 stages</p>
         </div>
-        <div className="flex items-center gap-3 bg-[#0C1221] px-4 py-2 border border-[#243050] rounded-xl">
-          <Label htmlFor="view-mode" className={cn("text-sm font-semibold cursor-pointer", view === 'weekly' ? 'text-white' : 'text-[#5A6E90]')}>Weekly</Label>
+        <div className="flex items-center gap-3 bg-[#FFFFFF] px-4 py-2 border border-[#E0E7FF] rounded-xl">
+          <Label htmlFor="view-mode" className={cn("text-sm font-semibold cursor-pointer", view === 'weekly' ? 'text-white' : 'text-[#94A3B8]')}>Weekly</Label>
           <Switch 
             id="view-mode" 
             checked={view === 'monthly'} 
             onCheckedChange={(c) => setView(c ? 'monthly' : 'weekly')}
-            className="data-[state=checked]:bg-[#D4521A] data-[state=unchecked]:bg-[#2E3C5C]"
+            className="data-[state=checked]:bg-[#4F46E5] data-[state=unchecked]:bg-[#C7D2FE]"
           />
-          <Label htmlFor="view-mode" className={cn("text-sm font-semibold cursor-pointer", view === 'monthly' ? 'text-white' : 'text-[#5A6E90]')}>Monthly</Label>
+          <Label htmlFor="view-mode" className={cn("text-sm font-semibold cursor-pointer", view === 'monthly' ? 'text-white' : 'text-[#94A3B8]')}>Monthly</Label>
         </div>
       </div>
 
       {loading ? (
         <div className="py-20 text-center">
-          <p className="text-[#8B9FC4] text-lg animate-pulse">Loading schedule...</p>
+          <p className="text-[#64748B] text-lg animate-pulse">Loading schedule...</p>
         </div>
       ) : (
-        <div className="bg-[#050810] border border-[#243050] rounded-xl overflow-hidden">
+        <div className="bg-[#F4F6FB] border border-[#E0E7FF] rounded-xl overflow-hidden">
           {/* Calendar Header Row */}
-          <div className="grid grid-cols-7 bg-[#0C1221] border-b border-[#243050]">
+          <div className="grid grid-cols-7 bg-[#FFFFFF] border-b border-[#E0E7FF]">
             {weekDays.map(day => (
-              <div key={day} className="py-3 text-center text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider">
+              <div key={day} className="py-3 text-center text-xs font-semibold text-[#64748B] uppercase tracking-wider">
                 {day}
               </div>
             ))}
           </div>
 
           {/* Calendar Grid */}
-          <div className="grid grid-cols-7 bg-[#243050] gap-px">
+          <div className="grid grid-cols-7 bg-[#E0E7FF] gap-px">
             {days.map((date, i) => {
               const dateStr = date.toISOString().split('T')[0]
               const isToday = new Date().toISOString().split('T')[0] === dateStr
@@ -196,7 +196,7 @@ export default function ProductionSchedulePage() {
                   key={i}
                   onClick={() => setSelectedDate(dateStr)}
                   className={cn(
-                    "min-h-[140px] bg-[#050810] p-2 hover:bg-[#1A263D]/50 transition-colors cursor-pointer group flex flex-col gap-1 relative",
+                    "min-h-[140px] bg-[#F4F6FB] p-2 hover:bg-[#EEF2FF]/50 transition-colors cursor-pointer group flex flex-col gap-1 relative",
                     !isCurrentMonth && "opacity-50"
                   )}
                 >
@@ -208,8 +208,8 @@ export default function ProductionSchedulePage() {
                     <span className={cn(
                       "text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full",
                       isToday 
-                        ? "bg-[#D4521A] text-white" 
-                        : "text-[#8B9FC4] group-hover:text-[#EEF3FF]"
+                        ? "bg-[#4F46E5] text-white" 
+                        : "text-[#64748B] group-hover:text-[#172554]"
                     )}>
                       {date.getDate()}
                     </span>

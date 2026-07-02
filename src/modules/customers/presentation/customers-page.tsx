@@ -41,27 +41,27 @@ export default function CustomersPage() {
     <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in zoom-in-95 duration-500">
       <div className="flex items-center justify-between">
         <div className="space-y-1">
-          <h1 className="text-3xl font-heading font-extrabold text-[#EEF3FF] tracking-tight">Customer Directory</h1>
-          <p className="text-[#8B9FC4] text-sm">View all registered customers imported from the database.</p>
+          <h1 className="text-3xl font-heading font-extrabold text-[#172554] tracking-tight">Customer Directory</h1>
+          <p className="text-[#64748B] text-sm">View all registered customers imported from the database.</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {customers.length === 0 ? (
-          <div className="col-span-full py-12 text-center text-[#5A6E90]">
+          <div className="col-span-full py-12 text-center text-[#94A3B8]">
             No customers found in the database.
           </div>
         ) : (
           customers.map(customer => (
-            <Card key={customer.id} className="bg-[#050810]/50 border-[#243050] hover:border-[#3A4A68] hover:bg-[#070B16] transition-all duration-300">
+            <Card key={customer.id} className="bg-[#F4F6FB]/50 border-[#E0E7FF] hover:border-[#C7D2FE] hover:bg-[#F8FAFC] transition-all duration-300">
               <CardContent className="p-5 space-y-4">
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <Buildings className="w-5 h-5 text-[#D4521A]" weight="duotone" />
-                      <h3 className="font-semibold text-lg text-[#EEF3FF]">{customer.label}</h3>
+                      <Buildings className="w-5 h-5 text-[#4F46E5]" weight="duotone" />
+                      <h3 className="font-semibold text-lg text-[#172554]">{customer.label}</h3>
                     </div>
-                    <div className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold tracking-widest uppercase bg-[#1A263D] text-[#8B9FC4]">
+                    <div className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold tracking-widest uppercase bg-[#EEF2FF] text-[#64748B]">
                       {customer.value}
                     </div>
                   </div>
@@ -70,23 +70,23 @@ export default function CustomersPage() {
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-[#243050] space-y-2.5">
-                  <div className="flex items-center gap-3 text-[#8B9FC4] text-sm">
-                    <div className="w-6 h-6 rounded-md bg-[#0C1221] flex items-center justify-center shrink-0">
+                <div className="pt-4 border-t border-[#E0E7FF] space-y-2.5">
+                  <div className="flex items-center gap-3 text-[#64748B] text-sm">
+                    <div className="w-6 h-6 rounded-md bg-[#FFFFFF] flex items-center justify-center shrink-0">
                       <EnvelopeSimple className="w-3.5 h-3.5" weight="duotone" />
                     </div>
                     <span className="truncate">{customer.email || 'N/A'}</span>
                   </div>
                   
-                  <div className="flex items-center gap-3 text-[#8B9FC4] text-sm">
-                    <div className="w-6 h-6 rounded-md bg-[#0C1221] flex items-center justify-center shrink-0">
+                  <div className="flex items-center gap-3 text-[#64748B] text-sm">
+                    <div className="w-6 h-6 rounded-md bg-[#FFFFFF] flex items-center justify-center shrink-0">
                       <Phone className="w-3.5 h-3.5" weight="duotone" />
                     </div>
                     <span className="truncate">{customer.phone || 'N/A'}</span>
                   </div>
                   
-                  <div className="flex items-start gap-3 text-[#8B9FC4] text-sm">
-                    <div className="w-6 h-6 rounded-md bg-[#0C1221] flex items-center justify-center shrink-0 mt-0.5">
+                  <div className="flex items-start gap-3 text-[#64748B] text-sm">
+                    <div className="w-6 h-6 rounded-md bg-[#FFFFFF] flex items-center justify-center shrink-0 mt-0.5">
                       <MapPin className="w-3.5 h-3.5" weight="duotone" />
                     </div>
                     <span className="line-clamp-2 leading-relaxed">{customer.address || 'N/A'}</span>

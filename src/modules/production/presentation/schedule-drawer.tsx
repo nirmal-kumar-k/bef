@@ -236,18 +236,18 @@ export function ScheduleDrawer({
       )}>
         <div 
           className={cn(
-            "bg-[#050810] border border-[#243050] rounded-2xl w-full max-w-[900px] shadow-2xl flex flex-col overflow-hidden max-h-[90vh] transition-transform duration-300 ease-out",
+            "bg-[#F4F6FB] border border-[#E0E7FF] rounded-2xl w-full max-w-[900px] shadow-2xl flex flex-col overflow-hidden max-h-[90vh] transition-transform duration-300 ease-out",
             isOpen ? "scale-100 translate-y-0" : "scale-95 translate-y-4"
           )}
         >
         <div className="flex-1 overflow-y-auto">
           {/* Header */}
-          <div className="sticky top-0 z-10 bg-[#0C1221]/95 backdrop-blur-md border-b border-[#243050] px-6 py-5 flex items-center justify-between">
+          <div className="sticky top-0 z-10 bg-[#FFFFFF]/95 backdrop-blur-md border-b border-[#E0E7FF] px-6 py-5 flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-bold text-[#EEF3FF] tracking-tight">Day-Wise Plan</h2>
-              <p className="text-[#8B9FC4] text-sm mt-1">{displayDate}</p>
+              <h2 className="text-xl font-bold text-[#172554] tracking-tight">Day-Wise Plan</h2>
+              <p className="text-[#64748B] text-sm mt-1">{displayDate}</p>
             </div>
-            <button onClick={onClose} className="p-2 text-[#5A6E90] hover:text-[#EEF3FF] hover:bg-[#1A263D] rounded-lg transition-colors">
+            <button onClick={onClose} className="p-2 text-[#94A3B8] hover:text-[#172554] hover:bg-[#EEF2FF] rounded-lg transition-colors">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -255,46 +255,46 @@ export function ScheduleDrawer({
           <div className="p-6 space-y-8">
             {/* Capacity Dashboard */}
             <div className="grid grid-cols-2 gap-4">
-               <div className={cn("p-4 rounded-xl border border-[#243050] bg-[#0C1221]", totalMelting > 2000 && "border-red-500/30 bg-red-500/10")}>
+               <div className={cn("p-4 rounded-xl border border-[#E0E7FF] bg-[#FFFFFF]", totalMelting > 2000 && "border-red-500/30 bg-red-500/10")}>
                   <div className="flex items-center justify-between mb-2">
-                     <span className="text-[#8B9FC4] text-sm font-medium">Melting Capacity (Heats)</span>
+                     <span className="text-[#64748B] text-sm font-medium">Melting Capacity (Heats)</span>
                      {totalMelting > 2000 && <ShieldWarning className="text-red-500 w-5 h-5" />}
                   </div>
                   <div className="flex items-end gap-2">
-                     <span className={cn("text-2xl font-bold text-[#EEF3FF]", totalMelting > 2000 && "text-red-400")}>{totalMelting}</span>
-                     <span className="text-[#5A6E90] text-sm mb-1">/ 2000</span>
+                     <span className={cn("text-2xl font-bold text-[#172554]", totalMelting > 2000 && "text-red-400")}>{totalMelting}</span>
+                     <span className="text-[#94A3B8] text-sm mb-1">/ 2000</span>
                   </div>
                </div>
-               <div className={cn("p-4 rounded-xl border border-[#243050] bg-[#0C1221]", totalMoulding > 500 && "border-orange-500/30 bg-orange-500/10")}>
+               <div className={cn("p-4 rounded-xl border border-[#E0E7FF] bg-[#FFFFFF]", totalMoulding > 500 && "border-orange-500/30 bg-orange-500/10")}>
                   <div className="flex items-center justify-between mb-2">
-                     <span className="text-[#8B9FC4] text-sm font-medium">Moulding Line Capacity</span>
+                     <span className="text-[#64748B] text-sm font-medium">Moulding Line Capacity</span>
                      {totalMoulding > 500 && <ShieldWarning className="text-orange-500 w-5 h-5" />}
                   </div>
                   <div className="flex items-end gap-2">
-                     <span className={cn("text-2xl font-bold text-[#EEF3FF]", totalMoulding > 500 && "text-orange-400")}>{totalMoulding}</span>
-                     <span className="text-[#5A6E90] text-sm mb-1">/ 500</span>
+                     <span className={cn("text-2xl font-bold text-[#172554]", totalMoulding > 500 && "text-orange-400")}>{totalMoulding}</span>
+                     <span className="text-[#94A3B8] text-sm mb-1">/ 500</span>
                   </div>
                </div>
             </div>
 
             {/* Add Order to Day */}
-            <div className="bg-[#0C1221] border border-[#243050] rounded-xl p-4 flex gap-3 items-end">
+            <div className="bg-[#FFFFFF] border border-[#E0E7FF] rounded-xl p-4 flex gap-3 items-end">
               <div className="flex-1 space-y-2">
-                <Label className="text-[#8B9FC4] text-xs uppercase font-bold tracking-wider">Allocate New Order to Day</Label>
+                <Label className="text-[#64748B] text-xs uppercase font-bold tracking-wider">Allocate New Order to Day</Label>
                 <Select value={selectedOrder} onValueChange={setSelectedOrder}>
-                  <SelectTrigger className="bg-[#050810] border-[#243050] text-[#EEF3FF]">
+                  <SelectTrigger className="bg-[#F4F6FB] border-[#E0E7FF] text-[#172554]">
                     <SelectValue placeholder="Select active customer order..." />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#0C1221] border-[#243050]">
+                  <SelectContent className="bg-[#FFFFFF] border-[#E0E7FF]">
                     {validOrders.map(o => (
-                      <SelectItem key={String(o.id || o._id)} value={String(o.id || o._id)} className="text-[#EEF3FF] hover:bg-[#1A263D] focus:bg-[#1A263D] focus:text-[#EEF3FF] cursor-pointer">
+                      <SelectItem key={String(o.id || o._id)} value={String(o.id || o._id)} className="text-[#172554] hover:bg-[#EEF2FF] focus:bg-[#EEF2FF] focus:text-[#172554] cursor-pointer">
                         {`${o.customerOrderNo} - ${o.customer}`}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              <Button onClick={handleAddOrder} disabled={!selectedOrder} className="bg-[#D4521A] hover:bg-[#E56020] text-white">
+              <Button onClick={handleAddOrder} disabled={!selectedOrder} className="bg-[#4F46E5] hover:bg-[#E56020] text-white">
                 <CalendarPlus className="w-4 h-4 mr-2" />
                 Add to Plan
               </Button>
@@ -303,17 +303,17 @@ export function ScheduleDrawer({
             {/* Scheduled Orders List */}
             <div className="space-y-4">
               {daySchedules.length === 0 ? (
-                <div className="text-center py-10 border border-dashed border-[#243050] rounded-xl">
-                  <p className="text-[#5A6E90]">No orders scheduled for this day yet.</p>
+                <div className="text-center py-10 border border-dashed border-[#E0E7FF] rounded-xl">
+                  <p className="text-[#94A3B8]">No orders scheduled for this day yet.</p>
                 </div>
               ) : (
                 daySchedules.map((s, idx) => (
-                  <div key={idx} className="bg-[#0C1221] border border-[#243050] rounded-xl p-5 space-y-4 relative group">
+                  <div key={idx} className="bg-[#FFFFFF] border border-[#E0E7FF] rounded-xl p-5 space-y-4 relative group">
                      {s.isNew && <Badge className="absolute -top-2 -right-2 bg-blue-500 text-white border-none">New Entry</Badge>}
                          <div className="flex justify-between items-start mb-4">
                             <div>
-                               <h4 className="text-lg font-bold text-[#EEF3FF]">{s.customerOrderNo}</h4>
-                               <p className="text-[#8B9FC4] text-sm">{s.customer}</p>
+                               <h4 className="text-lg font-bold text-[#172554]">{s.customerOrderNo}</h4>
+                               <p className="text-[#64748B] text-sm">{s.customer}</p>
                             </div>
                             {s.remarks?.includes('Carried forward') && (
                               <Badge variant="outline" className="bg-red-500/10 text-red-400 border-red-500/20 text-xs">
@@ -324,17 +324,17 @@ export function ScheduleDrawer({
                      
                      <div className="grid grid-cols-3 gap-4">
                         {['core', 'moulding', 'melting'].map(stageKey => (
-                           <div key={stageKey} className="space-y-2 bg-[#050810] p-3 rounded-lg border border-[#243050]">
-                              <Label className="text-[#8B9FC4] text-[11px] uppercase font-bold tracking-wider">{stageKey}</Label>
+                           <div key={stageKey} className="space-y-2 bg-[#F4F6FB] p-3 rounded-lg border border-[#E0E7FF]">
+                              <Label className="text-[#64748B] text-[11px] uppercase font-bold tracking-wider">{stageKey}</Label>
                               <div className="flex items-center gap-2">
                                  <Input 
                                     type="number" 
                                     value={s.stages[stageKey].planned || ''}
                                     onChange={(e) => updateStagePlanned(idx, stageKey, e.target.value)}
-                                    className="h-8 w-16 text-sm font-mono font-medium text-center bg-[#EEF3FF]/10 border-transparent text-[#EEF3FF] rounded-md focus:border-[#D4521A] focus:bg-[#0C1221] transition-colors px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
+                                    className="h-8 w-16 text-sm font-mono font-medium text-center bg-[#172554]/10 border-transparent text-[#172554] rounded-md focus:border-[#4F46E5] focus:bg-[#FFFFFF] transition-colors px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
                                     placeholder="0"
                                  />
-                                 <span className="text-[#5A6E90] text-xs w-10">{s.stages[stageKey].unit}</span>
+                                 <span className="text-[#94A3B8] text-xs w-10">{s.stages[stageKey].unit}</span>
                               </div>
                            </div>
                         ))}
@@ -347,11 +347,11 @@ export function ScheduleDrawer({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-[#243050] bg-[#0C1221] flex justify-end gap-3 shrink-0">
-          <Button variant="outline" onClick={onClose} className="border-[#243050] text-[#8B9FC4] hover:text-[#EEF3FF] hover:bg-[#1A263D]">
+        <div className="p-4 border-t border-[#E0E7FF] bg-[#FFFFFF] flex justify-end gap-3 shrink-0">
+          <Button variant="outline" onClick={onClose} className="border-[#E0E7FF] text-[#64748B] hover:text-[#172554] hover:bg-[#EEF2FF]">
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={isSaving} className="bg-[#EEF3FF] text-[#0C1221] hover:bg-white min-w-[120px]">
+          <Button onClick={handleSave} disabled={isSaving} className="bg-[#172554] text-[#FFFFFF] hover:bg-white min-w-[120px]">
             {isSaving ? 'Saving...' : 'Save Day Plan'}
           </Button>
         </div>

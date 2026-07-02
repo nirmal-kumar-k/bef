@@ -134,13 +134,13 @@ export function PlanningDrawer({
 
   return (
     <div className={cn(
-      "fixed inset-y-0 right-0 w-[420px] bg-[#050810] border-l border-[#243050] shadow-2xl transform transition-transform duration-300 ease-in-out z-50 flex flex-col",
+      "fixed inset-y-0 right-0 w-[420px] bg-[#F4F6FB] border-l border-[#E0E7FF] shadow-2xl transform transition-transform duration-300 ease-in-out z-50 flex flex-col",
       isOpen ? "translate-x-0" : "translate-x-full"
     )}>
       {/* Header */}
-      <div className="flex items-center justify-between p-6 border-b border-[#243050] bg-[#0C1221]">
-        <h2 className="text-xl font-heading font-bold text-[#EEF3FF]">{dateString}</h2>
-        <button onClick={onClose} className="text-[#8B9FC4] hover:text-white transition-colors">
+      <div className="flex items-center justify-between p-6 border-b border-[#E0E7FF] bg-[#FFFFFF]">
+        <h2 className="text-xl font-heading font-bold text-[#172554]">{dateString}</h2>
+        <button onClick={onClose} className="text-[#64748B] hover:text-white transition-colors">
           <X className="w-6 h-6" />
         </button>
       </div>
@@ -148,45 +148,45 @@ export function PlanningDrawer({
       <div className="flex-1 overflow-y-auto p-6 space-y-8">
         {/* Capacity Stat Cards */}
         <div className="grid grid-cols-2 gap-4">
-          <div className="bg-[#1A263D] border border-[#243050] rounded-xl p-4">
+          <div className="bg-[#EEF2FF] border border-[#E0E7FF] rounded-xl p-4">
             <div className="flex items-center gap-2 text-[#EAB308] mb-2">
               <Fire weight="duotone" className="w-5 h-5" />
               <span className="text-xs font-semibold uppercase tracking-wider">Melting (Heats)</span>
             </div>
             <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-bold font-mono text-[#EEF3FF]">{plannedMelts}</span>
-              <span className="text-[#8B9FC4] text-sm">/ 10</span>
+              <span className="text-2xl font-bold font-mono text-[#172554]">{plannedMelts}</span>
+              <span className="text-[#64748B] text-sm">/ 10</span>
             </div>
           </div>
-          <div className="bg-[#1A263D] border border-[#243050] rounded-xl p-4">
+          <div className="bg-[#EEF2FF] border border-[#E0E7FF] rounded-xl p-4">
             <div className="flex items-center gap-2 text-[#4285F4] mb-2">
               <Cube weight="duotone" className="w-5 h-5" />
               <span className="text-xs font-semibold uppercase tracking-wider">Moulding (Boxes)</span>
             </div>
             <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-bold font-mono text-[#EEF3FF]">{plannedMoulds}</span>
-              <span className="text-[#8B9FC4] text-sm">/ 200</span>
+              <span className="text-2xl font-bold font-mono text-[#172554]">{plannedMoulds}</span>
+              <span className="text-[#64748B] text-sm">/ 200</span>
             </div>
           </div>
         </div>
 
         {/* Allocate New Order */}
         <div className="space-y-3">
-          <Label className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider">Allocate New Order To Day</Label>
+          <Label className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">Allocate New Order To Day</Label>
           <div className="flex gap-2">
             <Select value={selectedOrderToAdd} onValueChange={setSelectedOrderToAdd}>
-              <SelectTrigger className="flex-1 bg-[#0C1221] border-[#243050] text-[#EEF3FF]">
+              <SelectTrigger className="flex-1 bg-[#FFFFFF] border-[#E0E7FF] text-[#172554]">
                 <SelectValue placeholder="Select active customer order..." />
               </SelectTrigger>
-              <SelectContent className="bg-[#0C1221] border-[#243050] max-h-60">
+              <SelectContent className="bg-[#FFFFFF] border-[#E0E7FF] max-h-60">
                 {openOrders.map(o => (
-                  <SelectItem key={o.id} value={o.id} className="text-[#EEF3FF]">
+                  <SelectItem key={o.id} value={o.id} className="text-[#172554]">
                     {o.customerOrderNo} — {o.customer}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Button onClick={handleAddOrder} disabled={!selectedOrderToAdd} className="bg-[#D4521A] hover:bg-[#b04213] text-white px-3">
+            <Button onClick={handleAddOrder} disabled={!selectedOrderToAdd} className="bg-[#4F46E5] hover:bg-[#b04213] text-white px-3">
               <Plus weight="bold" className="w-5 h-5" />
             </Button>
           </div>
@@ -202,26 +202,26 @@ export function PlanningDrawer({
             const orderCoreBacklogs = backlogData.Core.filter(b => b.orderNo === order.customerOrderNo)
             
             return (
-              <div key={orderId} className="bg-[#0C1221] border border-[#243050] rounded-xl overflow-hidden">
-                <div className="p-4 border-b border-[#243050] bg-[#10172A]">
-                  <h3 className="text-xl font-bold font-mono text-[#EEF3FF]">{order.customerOrderNo}</h3>
-                  <p className="text-sm text-[#8B9FC4] mt-0.5">{order.customer}</p>
+              <div key={orderId} className="bg-[#FFFFFF] border border-[#E0E7FF] rounded-xl overflow-hidden">
+                <div className="p-4 border-b border-[#E0E7FF] bg-[#10172A]">
+                  <h3 className="text-xl font-bold font-mono text-[#172554]">{order.customerOrderNo}</h3>
+                  <p className="text-sm text-[#64748B] mt-0.5">{order.customer}</p>
                 </div>
                 
                 <div className="p-4 flex gap-3 overflow-x-auto">
                   {/* CORE Sub-card */}
-                  <div className="flex-1 min-w-[120px] bg-[#050810] border border-[#243050] rounded-lg p-3">
+                  <div className="flex-1 min-w-[120px] bg-[#F4F6FB] border border-[#E0E7FF] rounded-lg p-3">
                     <div className="flex items-center gap-1.5 text-[#4285F4] mb-3">
                       <CubeTransparent weight="bold" className="w-4 h-4" />
                       <span className="text-xs font-bold uppercase tracking-wider">Core</span>
                     </div>
                     <div className="space-y-3">
                       {orderCoreBacklogs.length === 0 ? (
-                        <p className="text-[10px] text-[#5A6E90]">No cores required</p>
+                        <p className="text-[10px] text-[#94A3B8]">No cores required</p>
                       ) : (
                         orderCoreBacklogs.map(cb => (
                           <div key={cb.coreBoxCode} className="space-y-1">
-                            <Label className="text-[10px] text-[#8B9FC4] leading-none">{cb.coreBoxCode}</Label>
+                            <Label className="text-[10px] text-[#64748B] leading-none">{cb.coreBoxCode}</Label>
                             <div className="flex items-center gap-2">
                               <Input 
                                 type="number" 
@@ -234,10 +234,10 @@ export function PlanningDrawer({
                                     core: { ...prev[orderId].core, [cb.coreBoxCode!]: Number(e.target.value) }
                                   }
                                 }))}
-                                className="h-8 bg-[#0C1221] border-[#243050] text-[#EEF3FF] font-mono px-2 text-sm"
+                                className="h-8 bg-[#FFFFFF] border-[#E0E7FF] text-[#172554] font-mono px-2 text-sm"
                                 placeholder="0"
                               />
-                              <span className="text-[10px] text-[#5A6E90]">cores</span>
+                              <span className="text-[10px] text-[#94A3B8]">cores</span>
                             </div>
                           </div>
                         ))
@@ -246,8 +246,8 @@ export function PlanningDrawer({
                   </div>
 
                   {/* MOULDING Sub-card */}
-                  <div className="flex-1 min-w-[120px] bg-[#050810] border border-[#243050] rounded-lg p-3">
-                    <div className="flex items-center gap-1.5 text-[#D4521A] mb-3">
+                  <div className="flex-1 min-w-[120px] bg-[#F4F6FB] border border-[#E0E7FF] rounded-lg p-3">
+                    <div className="flex items-center gap-1.5 text-[#4F46E5] mb-3">
                       <Cube weight="bold" className="w-4 h-4" />
                       <span className="text-xs font-bold uppercase tracking-wider">Moulding</span>
                     </div>
@@ -260,15 +260,15 @@ export function PlanningDrawer({
                           ...prev,
                           [orderId]: { ...prev[orderId], mould: Number(e.target.value) }
                         }))}
-                        className="h-8 bg-[#0C1221] border-[#243050] text-[#EEF3FF] font-mono px-2 text-sm"
+                        className="h-8 bg-[#FFFFFF] border-[#E0E7FF] text-[#172554] font-mono px-2 text-sm"
                         placeholder="0"
                       />
-                      <span className="text-[10px] text-[#5A6E90]">moulds</span>
+                      <span className="text-[10px] text-[#94A3B8]">moulds</span>
                     </div>
                   </div>
 
                   {/* MELTING Sub-card */}
-                  <div className="flex-1 min-w-[120px] bg-[#050810] border border-[#243050] rounded-lg p-3">
+                  <div className="flex-1 min-w-[120px] bg-[#F4F6FB] border border-[#E0E7FF] rounded-lg p-3">
                     <div className="flex items-center gap-1.5 text-[#EAB308] mb-3">
                       <Fire weight="bold" className="w-4 h-4" />
                       <span className="text-xs font-bold uppercase tracking-wider">Melting</span>
@@ -282,10 +282,10 @@ export function PlanningDrawer({
                           ...prev,
                           [orderId]: { ...prev[orderId], melt: Number(e.target.value) }
                         }))}
-                        className="h-8 bg-[#0C1221] border-[#243050] text-[#EEF3FF] font-mono px-2 text-sm"
+                        className="h-8 bg-[#FFFFFF] border-[#E0E7FF] text-[#172554] font-mono px-2 text-sm"
                         placeholder="0"
                       />
-                      <span className="text-[10px] text-[#5A6E90]">heats</span>
+                      <span className="text-[10px] text-[#94A3B8]">heats</span>
                     </div>
                   </div>
                 </div>
@@ -296,11 +296,11 @@ export function PlanningDrawer({
       </div>
 
       {/* Footer */}
-      <div className="p-6 border-t border-[#243050] bg-[#0C1221] flex justify-end gap-3">
-        <Button variant="ghost" onClick={onClose} className="text-[#8B9FC4] hover:text-[#EEF3FF] hover:bg-[#1A263D]">
+      <div className="p-6 border-t border-[#E0E7FF] bg-[#FFFFFF] flex justify-end gap-3">
+        <Button variant="ghost" onClick={onClose} className="text-[#64748B] hover:text-[#172554] hover:bg-[#EEF2FF]">
           Cancel
         </Button>
-        <Button onClick={handleSave} className="bg-[#D4521A] hover:bg-[#b04213] text-white px-6">
+        <Button onClick={handleSave} className="bg-[#4F46E5] hover:bg-[#b04213] text-white px-6">
           Save Day Plan
         </Button>
       </div>

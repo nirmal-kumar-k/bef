@@ -205,22 +205,22 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, patterns, dailyPlan
         <div className="flex justify-end">
           <button
             onClick={() => handleOpenPlanning(new Date().toISOString().split('T')[0])}
-            className="bg-[#D4521A] hover:bg-[#E56020] text-white px-5 py-2.5 rounded-lg font-bold shadow-sm flex items-center gap-2 transition-transform hover:scale-105"
+            className="bg-[#4F46E5] hover:bg-[#E56020] text-white px-5 py-2.5 rounded-lg font-bold shadow-sm flex items-center gap-2 transition-transform hover:scale-105"
           >
             <Plus weight="bold" className="w-4 h-4" />
             New Charge
           </button>
         </div>
       )}
-      <div className="bg-[#050810] border border-[#243050] rounded-xl overflow-hidden flex flex-col">
-        <div className="grid grid-cols-7 border-b border-[#243050] bg-[#0C1221]">
+      <div className="bg-[#F4F6FB] border border-[#E0E7FF] rounded-xl overflow-hidden flex flex-col">
+        <div className="grid grid-cols-7 border-b border-[#E0E7FF] bg-[#FFFFFF]">
           {weekDays.map(day => (
-            <div key={day} className="py-3 text-center text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider">
+            <div key={day} className="py-3 text-center text-xs font-semibold text-[#64748B] uppercase tracking-wider">
               {day}
             </div>
           ))}
         </div>
-        <div className="grid grid-cols-7 bg-[#243050] gap-[1px] flex-1">
+        <div className="grid grid-cols-7 bg-[#E0E7FF] gap-[1px] flex-1">
           {days.map((date, i) => {
             const dateStr = date.toISOString().split('T')[0]
             const isToday = new Date().toISOString().split('T')[0] === dateStr
@@ -247,15 +247,15 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, patterns, dailyPlan
                 }}
                 className={cn(
                   "p-2 transition-colors flex flex-col min-h-[120px] relative group border-[1px]",
-                  "bg-[#050810] hover:bg-[#0C1221] border-transparent",
+                  "bg-[#F4F6FB] hover:bg-[#FFFFFF] border-transparent",
                   !isCurrentMonth && "opacity-50",
-                  activeTab === 'planning' && "cursor-pointer hover:border-[#D4521A]/20",
+                  activeTab === 'planning' && "cursor-pointer hover:border-[#4F46E5]/20",
                   activeTab === 'tracking' && dayHeats.length > 0 && "cursor-pointer hover:border-[#374151]"
                 )}
               >
-                {isToday && <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#D4521A]" />}
+                {isToday && <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#4F46E5]" />}
                 <div className="flex justify-between items-start mb-2 pl-1">
-                  <span className={cn("text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full", isToday ? "bg-[#D4521A] text-white" : "text-[#8B9FC4]")}>
+                  <span className={cn("text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full", isToday ? "bg-[#4F46E5] text-white" : "text-[#64748B]")}>
                     {date.getDate()}
                   </span>
                 </div>
@@ -270,7 +270,7 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, patterns, dailyPlan
                             e.stopPropagation(); 
                             setDraggedHeats(dayHeats);
                           }}
-                          className="px-2 py-1 text-[10px] font-bold uppercase rounded-md bg-[#D4521A] text-white border border-[#D4521A]/50 cursor-grab truncate shadow-md"
+                          className="px-2 py-1 text-[10px] font-bold uppercase rounded-md bg-[#4F46E5] text-white border border-[#4F46E5]/50 cursor-grab truncate shadow-md"
                         >
                           PLANNED {dayHeats.length}
                         </div>
@@ -291,7 +291,7 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, patterns, dailyPlan
                   ) : (
                     <>
                       {dayHeats.length > 0 && (
-                        <div className="px-2 py-1 text-[10px] font-bold uppercase rounded-md bg-[#D4521A]/20 text-[#D4521A] border border-[#D4521A]/30 truncate">
+                        <div className="px-2 py-1 text-[10px] font-bold uppercase rounded-md bg-[#4F46E5]/20 text-[#4F46E5] border border-[#4F46E5]/30 truncate">
                           PLANNED {dayHeats.length}
                         </div>
                       )}
@@ -317,28 +317,28 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, patterns, dailyPlan
       {/* DAILY HEAT PLANNING MODAL */}
       {selectedDateForPlanning && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setSelectedDateForPlanning(null)}>
-          <div className="bg-[#111827] border-t-2 border-[#D4521A] rounded-[14px] text-white max-w-5xl w-full flex flex-col shadow-2xl h-[85vh] animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center p-6 border-b border-[#1F2937] shrink-0 bg-[#0C1221] rounded-t-[14px]">
+          <div className="bg-[#111827] border-t-2 border-[#4F46E5] rounded-[14px] text-white max-w-5xl w-full flex flex-col shadow-2xl h-[85vh] animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center p-6 border-b border-[#1F2937] shrink-0 bg-[#FFFFFF] rounded-t-[14px]">
               <div>
-                <h2 className="text-2xl font-bold font-heading tracking-tight text-[#EEF3FF]">Daily Heat Plan</h2>
-                <p className="text-[#8B9FC4] font-mono text-sm mt-1">{selectedDateForPlanning}</p>
+                <h2 className="text-2xl font-bold font-heading tracking-tight text-[#172554]">Daily Heat Plan</h2>
+                <p className="text-[#64748B] font-mono text-sm mt-1">{selectedDateForPlanning}</p>
               </div>
               <button onClick={() => setSelectedDateForPlanning(null)} className="text-[#9CA3AF] hover:text-white transition-colors bg-[#1F2937] p-2 rounded-full hover:bg-[#374151]">
                 <X className="w-5 h-5" />
               </button>
             </div>
             
-            <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-[#050810]">
+            <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-[#F4F6FB]">
               {planningHeats.filter(h => h.quantityScheduled !== 0).map((heat, idx) => (
-                <div key={heat.itemId || idx} className="bg-[#111827] border border-[#243050] rounded-xl overflow-hidden shadow-sm">
-                  <div className="flex items-center gap-4 p-4 border-b border-[#243050] bg-[#0C1221]">
-                    <div className="w-8 h-8 rounded-full bg-[#D4521A]/10 text-[#D4521A] flex items-center justify-center font-bold font-mono border border-[#D4521A]/20">
+                <div key={heat.itemId || idx} className="bg-[#111827] border border-[#E0E7FF] rounded-xl overflow-hidden shadow-sm">
+                  <div className="flex items-center gap-4 p-4 border-b border-[#E0E7FF] bg-[#FFFFFF]">
+                    <div className="w-8 h-8 rounded-full bg-[#4F46E5]/10 text-[#4F46E5] flex items-center justify-center font-bold font-mono border border-[#4F46E5]/20">
                       {idx + 1}
                     </div>
                     <Input 
                       value={heat.heatNo || ''} 
                       onChange={e => handleUpdatePlanningHeat(idx, 'heatNo', e.target.value)} 
-                      className="bg-transparent border-none text-xl font-bold font-heading text-[#EEF3FF] w-32 focus-visible:ring-1 focus-visible:ring-[#D4521A] px-2 h-auto py-1" 
+                      className="bg-transparent border-none text-xl font-bold font-heading text-[#172554] w-32 focus-visible:ring-1 focus-visible:ring-[#4F46E5] px-2 h-auto py-1" 
                       placeholder="H001"
                     />
                     <div className="ml-auto flex items-center gap-2">
@@ -350,7 +350,7 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, patterns, dailyPlan
                   
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-6 p-6">
                     <div className="space-y-2">
-                      <Label className="text-xs font-bold text-[#5A6E90] uppercase tracking-wider">Time Slot</Label>
+                      <Label className="text-xs font-bold text-[#94A3B8] uppercase tracking-wider">Time Slot</Label>
                       <div className="flex items-center gap-2">
                         <Input 
                           type="time" 
@@ -358,7 +358,7 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, patterns, dailyPlan
                           onChange={e => handleUpdatePlanningHeat(idx, 'startTime', e.target.value)} 
                           className="bg-[#1F2937] border-[#374151] text-[#F3F4F6] font-mono h-10" 
                         />
-                        <span className="text-[#5A6E90] font-bold">—</span>
+                        <span className="text-[#94A3B8] font-bold">—</span>
                         <Input 
                           type="time" 
                           value={heat.endTime || '10:30'} 
@@ -369,7 +369,7 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, patterns, dailyPlan
                     </div>
                     
                     <div className="space-y-2">
-                      <Label className="text-xs font-bold text-[#5A6E90] uppercase tracking-wider">Grade</Label>
+                      <Label className="text-xs font-bold text-[#94A3B8] uppercase tracking-wider">Grade</Label>
                       <Select value={heat.grade || 'FC 200'} onValueChange={v => handleUpdatePlanningHeat(idx, 'grade', v)}>
                         <SelectTrigger className="bg-[#1F2937] border-[#374151] text-[#F3F4F6] h-10">
                           <SelectValue />
@@ -383,7 +383,7 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, patterns, dailyPlan
                     </div>
                     
                     <div className="space-y-2">
-                      <Label className="text-xs font-bold text-[#5A6E90] uppercase tracking-wider">Melt Weight (kg)</Label>
+                      <Label className="text-xs font-bold text-[#94A3B8] uppercase tracking-wider">Melt Weight (kg)</Label>
                       <Input 
                         type="number" 
                         value={heat.meltWeight || heat.quantityScheduled || 150} 
@@ -393,7 +393,7 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, patterns, dailyPlan
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-xs font-bold text-[#5A6E90] uppercase tracking-wider">Target Sales Order</Label>
+                      <Label className="text-xs font-bold text-[#94A3B8] uppercase tracking-wider">Target Sales Order</Label>
                       <Select value={heat.orderId || ''} onValueChange={v => handleUpdatePlanningHeat(idx, 'orderId', v)}>
                         <SelectTrigger className="bg-[#1F2937] border-[#374151] text-[#F3F4F6] h-10">
                           <SelectValue placeholder="Select order..." />
@@ -410,7 +410,7 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, patterns, dailyPlan
               ))}
               
               {planningHeats.filter(h => h.quantityScheduled !== 0).length === 0 && (
-                <div className="text-center text-[#5A6E90] py-20 bg-[#111827] border border-[#243050] rounded-xl border-dashed">
+                <div className="text-center text-[#94A3B8] py-20 bg-[#111827] border border-[#E0E7FF] rounded-xl border-dashed">
                   No heats planned for this date.
                 </div>
               )}
@@ -418,20 +418,20 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, patterns, dailyPlan
               <Button 
                 variant="outline" 
                 onClick={handleAddPlanningHeat} 
-                className="w-full border-dashed border-[#D4521A]/50 text-[#D4521A] hover:bg-[#D4521A]/10 hover:text-[#E56020] hover:border-[#D4521A] h-14 bg-transparent mt-4"
+                className="w-full border-dashed border-[#4F46E5]/50 text-[#4F46E5] hover:bg-[#4F46E5]/10 hover:text-[#E56020] hover:border-[#4F46E5] h-14 bg-transparent mt-4"
               >
                 <Plus className="w-5 h-5 mr-2" weight="bold" />
                 Add Heat Slot
               </Button>
             </div>
             
-            <div className="p-6 border-t border-[#1F2937] bg-[#0C1221] rounded-b-[14px] flex justify-between items-center shrink-0">
-              <div className="text-[#5A6E90] text-sm">
-                Total Planned Weight: <span className="text-[#EEF3FF] font-mono font-bold ml-1">{planningHeats.filter(h => h.quantityScheduled !== 0).reduce((acc, curr) => acc + (curr.meltWeight || curr.quantityScheduled || 0), 0)} kg</span>
+            <div className="p-6 border-t border-[#1F2937] bg-[#FFFFFF] rounded-b-[14px] flex justify-between items-center shrink-0">
+              <div className="text-[#94A3B8] text-sm">
+                Total Planned Weight: <span className="text-[#172554] font-mono font-bold ml-1">{planningHeats.filter(h => h.quantityScheduled !== 0).reduce((acc, curr) => acc + (curr.meltWeight || curr.quantityScheduled || 0), 0)} kg</span>
               </div>
               <div className="flex gap-3">
                 <Button variant="outline" onClick={() => setSelectedDateForPlanning(null)} className="border-[#374151] text-[#9CA3AF] hover:text-white bg-transparent">CANCEL</Button>
-                <Button onClick={handleSavePlanning} className="bg-[#D4521A] hover:bg-[#E56020] text-white uppercase font-bold tracking-wider px-8 shadow-lg shadow-[#D4521A]/20">SAVE DAY PLAN</Button>
+                <Button onClick={handleSavePlanning} className="bg-[#4F46E5] hover:bg-[#E56020] text-white uppercase font-bold tracking-wider px-8 shadow-lg shadow-[#4F46E5]/20">SAVE DAY PLAN</Button>
               </div>
             </div>
           </div>
@@ -440,11 +440,11 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, patterns, dailyPlan
 
       {selectedDate && activeTab === 'tracking' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setSelectedDate(null)}>
-          <div className="bg-[#111827] border-t-2 border-[#D4521A] rounded-[14px] text-white max-w-4xl w-full flex flex-col shadow-2xl max-h-[85vh] animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-            <div className="p-6 border-b border-[#1F2937] bg-[#0C1221] rounded-t-[14px] flex justify-between items-start shrink-0">
+          <div className="bg-[#111827] border-t-2 border-[#4F46E5] rounded-[14px] text-white max-w-4xl w-full flex flex-col shadow-2xl max-h-[85vh] animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-[#1F2937] bg-[#FFFFFF] rounded-t-[14px] flex justify-between items-start shrink-0">
               <div>
                 <h2 className="text-xl font-bold text-[#F3F4F6] font-mono tracking-tight">{selectedDate}</h2>
-                <Badge variant="outline" className="mt-2 border-[#D4521A]/30 text-[#D4521A] bg-[#D4521A]/10 uppercase text-[10px] font-bold tracking-wider">
+                <Badge variant="outline" className="mt-2 border-[#4F46E5]/30 text-[#4F46E5] bg-[#4F46E5]/10 uppercase text-[10px] font-bold tracking-wider">
                   MELT TRACKING
                 </Badge>
               </div>
@@ -453,7 +453,7 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, patterns, dailyPlan
               </button>
             </div>
 
-            <div className="bg-[#050810] p-6 border-b border-[#374151] shrink-0">
+            <div className="bg-[#F4F6FB] p-6 border-b border-[#374151] shrink-0">
               <div className="flex justify-between items-center text-sm font-medium mb-3">
                 <div className="text-[#F3F4F6]">Planned: {drawerPlanned}</div>
                 <div className="text-green-400">Done: {drawerCompleted}</div>
@@ -468,7 +468,7 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, patterns, dailyPlan
               </div>
             </div>
             
-            <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-[#050810]">
+            <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-[#F4F6FB]">
               {dayHeatsForDrawer.map((heat, idx) => {
                 const heatId = heat.itemId || heat.heatNo
                 const form = actualsForms[heatId] || {}
@@ -548,15 +548,15 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, patterns, dailyPlan
                 )
               })}
               {dayHeatsForDrawer.length === 0 && (
-                <div className="text-center text-[#5A6E90] py-20 bg-[#111827] border border-[#243050] rounded-xl border-dashed">
+                <div className="text-center text-[#94A3B8] py-20 bg-[#111827] border border-[#E0E7FF] rounded-xl border-dashed">
                   No heats scheduled for this date.
                 </div>
               )}
             </div>
 
-            <div className="p-6 border-t border-[#1F2937] bg-[#0C1221] rounded-b-[14px] flex justify-end gap-3 shrink-0">
+            <div className="p-6 border-t border-[#1F2937] bg-[#FFFFFF] rounded-b-[14px] flex justify-end gap-3 shrink-0">
               <Button variant="outline" onClick={() => setSelectedDate(null)} className="border-[#374151] text-[#9CA3AF] hover:text-white bg-transparent">CANCEL</Button>
-              <Button onClick={handleSaveActuals} className="bg-[#D4521A] hover:bg-[#E56020] text-white uppercase font-bold tracking-wider px-8 shadow-lg shadow-[#D4521A]/20">SAVE ACTUALS</Button>
+              <Button onClick={handleSaveActuals} className="bg-[#4F46E5] hover:bg-[#E56020] text-white uppercase font-bold tracking-wider px-8 shadow-lg shadow-[#4F46E5]/20">SAVE ACTUALS</Button>
             </div>
           </div>
         </div>

@@ -177,54 +177,54 @@ export function ProductMappingModal({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent 
-        className="w-full sm:max-w-4xl bg-[#050810] border-[#243050] text-foreground max-h-[90vh] overflow-y-auto"
+        className="w-full sm:max-w-4xl bg-[#F4F6FB] border-[#E0E7FF] text-foreground max-h-[90vh] overflow-y-auto"
         onKeyDown={handleEnterToTab}
       >
         <DialogHeader>
-          <DialogTitle className="text-xl font-heading text-[#EEF3FF]">
+          <DialogTitle className="text-xl font-heading text-[#172554]">
             Pattern Product Mapping
           </DialogTitle>
-          <p className="text-sm text-[#8B9FC4] mt-1">
+          <p className="text-sm text-[#64748B] mt-1">
             Map products to this pattern and set cavity count per product.
           </p>
         </DialogHeader>
 
         <div className="py-4 space-y-6">
-          <div className="bg-[#0C1221]/50 border border-[#243050] rounded-lg p-4">
-            <h3 className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider mb-2">Pattern Info</h3>
+          <div className="bg-[#FFFFFF]/50 border border-[#E0E7FF] rounded-lg p-4">
+            <h3 className="text-[#64748B] text-xs font-semibold uppercase tracking-wider mb-2">Pattern Info</h3>
             <div className="flex gap-8">
               <div>
-                <span className="text-[#5A6E90] text-sm">Code:</span>
-                <span className="ml-2 text-[#D4521A] font-mono font-medium">P-{patternId || 'XXXX'}</span>
+                <span className="text-[#94A3B8] text-sm">Code:</span>
+                <span className="ml-2 text-[#4F46E5] font-mono font-medium">P-{patternId || 'XXXX'}</span>
               </div>
               <div>
-                <span className="text-[#5A6E90] text-sm">Name:</span>
-                <span className="ml-2 text-[#EEF3FF]">Pump Housing B</span>
+                <span className="text-[#94A3B8] text-sm">Name:</span>
+                <span className="ml-2 text-[#172554]">Pump Housing B</span>
               </div>
             </div>
           </div>
 
           <div className="space-y-4">
-            <h3 className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider border-b border-[#243050] pb-2">Mapped Products</h3>
+            <h3 className="text-[#64748B] text-xs font-semibold uppercase tracking-wider border-b border-[#E0E7FF] pb-2">Mapped Products</h3>
             
             {lines.map((line, index) => (
-              <div key={line.id} className="space-y-3 bg-[#0C1221] p-4 rounded-lg border border-[#243050]">
+              <div key={line.id} className="space-y-3 bg-[#FFFFFF] p-4 rounded-lg border border-[#E0E7FF]">
                 {/* Row 1: Product Code | Product | Cavities | Delete */}
                 <div className="grid grid-cols-12 gap-4 items-end">
                   {/* Product Code Input */}
                   <div className="col-span-3 space-y-2">
-                    <Label className="text-[#8B9FC4]">Product Code</Label>
+                    <Label className="text-[#64748B]">Product Code</Label>
                     <Input 
                       placeholder="e.g. PRD-0512" 
                       value={line.productCode}
                       onChange={(e) => handleProductCodeChange(line.id, e.target.value)}
-                      className="h-10 w-full bg-[#050810] border-[#243050] text-[#EEF3FF]"
+                      className="h-10 w-full bg-[#F4F6FB] border-[#E0E7FF] text-[#172554]"
                     />
                   </div>
 
                   {/* Product Combobox */}
                   <div className="col-span-6 space-y-2">
-                    <Label className="text-[#8B9FC4]">Product</Label>
+                    <Label className="text-[#64748B]">Product</Label>
                     <ProductCombobox 
                       products={products}
                       selectedId={line.selectedProductId}
@@ -234,14 +234,14 @@ export function ProductMappingModal({
 
                   {/* Cavities */}
                   <div className="col-span-2 space-y-2">
-                    <Label className="text-[#8B9FC4]">Cavities</Label>
+                    <Label className="text-[#64748B]">Cavities</Label>
                     <Input 
                       type="number" 
                       min="0"
                       placeholder="Count" 
                       value={line.cavities}
                       onChange={(e) => updateCavities(line.id, e.target.value)}
-                      className="h-10 w-full bg-[#050810] border-[#243050] text-[#EEF3FF]"
+                      className="h-10 w-full bg-[#F4F6FB] border-[#E0E7FF] text-[#172554]"
                     />
                   </div>
 
@@ -252,7 +252,7 @@ export function ProductMappingModal({
                       size="icon" 
                       onClick={() => setItemToDelete(line.id)}
                       disabled={lines.length === 1}
-                      className="text-[#5A6E90] hover:text-red-400 hover:bg-red-400/10"
+                      className="text-[#94A3B8] hover:text-red-400 hover:bg-red-400/10"
                     >
                       <Trash weight="duotone" className="h-4 w-4" />
                     </Button>
@@ -260,11 +260,11 @@ export function ProductMappingModal({
                 </div>
 
                 {/* Row 2: Core Box multi-select + per-box quantity */}
-                <div className="space-y-2 pt-1 border-t border-[#243050]">
+                <div className="space-y-2 pt-1 border-t border-[#E0E7FF]">
                   <div className="flex items-center justify-between">
-                    <Label className="text-[#8B9FC4] text-xs">Core Boxes</Label>
+                    <Label className="text-[#64748B] text-xs">Core Boxes</Label>
                     {coreBoxes.length === 0 && (
-                      <span className="text-[11px] text-[#5A6E90] italic">No core boxes defined on this pattern</span>
+                      <span className="text-[11px] text-[#94A3B8] italic">No core boxes defined on this pattern</span>
                     )}
                   </div>
 
@@ -283,7 +283,7 @@ export function ProductMappingModal({
             <Button 
               variant="outline" 
               onClick={addLine}
-              className="mt-4 bg-transparent border-[#243050] text-[#8B9FC4] hover:text-[#EEF3FF] hover:bg-[#1C2840] hover:border-[#2E3C5C] transition-colors"
+              className="mt-4 bg-transparent border-[#E0E7FF] text-[#64748B] hover:text-[#172554] hover:bg-[#EEF2FF] hover:border-[#C7D2FE] transition-colors"
             >
               <Plus weight="bold" className="mr-2 h-4 w-4" />
               Add Product
@@ -291,11 +291,11 @@ export function ProductMappingModal({
           </div>
         </div>
 
-        <DialogFooter className="mt-4 pt-4 border-t border-[#243050]">
-          <Button variant="ghost" onClick={onClose} className="text-[#8B9FC4] hover:text-[#EEF3FF] hover:bg-[#1C2840]">
+        <DialogFooter className="mt-4 pt-4 border-t border-[#E0E7FF]">
+          <Button variant="ghost" onClick={onClose} className="text-[#64748B] hover:text-[#172554] hover:bg-[#EEF2FF]">
             Cancel
           </Button>
-          <Button className="bg-[#D4521A] hover:bg-[#D4521A] text-white" onClick={handleSave}>
+          <Button className="bg-[#4F46E5] hover:bg-[#4F46E5] text-white" onClick={handleSave}>
             Save Mapping
           </Button>
         </DialogFooter>
@@ -341,8 +341,8 @@ function CoreBoxMultiSelect({
             className={cn(
               'flex items-center gap-4 border rounded-lg p-3 transition-colors',
               isSelected
-                ? 'bg-[#050810]/80 border-[#D4521A]/50'
-                : 'bg-[#0C1221] border-[#243050] hover:border-[#2E3C5C]'
+                ? 'bg-[#F4F6FB]/80 border-[#4F46E5]/50'
+                : 'bg-[#FFFFFF] border-[#E0E7FF] hover:border-[#C7D2FE]'
             )}
           >
             {/* Custom Checkbox */}
@@ -352,8 +352,8 @@ function CoreBoxMultiSelect({
               className={cn(
                 'flex items-center justify-center w-5 h-5 rounded border transition-colors',
                 isSelected
-                  ? 'bg-[#D4521A] border-[#D4521A] text-white'
-                  : 'bg-[#050810] border-[#5A6E90] text-transparent hover:border-[#8B9FC4]'
+                  ? 'bg-[#4F46E5] border-[#4F46E5] text-white'
+                  : 'bg-[#F4F6FB] border-[#94A3B8] text-transparent hover:border-[#64748B]'
               )}
             >
               <Check weight="bold" className="w-3.5 h-3.5" />
@@ -363,13 +363,13 @@ function CoreBoxMultiSelect({
             <div className="flex-1 cursor-pointer" onClick={() => onToggle(cb.id, cb.code)}>
               <div className="flex justify-between items-start mb-2">
                 <div>
-                  <span className="text-[#8B9FC4] text-[11px] font-semibold uppercase tracking-wider block mb-0.5">
+                  <span className="text-[#64748B] text-[11px] font-semibold uppercase tracking-wider block mb-0.5">
                     Core Box Code
                   </span>
                   <span
                     className={cn(
                       'font-mono text-sm font-medium',
-                      isSelected ? 'text-[#D4521A]' : 'text-[#EEF3FF]',
+                      isSelected ? 'text-[#4F46E5]' : 'text-[#172554]',
                       !cb.code && 'italic opacity-60'
                     )}
                   >
@@ -379,22 +379,22 @@ function CoreBoxMultiSelect({
                 {/* Core Box Details summary badges */}
                 <div className="flex gap-2 text-xs">
                   {cb.owner && (
-                    <span className="bg-[#1A263D] text-[#8B9FC4] px-2 py-0.5 rounded border border-[#243050]">
+                    <span className="bg-[#EEF2FF] text-[#64748B] px-2 py-0.5 rounded border border-[#E0E7FF]">
                       {cb.owner}
                     </span>
                   )}
                   {cb.typeOfCore && (
-                    <span className="bg-[#1A263D] text-[#8B9FC4] px-2 py-0.5 rounded border border-[#243050]">
+                    <span className="bg-[#EEF2FF] text-[#64748B] px-2 py-0.5 rounded border border-[#E0E7FF]">
                       {cb.typeOfCore}
                     </span>
                   )}
                   {cb.coreWeight != null && (
-                    <span className="bg-[#1A263D] text-[#8B9FC4] px-2 py-0.5 rounded border border-[#243050]">
+                    <span className="bg-[#EEF2FF] text-[#64748B] px-2 py-0.5 rounded border border-[#E0E7FF]">
                       {cb.coreWeight} kg
                     </span>
                   )}
                   {cb.avgCoreProduction && (
-                    <span className="bg-[#1A263D] text-[#8B9FC4] px-2 py-0.5 rounded border border-[#243050]">
+                    <span className="bg-[#EEF2FF] text-[#64748B] px-2 py-0.5 rounded border border-[#E0E7FF]">
                       {cb.avgCoreProduction}/hr
                     </span>
                   )}
@@ -405,7 +405,7 @@ function CoreBoxMultiSelect({
             {/* Quantity Input */}
             {isSelected && (
               <div className="w-20 animate-in fade-in zoom-in-95 duration-200">
-                <Label className="text-[#8B9FC4] text-[11px] font-semibold uppercase tracking-wider block mb-1 text-center">
+                <Label className="text-[#64748B] text-[11px] font-semibold uppercase tracking-wider block mb-1 text-center">
                   Quantity
                 </Label>
                 <Input
@@ -415,7 +415,7 @@ function CoreBoxMultiSelect({
                   onChange={(e) =>
                     onQtyChange(cb.id, cb.code, e.target.value === '' ? '' : Number(e.target.value))
                   }
-                  className="h-9 w-full bg-[#0C1221] border-[#243050] text-[#EEF3FF] focus-visible:ring-1 focus-visible:ring-[#D4521A] text-center"
+                  className="h-9 w-full bg-[#FFFFFF] border-[#E0E7FF] text-[#172554] focus-visible:ring-1 focus-visible:ring-[#4F46E5] text-center"
                 />
               </div>
             )}
@@ -444,7 +444,7 @@ function ProductCombobox({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
-        className="flex h-10 w-full items-center justify-between rounded-md border border-[#243050] bg-[#050810] px-3 py-2 text-sm text-[#EEF3FF] hover:bg-[#1A263D]"
+        className="flex h-10 w-full items-center justify-between rounded-md border border-[#E0E7FF] bg-[#F4F6FB] px-3 py-2 text-sm text-[#172554] hover:bg-[#EEF2FF]"
         aria-expanded={open}
       >
         <span className="truncate">
@@ -452,11 +452,11 @@ function ProductCombobox({
         </span>
         <CaretUpDown weight="duotone" className="ml-2 h-4 w-4 shrink-0 opacity-50" />
       </PopoverTrigger>
-      <PopoverContent className="w-[380px] p-0 bg-[#0C1221] border-[#243050]">
+      <PopoverContent className="w-[380px] p-0 bg-[#FFFFFF] border-[#E0E7FF]">
         <Command className="bg-transparent">
-          <CommandInput placeholder="Search products..." className="text-[#EEF3FF]" />
+          <CommandInput placeholder="Search products..." className="text-[#172554]" />
           <CommandList>
-            <CommandEmpty className="text-[#8B9FC4] p-4 text-center text-sm">No product found.</CommandEmpty>
+            <CommandEmpty className="text-[#64748B] p-4 text-center text-sm">No product found.</CommandEmpty>
             <CommandGroup>
               {products.map((product) => (
                 <CommandItem
@@ -466,17 +466,17 @@ function ProductCombobox({
                     onSelect(product.id)
                     setOpen(false)
                   }}
-                  className="text-[#EEF3FF] hover:bg-[#1A263D] cursor-pointer"
+                  className="text-[#172554] hover:bg-[#EEF2FF] cursor-pointer"
                 >
                   <Check weight="duotone"
                     className={cn(
                       'mr-2 h-4 w-4 flex-shrink-0',
-                      selectedId === product.id ? 'opacity-100 text-[#D4521A]' : 'opacity-0'
+                      selectedId === product.id ? 'opacity-100 text-[#4F46E5]' : 'opacity-0'
                     )}
                   />
-                  <span className="font-mono text-[#D4521A] mr-2">{product.code}</span>
+                  <span className="font-mono text-[#4F46E5] mr-2">{product.code}</span>
                   {product.name}
-                  <span className="ml-auto text-[#5A6E90] text-xs">{product.weight}</span>
+                  <span className="ml-auto text-[#94A3B8] text-xs">{product.weight}</span>
                 </CommandItem>
               ))}
             </CommandGroup>

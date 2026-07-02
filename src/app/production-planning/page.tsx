@@ -161,55 +161,55 @@ export default function ProductionPlanningPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-[#EEF3FF] font-heading tracking-tight">Production Planning</h1>
-          <p className="text-[#8B9FC4] mt-1 text-sm">Schedule capacity and track requirements dynamically</p>
+          <h1 className="text-3xl font-bold text-[#172554] font-heading tracking-tight">Production Planning</h1>
+          <p className="text-[#64748B] mt-1 text-sm">Schedule capacity and track requirements dynamically</p>
         </div>
       </div>
 
       {loading ? (
         <div className="py-20 text-center">
-          <p className="text-[#8B9FC4] text-lg animate-pulse">Loading planning data...</p>
+          <p className="text-[#64748B] text-lg animate-pulse">Loading planning data...</p>
         </div>
       ) : (
         <>
           {/* Overview Cards (Always Visible) */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-[#0C1221] border border-[#243050] p-6 rounded-2xl flex items-center gap-5 relative overflow-hidden">
+            <div className="bg-[#FFFFFF] border border-[#E0E7FF] p-6 rounded-2xl flex items-center gap-5 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-[#4285F4]/5 rounded-full -mr-10 -mt-10 blur-2xl pointer-events-none" />
-              <div className="w-14 h-14 rounded-xl bg-[#1A263D] flex items-center justify-center shrink-0 border border-[#2E3C5C]">
+              <div className="w-14 h-14 rounded-xl bg-[#EEF2FF] flex items-center justify-center shrink-0 border border-[#C7D2FE]">
                 <CubeTransparent weight="duotone" className="w-7 h-7 text-[#4285F4]" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-[#8B9FC4] uppercase tracking-wider mb-1">Total Cores Needed</p>
+                <p className="text-sm font-semibold text-[#64748B] uppercase tracking-wider mb-1">Total Cores Needed</p>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-bold text-[#EEF3FF] font-mono tracking-tight">{totals.cores.toLocaleString()}</span>
+                  <span className="text-3xl font-bold text-[#172554] font-mono tracking-tight">{totals.cores.toLocaleString()}</span>
                 </div>
               </div>
             </div>
             
-            <div className="bg-[#0C1221] border border-[#243050] p-6 rounded-2xl flex items-center gap-5 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-[#D4521A]/5 rounded-full -mr-10 -mt-10 blur-2xl pointer-events-none" />
-              <div className="w-14 h-14 rounded-xl bg-[#1A263D] flex items-center justify-center shrink-0 border border-[#2E3C5C]">
-                <Cube weight="duotone" className="w-7 h-7 text-[#D4521A]" />
+            <div className="bg-[#FFFFFF] border border-[#E0E7FF] p-6 rounded-2xl flex items-center gap-5 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-[#4F46E5]/5 rounded-full -mr-10 -mt-10 blur-2xl pointer-events-none" />
+              <div className="w-14 h-14 rounded-xl bg-[#EEF2FF] flex items-center justify-center shrink-0 border border-[#C7D2FE]">
+                <Cube weight="duotone" className="w-7 h-7 text-[#4F46E5]" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-[#8B9FC4] uppercase tracking-wider mb-1">Total Moulds Needed</p>
+                <p className="text-sm font-semibold text-[#64748B] uppercase tracking-wider mb-1">Total Moulds Needed</p>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-bold text-[#EEF3FF] font-mono tracking-tight">{totals.moulds.toLocaleString()}</span>
+                  <span className="text-3xl font-bold text-[#172554] font-mono tracking-tight">{totals.moulds.toLocaleString()}</span>
                 </div>
               </div>
             </div>
 
-            <div className="bg-[#0C1221] border border-[#243050] p-6 rounded-2xl flex items-center gap-5 relative overflow-hidden">
+            <div className="bg-[#FFFFFF] border border-[#E0E7FF] p-6 rounded-2xl flex items-center gap-5 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-[#EAB308]/5 rounded-full -mr-10 -mt-10 blur-2xl pointer-events-none" />
-              <div className="w-14 h-14 rounded-xl bg-[#1A263D] flex items-center justify-center shrink-0 border border-[#2E3C5C]">
+              <div className="w-14 h-14 rounded-xl bg-[#EEF2FF] flex items-center justify-center shrink-0 border border-[#C7D2FE]">
                 <Fire weight="duotone" className="w-7 h-7 text-[#EAB308]" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-[#8B9FC4] uppercase tracking-wider mb-1">Total Metal Req.</p>
+                <p className="text-sm font-semibold text-[#64748B] uppercase tracking-wider mb-1">Total Metal Req.</p>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-bold text-[#EEF3FF] font-mono tracking-tight">{totals.metal.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
-                  <span className="text-[#5A6E90] text-sm">kg</span>
+                  <span className="text-3xl font-bold text-[#172554] font-mono tracking-tight">{totals.metal.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                  <span className="text-[#94A3B8] text-sm">kg</span>
                 </div>
               </div>
             </div>
@@ -217,7 +217,7 @@ export default function ProductionPlanningPage() {
 
           {/* TAB CONTENT */}
           <div className="space-y-6">
-            <div className="flex gap-2 p-1 bg-[#050810] border border-[#243050] rounded-xl w-full sm:w-auto self-start inline-flex">
+            <div className="flex gap-2 p-1 bg-[#F4F6FB] border border-[#E0E7FF] rounded-xl w-full sm:w-auto self-start inline-flex">
               {(['Core', 'Mould', 'Melt', 'Pour'] as const).map(tab => (
                 <button
                   key={tab}
@@ -225,8 +225,8 @@ export default function ProductionPlanningPage() {
                   className={cn(
                     "px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200",
                     activeTab === tab 
-                      ? "bg-[#1A263D] text-[#EEF3FF] shadow-sm" 
-                      : "text-[#8B9FC4] hover:text-[#EEF3FF] hover:bg-[#0C1221]"
+                      ? "bg-[#EEF2FF] text-[#172554] shadow-sm" 
+                      : "text-[#64748B] hover:text-[#172554] hover:bg-[#FFFFFF]"
                   )}
                 >
                   {tab} Planning

@@ -120,14 +120,14 @@ export function NewProductModal({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent 
-        className="w-full sm:max-w-4xl bg-[#050810] border-[#243050] text-foreground max-h-[90vh] overflow-hidden flex flex-col"
+        className="w-full sm:max-w-4xl bg-[#F4F6FB] border-[#E0E7FF] text-foreground max-h-[90vh] overflow-hidden flex flex-col"
         onKeyDown={handleEnterToTab}
       >
         <DialogHeader className="shrink-0">
-          <DialogTitle className="text-2xl font-bold font-heading text-[#EEF3FF]">
+          <DialogTitle className="text-2xl font-bold font-heading text-[#172554]">
             Add Product
           </DialogTitle>
-          <p className="text-sm text-[#5A6E90] mt-1">Link product to a customer with weight details</p>
+          <p className="text-sm text-[#94A3B8] mt-1">Link product to a customer with weight details</p>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto px-1">
@@ -135,22 +135,22 @@ export function NewProductModal({
             {/* Row 1: Product Code | Product Name */}
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="product-code" className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider">Product Code</Label>
-                <Input id="product-code" placeholder="e.g. PRD-0512" value={code} onChange={e => setCode(e.target.value)} className="h-12 px-4 rounded-lg bg-[#0C1221] border-[#243050] text-[#EEF3FF] text-[15px]" />
+                <Label htmlFor="product-code" className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">Product Code</Label>
+                <Input id="product-code" placeholder="e.g. PRD-0512" value={code} onChange={e => setCode(e.target.value)} className="h-12 px-4 rounded-lg bg-[#FFFFFF] border-[#E0E7FF] text-[#172554] text-[15px]" />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="product-name" className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider">Product Name</Label>
-                <Input id="product-name" placeholder="e.g. Pump Housing" value={name} onChange={e => setName(e.target.value)} className="h-12 px-4 rounded-lg bg-[#0C1221] border-[#243050] text-[#EEF3FF] text-[15px]" />
+                <Label htmlFor="product-name" className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">Product Name</Label>
+                <Input id="product-name" placeholder="e.g. Pump Housing" value={name} onChange={e => setName(e.target.value)} className="h-12 px-4 rounded-lg bg-[#FFFFFF] border-[#E0E7FF] text-[#172554] text-[15px]" />
               </div>
             </div>
 
             {/* Row 2: Customer | Weight (kg) */}
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider">Customer</Label>
+                <Label className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">Customer</Label>
                 <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
                   <PopoverTrigger
-                    className="w-full flex justify-between items-center h-12 py-2.5 px-4 border border-[#243050] rounded-lg shadow-sm text-sm font-medium text-[#EEF3FF] bg-[#0C1221] hover:bg-[#1A263D] transition-colors"
+                    className="w-full flex justify-between items-center h-12 py-2.5 px-4 border border-[#E0E7FF] rounded-lg shadow-sm text-sm font-medium text-[#172554] bg-[#FFFFFF] hover:bg-[#EEF2FF] transition-colors"
                     aria-expanded={customerOpen}
                   >
                   {selectedCustomer
@@ -158,11 +158,11 @@ export function NewProductModal({
                     : 'Select customer...'}
                   <CaretUpDown weight="duotone" className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </PopoverTrigger>
-                <PopoverContent className="w-[400px] p-0 bg-[#0C1221] border-[#243050]">
+                <PopoverContent className="w-[400px] p-0 bg-[#FFFFFF] border-[#E0E7FF]">
                   <Command className="bg-transparent">
-                    <CommandInput placeholder="Search customer..." className="text-[#EEF3FF]" />
+                    <CommandInput placeholder="Search customer..." className="text-[#172554]" />
                     <CommandList>
-                      <CommandEmpty className="text-[#8B9FC4] p-4 text-center text-sm">No customer found.</CommandEmpty>
+                      <CommandEmpty className="text-[#64748B] p-4 text-center text-sm">No customer found.</CommandEmpty>
                       <CommandGroup>
                         {customers.map((customer) => (
                           <CommandItem
@@ -173,12 +173,12 @@ export function NewProductModal({
                               setSelectedCustomer(currentValue === selectedCustomer ? '' : currentValue)
                               setCustomerOpen(false)
                             }}
-                            className="text-[#EEF3FF] hover:bg-[#1A263D] cursor-pointer"
+                            className="text-[#172554] hover:bg-[#EEF2FF] cursor-pointer"
                           >
                             <Check weight="duotone"
                               className={cn(
                                 'mr-2 h-4 w-4',
-                                selectedCustomer === customer.value ? 'opacity-100 text-[#D4521A]' : 'opacity-0'
+                                selectedCustomer === customer.value ? 'opacity-100 text-[#4F46E5]' : 'opacity-0'
                               )}
                             />
                             {customer.label}
@@ -191,11 +191,11 @@ export function NewProductModal({
               </Popover>
             </div>
               <div className="space-y-2">
-                <Label className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider">Grade</Label>
+                <Label className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">Grade</Label>
                 <Popover open={gradeOpen} onOpenChange={setGradeOpen}>
                   <PopoverTrigger
                     className={cn(
-                      "flex h-12 w-full items-center justify-between rounded-lg border border-[#243050] bg-[#0C1221] px-4 py-2 text-[15px] text-[#EEF3FF] hover:bg-[#1A263D]"
+                      "flex h-12 w-full items-center justify-between rounded-lg border border-[#E0E7FF] bg-[#FFFFFF] px-4 py-2 text-[15px] text-[#172554] hover:bg-[#EEF2FF]"
                     )}
                     aria-expanded={gradeOpen}
                   >
@@ -204,11 +204,11 @@ export function NewProductModal({
                     : 'Select grade...'}
                   <CaretUpDown weight="duotone" className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </PopoverTrigger>
-                <PopoverContent className="w-[400px] p-0 bg-[#0C1221] border-[#243050]">
+                <PopoverContent className="w-[400px] p-0 bg-[#FFFFFF] border-[#E0E7FF]">
                   <Command className="bg-transparent">
-                    <CommandInput placeholder="Search grade..." className="text-[#EEF3FF]" />
+                    <CommandInput placeholder="Search grade..." className="text-[#172554]" />
                     <CommandList>
-                      <CommandEmpty className="text-[#8B9FC4] p-4 text-center text-sm">No grade found.</CommandEmpty>
+                      <CommandEmpty className="text-[#64748B] p-4 text-center text-sm">No grade found.</CommandEmpty>
                       <CommandGroup>
                         {grades.map((grade) => (
                           <CommandItem
@@ -219,12 +219,12 @@ export function NewProductModal({
                               setSelectedGrade(currentValue === selectedGrade ? '' : currentValue)
                               setGradeOpen(false)
                             }}
-                            className="text-[#EEF3FF] hover:bg-[#1A263D] cursor-pointer"
+                            className="text-[#172554] hover:bg-[#EEF2FF] cursor-pointer"
                           >
                             <Check weight="duotone"
                               className={cn(
                                 'mr-2 h-4 w-4',
-                                selectedGrade === grade.code ? 'opacity-100 text-[#D4521A]' : 'opacity-0'
+                                selectedGrade === grade.code ? 'opacity-100 text-[#4F46E5]' : 'opacity-0'
                               )}
                             />
                             {grade.code} - {grade.name}
@@ -241,7 +241,7 @@ export function NewProductModal({
             {/* Row 3: Weight (kg) | Remarks */}
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="product-weight" className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider">Weight (kg)</Label>
+                <Label htmlFor="product-weight" className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">Weight (kg)</Label>
                 <Input
                   id="product-weight"
                   type="number"
@@ -249,30 +249,30 @@ export function NewProductModal({
                   placeholder="0.0"
                   value={weight}
                   onChange={(e) => setWeight(e.target.value)}
-                  className="h-12 px-4 rounded-lg bg-[#0C1221] border-[#243050] text-[#EEF3FF] text-[15px]"
+                  className="h-12 px-4 rounded-lg bg-[#FFFFFF] border-[#E0E7FF] text-[#172554] text-[15px]"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="product-remarks" className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider">Remarks</Label>
+                <Label htmlFor="product-remarks" className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">Remarks</Label>
                 <Textarea
                   id="product-remarks"
                   placeholder="Add any additional notes..."
                   value={remarks}
                   onChange={(e) => setRemarks(e.target.value)}
-                  className="min-h-[48px] h-12 py-3 px-4 rounded-lg bg-[#0C1221] border-[#243050] text-[#EEF3FF] text-[15px] resize-none"
+                  className="min-h-[48px] h-12 py-3 px-4 rounded-lg bg-[#FFFFFF] border-[#E0E7FF] text-[#172554] text-[15px] resize-none"
                 />
               </div>
             </div>
 
             {/* Row 3: Rate per kg Toggle & Pricing logic */}
-            <div className="grid grid-cols-2 gap-6 items-end bg-[#0C1221]/40 p-5 rounded-xl border border-[#243050]">
+            <div className="grid grid-cols-2 gap-6 items-end bg-[#FFFFFF]/40 p-5 rounded-xl border border-[#E0E7FF]">
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <Label className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider">Rate per kg</Label>
+                <Label className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">Rate per kg</Label>
                 <Switch
                   checked={ratePerKgToggle}
                   onCheckedChange={setRatePerKgToggle}
-                  className="data-[state=checked]:bg-[#D4521A]"
+                  className="data-[state=checked]:bg-[#4F46E5]"
                 />
               </div>
               
@@ -284,15 +284,15 @@ export function NewProductModal({
                     value={ratePerKg}
                     onChange={(e) => setRatePerKg(e.target.value)}
                     disabled={!ratePerKgToggle}
-                    className="h-12 px-4 rounded-lg bg-[#0C1221] border-[#243050] text-[#EEF3FF] text-[15px] disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="h-12 px-4 rounded-lg bg-[#FFFFFF] border-[#E0E7FF] text-[#172554] text-[15px] disabled:opacity-50 disabled:cursor-not-allowed"
                   />
               </div>
             </div>
 
             <div className="space-y-2">
-                <Label className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider">Unit Price</Label>
+                <Label className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">Unit Price</Label>
                 {ratePerKgToggle ? (
-                  <div className="h-12 px-4 flex items-center bg-[#1A263D]/50 border border-[#243050] rounded-lg text-[#C4D2EE] font-mono text-[15px]">
+                  <div className="h-12 px-4 flex items-center bg-[#EEF2FF]/50 border border-[#E0E7FF] rounded-lg text-[#0F172A] font-mono text-[15px]">
                     {calculatedUnitPrice}
                   </div>
                 ) : (
@@ -302,7 +302,7 @@ export function NewProductModal({
                     placeholder="0.00"
                     value={manualUnitPrice}
                     onChange={(e) => setManualUnitPrice(e.target.value)}
-                    className="h-12 px-4 rounded-lg bg-[#0C1221] border-[#243050] text-[#EEF3FF] text-[15px]"
+                    className="h-12 px-4 rounded-lg bg-[#FFFFFF] border-[#E0E7FF] text-[#172554] text-[15px]"
                   />
                 )}
               </div>
@@ -310,7 +310,7 @@ export function NewProductModal({
 
             {/* Row 5: Product Image */}
             <div className="space-y-2 pb-2">
-              <Label className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider mb-2 block">Product Images</Label>
+              <Label className="text-[#64748B] text-xs font-semibold uppercase tracking-wider mb-2 block">Product Images</Label>
               <ImageCarousel 
                 images={images} 
                 onImagesChange={setImages}
@@ -322,11 +322,11 @@ export function NewProductModal({
           </div>
         </div>
 
-        <DialogFooter className="mt-2 shrink-0 border-t border-[#243050] pt-4">
-          <Button variant="ghost" onClick={handleClose} className="text-[#8B9FC4] hover:text-[#EEF3FF] hover:bg-[#1C2840]">
+        <DialogFooter className="mt-2 shrink-0 border-t border-[#E0E7FF] pt-4">
+          <Button variant="ghost" onClick={handleClose} className="text-[#64748B] hover:text-[#172554] hover:bg-[#EEF2FF]">
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={!code.trim() || !name.trim()} className="bg-[#D4521A] hover:bg-[#D4521A] text-white disabled:opacity-50">
+          <Button onClick={handleSave} disabled={!code.trim() || !name.trim()} className="bg-[#4F46E5] hover:bg-[#4F46E5] text-white disabled:opacity-50">
             Save Product
           </Button>
         </DialogFooter>

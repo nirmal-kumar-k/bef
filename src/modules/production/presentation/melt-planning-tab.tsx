@@ -14,33 +14,33 @@ export function MeltPlanningTab({ defaultMetalQty, defaultGrade, openOrders, pat
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         {/* Inner Tabs for Planning/Tracking */}
-        <div className={cn("flex gap-2 p-1 bg-[#050810] border border-[#243050] rounded-xl transition-opacity", viewMode === 'table' && "opacity-0 pointer-events-none")}>
+        <div className={cn("flex gap-2 p-1 bg-[#F4F6FB] border border-[#E0E7FF] rounded-xl transition-opacity", viewMode === 'table' && "opacity-0 pointer-events-none")}>
           <button
             onClick={() => setActiveTab('planning')}
-            className={cn("px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors", activeTab === 'planning' ? "bg-[#1A263D] text-[#EEF3FF]" : "text-[#8B9FC4] hover:text-[#EEF3FF]")}
+            className={cn("px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors", activeTab === 'planning' ? "bg-[#EEF2FF] text-[#172554]" : "text-[#64748B] hover:text-[#172554]")}
           >
             Planning
           </button>
           <button
             onClick={() => setActiveTab('tracking')}
-            className={cn("px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors", activeTab === 'tracking' ? "bg-[#1A263D] text-[#EEF3FF]" : "text-[#8B9FC4] hover:text-[#EEF3FF]")}
+            className={cn("px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors", activeTab === 'tracking' ? "bg-[#EEF2FF] text-[#172554]" : "text-[#64748B] hover:text-[#172554]")}
           >
             Tracking
           </button>
         </div>
 
         {/* View Mode Toggle (Icons only) */}
-        <div className="flex items-center p-1 bg-[#050810] border border-[#243050] rounded-xl ml-auto">
+        <div className="flex items-center p-1 bg-[#F4F6FB] border border-[#E0E7FF] rounded-xl ml-auto">
           <button 
             onClick={() => setViewMode('calendar')}
-            className={cn("p-2 rounded-lg transition-colors", viewMode === 'calendar' ? "bg-[#1A263D] text-[#EEF3FF]" : "text-[#8B9FC4] hover:text-[#EEF3FF]")}
+            className={cn("p-2 rounded-lg transition-colors", viewMode === 'calendar' ? "bg-[#EEF2FF] text-[#172554]" : "text-[#64748B] hover:text-[#172554]")}
             title="Calendar View"
           >
             <CalendarBlank weight={viewMode === 'calendar' ? "fill" : "regular"} className="w-5 h-5" />
           </button>
           <button 
             onClick={() => setViewMode('table')}
-            className={cn("p-2 rounded-lg transition-colors", viewMode === 'table' ? "bg-[#1A263D] text-[#EEF3FF]" : "text-[#8B9FC4] hover:text-[#EEF3FF]")}
+            className={cn("p-2 rounded-lg transition-colors", viewMode === 'table' ? "bg-[#EEF2FF] text-[#172554]" : "text-[#64748B] hover:text-[#172554]")}
             title="Table View"
           >
             <List weight={viewMode === 'table' ? "bold" : "regular"} className="w-5 h-5" />

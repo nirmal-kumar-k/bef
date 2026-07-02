@@ -97,36 +97,36 @@ export function ImageCarousel({
         <>
           <div className="flex flex-col gap-1.5 shrink-0">
             <div className={cn("relative group", boxClass)}>
-              <img src={images[currentIndex]} alt={`Preview ${currentIndex + 1}`} className="w-full h-full rounded-xl object-cover border-2 border-[#243050] border-solid" />
+              <img src={images[currentIndex]} alt={`Preview ${currentIndex + 1}`} className="w-full h-full rounded-xl object-cover border-2 border-[#E0E7FF] border-solid" />
               
-              <div className={cn("absolute bottom-0 z-[100] rounded-2xl overflow-hidden border border-[#8B9FC4]/30 shadow-[0_20px_50px_rgba(0,0,0,0.5),0_0_30px_rgba(139,159,196,0.2)] opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-500 ease-out scale-90 group-hover:scale-100 hidden md:block", floatingClass, previewPosition === 'left' ? "right-[calc(100%+24px)] origin-bottom-right" : "left-[calc(100%+24px)] origin-bottom-left")}>
+              <div className={cn("absolute bottom-0 z-[100] rounded-2xl overflow-hidden border border-[#64748B]/30 shadow-[0_20px_50px_rgba(0,0,0,0.5),0_0_30px_rgba(139,159,196,0.2)] opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-500 ease-out scale-90 group-hover:scale-100 hidden md:block", floatingClass, previewPosition === 'left' ? "right-[calc(100%+24px)] origin-bottom-right" : "left-[calc(100%+24px)] origin-bottom-left")}>
                 <img src={images[currentIndex]} alt="Large Preview" className="w-full h-full object-cover" />
               </div>
             </div>
 
             {images.length > 1 && (
               <div className="flex justify-between items-center px-1">
-                 <button type="button" className="text-[#5A6E90] hover:text-[#EEF3FF] transition-colors p-0.5" onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))}>
+                 <button type="button" className="text-[#94A3B8] hover:text-[#172554] transition-colors p-0.5" onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))}>
                    <CaretLeft className="w-3.5 h-3.5" />
                  </button>
-                 <span className="text-[10px] text-[#5A6E90] font-medium">
+                 <span className="text-[10px] text-[#94A3B8] font-medium">
                    {currentIndex + 1} / {images.length}
                  </span>
-                 <button type="button" className="text-[#5A6E90] hover:text-[#EEF3FF] transition-colors p-0.5" onClick={() => setCurrentIndex(Math.min(images.length - 1, currentIndex + 1))}>
+                 <button type="button" className="text-[#94A3B8] hover:text-[#172554] transition-colors p-0.5" onClick={() => setCurrentIndex(Math.min(images.length - 1, currentIndex + 1))}>
                    <CaretRight className="w-3.5 h-3.5" />
                  </button>
               </div>
             )}
           </div>
           <div className="flex flex-col gap-1.5 shrink-0">
-            <div className={cn("flex items-center justify-center gap-1.5 bg-[#0C1221] border border-[#243050] rounded-md text-[#8B9FC4] font-medium shrink-0 cursor-default", btnClass)} title="Total Images">
-              <span className="text-[#EEF3FF] font-bold">{images.length}</span> Total
+            <div className={cn("flex items-center justify-center gap-1.5 bg-[#FFFFFF] border border-[#E0E7FF] rounded-md text-[#64748B] font-medium shrink-0 cursor-default", btnClass)} title="Total Images">
+              <span className="text-[#172554] font-bold">{images.length}</span> Total
             </div>
-            <label className={cn("cursor-pointer flex items-center justify-center gap-1.5 bg-[#1A263D] hover:bg-[#243050] rounded-md text-[#8B9FC4] hover:text-[#EEF3FF] transition-colors font-medium", btnClass)} title="Add Image">
+            <label className={cn("cursor-pointer flex items-center justify-center gap-1.5 bg-[#EEF2FF] hover:bg-[#E0E7FF] rounded-md text-[#64748B] hover:text-[#172554] transition-colors font-medium", btnClass)} title="Add Image">
               <Plus className={iconClass} /> Add
               <input type="file" className="hidden" accept="image/*" multiple disabled={disabled} onChange={(e) => handleAdd(e.target.files)} />
             </label>
-            <label className={cn("cursor-pointer flex items-center justify-center gap-1.5 bg-[#1A263D] hover:bg-[#243050] rounded-md text-[#8B9FC4] hover:text-[#EEF3FF] transition-colors font-medium", btnClass)} title="Edit Image">
+            <label className={cn("cursor-pointer flex items-center justify-center gap-1.5 bg-[#EEF2FF] hover:bg-[#E0E7FF] rounded-md text-[#64748B] hover:text-[#172554] transition-colors font-medium", btnClass)} title="Edit Image">
               <PencilSimple className={iconClass} /> Edit
               <input type="file" className="hidden" accept="image/*" onChange={(e) => handleEdit(e.target.files?.[0] || null)} />
             </label>
@@ -137,8 +137,8 @@ export function ImageCarousel({
         </>
       ) : (
         <div className={cn("relative shrink-0 group", boxClass)}>
-          <div className="w-full h-full rounded-xl overflow-hidden border-2 border-dashed transition-colors relative border-[#243050] hover:border-[#8B9FC4]/50 bg-[#050810]">
-            <div className="w-full h-full flex flex-col items-center justify-center text-[#8B9FC4] group-hover:text-[#EEF3FF]">
+          <div className="w-full h-full rounded-xl overflow-hidden border-2 border-dashed transition-colors relative border-[#E0E7FF] hover:border-[#64748B]/50 bg-[#F4F6FB]">
+            <div className="w-full h-full flex flex-col items-center justify-center text-[#64748B] group-hover:text-[#172554]">
               <ImageIcon className={uploadIconClass} />
               <span className={cn("uppercase font-medium", emptyTextClass)}>Upload</span>
             </div>

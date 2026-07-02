@@ -72,11 +72,11 @@ export default function OrdersPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-4xl font-bold text-foreground font-heading mb-2">Sales Orders</h1>
-            <p className="text-[#8B9FC4]">View and manage sales orders</p>
+            <p className="text-[#64748B]">View and manage sales orders</p>
           </div>
           {role !== 'Supervisor' && (
             <Button 
-              className="bg-[#D4521A] hover:bg-[#D4521A] text-white px-6 py-5 text-sm font-semibold rounded-lg"
+              className="bg-[#4F46E5] hover:bg-[#4F46E5] text-white px-6 py-5 text-sm font-semibold rounded-lg"
               onClick={() => setIsModalOpen(true)}
             >
               <Plus weight="bold" className="mr-2 h-5 w-5" />
@@ -86,7 +86,7 @@ export default function OrdersPage() {
         </div>
 
         {/* Filter Bar */}
-        <div className="flex items-center gap-3 py-6 px-6 bg-[#0C1221] border border-white/[0.06] rounded-[14px] overflow-x-auto min-h-[80px]">
+        <div className="flex items-center gap-3 py-6 px-6 bg-[#FFFFFF] border border-black/[0.04] rounded-[14px] overflow-x-auto min-h-[80px]">
           {categories.map((cat) => (
             <Badge
               key={cat}
@@ -95,8 +95,8 @@ export default function OrdersPage() {
               className={cn(
                 'cursor-pointer h-12 px-8 text-[15px] font-medium transition-colors border rounded-lg min-w-[120px] flex items-center justify-center shrink-0',
                 activeCategory === cat
-                  ? 'bg-[#D4521A]/20 border-[#D4521A]/40 text-[#D4521A]'
-                  : 'bg-transparent text-[#8B9FC4] border-sidebar-border hover:border-[#2E3C5C] hover:text-[#EEF3FF]'
+                  ? 'bg-[#4F46E5]/20 border-[#4F46E5]/40 text-[#4F46E5]'
+                  : 'bg-transparent text-[#64748B] border-sidebar-border hover:border-[#C7D2FE] hover:text-[#172554]'
               )}
             >
               {cat}
@@ -108,16 +108,16 @@ export default function OrdersPage() {
         <div className="space-y-4">
           {loading ? (
             <div className="py-20 text-center">
-              <p className="text-[#8B9FC4] text-lg animate-pulse">Loading orders...</p>
+              <p className="text-[#64748B] text-lg animate-pulse">Loading orders...</p>
             </div>
           ) : orders.length === 0 ? (
-            <div className="py-20 text-center border border-dashed border-[#243050] rounded-xl bg-[#0C1221]/30">
-              <p className="text-[#8B9FC4] text-lg font-medium">No orders yet</p>
-              <p className="text-[#5A6E90] text-sm mt-1">Click &quot;New Order&quot; to create your first order</p>
+            <div className="py-20 text-center border border-dashed border-[#E0E7FF] rounded-xl bg-[#FFFFFF]/30">
+              <p className="text-[#64748B] text-lg font-medium">No orders yet</p>
+              <p className="text-[#94A3B8] text-sm mt-1">Click &quot;New Order&quot; to create your first order</p>
             </div>
           ) : filteredOrders.length === 0 ? (
-            <div className="py-12 text-center border border-[#243050] rounded-xl bg-[#050810]/50">
-              <p className="text-[#8B9FC4] text-lg">No orders found for this status.</p>
+            <div className="py-12 text-center border border-[#E0E7FF] rounded-xl bg-[#F4F6FB]/50">
+              <p className="text-[#64748B] text-lg">No orders found for this status.</p>
             </div>
           ) : (
             filteredOrders.map((order) => (
@@ -131,43 +131,43 @@ export default function OrdersPage() {
                   }
                 }}
                 className={cn(
-                  "flex items-center bg-[#0C1221] border p-5 rounded-[14px] hover:bg-white/[0.04] transition-all duration-150 cursor-pointer",
-                  statusAccentColors[order.status] || 'border-white/[0.06]'
+                  "flex items-center bg-[#FFFFFF] border p-5 rounded-[14px] hover:bg-black/[0.03] transition-all duration-150 cursor-pointer",
+                  statusAccentColors[order.status] || 'border-black/[0.04]'
                 )}
               >
-                <div className="w-[160px] shrink-0 pr-4 border-r border-[#243050]/50 mr-6">
-                  <p className="text-[17px] font-bold text-[#EEF3FF] tracking-tight truncate">{order.customerOrderNo}</p>
-                  <p className="text-sm font-mono text-[#5A6E90] mt-1">{order.internalOrderNo}</p>
+                <div className="w-[160px] shrink-0 pr-4 border-r border-[#E0E7FF]/50 mr-6">
+                  <p className="text-[17px] font-bold text-[#172554] tracking-tight truncate">{order.customerOrderNo}</p>
+                  <p className="text-sm font-mono text-[#94A3B8] mt-1">{order.internalOrderNo}</p>
                 </div>
 
                 <div className="flex flex-1 items-center gap-6">
                   <div className="w-[200px]">
-                    <p className="text-[12px] text-[#8B9FC4] uppercase font-semibold mb-1 tracking-wider">Customer</p>
-                    <p className="text-[15px] font-medium text-[#EEF3FF] leading-tight line-clamp-2">{order.customer}</p>
+                    <p className="text-[12px] text-[#64748B] uppercase font-semibold mb-1 tracking-wider">Customer</p>
+                    <p className="text-[15px] font-medium text-[#172554] leading-tight line-clamp-2">{order.customer}</p>
                   </div>
                   <div className="w-[330px]">
-                    <p className="text-[12px] text-[#8B9FC4] uppercase font-semibold mb-1 tracking-wider">Product</p>
-                    <p className="text-[15px] font-medium text-[#EEF3FF] leading-tight line-clamp-2">
+                    <p className="text-[12px] text-[#64748B] uppercase font-semibold mb-1 tracking-wider">Product</p>
+                    <p className="text-[15px] font-medium text-[#172554] leading-tight line-clamp-2">
                       {order.cart && order.cart.length > 0 
                         ? (order.cart.length === 1 ? order.cart[0].productName : `${order.cart.length} Products`)
                         : (order as any).product || 'N/A'}
                     </p>
                   </div>
                   <div className="w-[90px]">
-                    <p className="text-[12px] text-[#8B9FC4] uppercase font-semibold mb-1 tracking-wider">Qty</p>
-                    <p className="text-[16px] font-bold text-[#EEF3FF]">
+                    <p className="text-[12px] text-[#64748B] uppercase font-semibold mb-1 tracking-wider">Qty</p>
+                    <p className="text-[16px] font-bold text-[#172554]">
                       {order.cart && order.cart.length > 0
                         ? order.cart.reduce((sum, item) => sum + item.quantity, 0).toLocaleString()
                         : ((order as any).quantity || 0).toLocaleString()}
                     </p>
                   </div>
                   <div className="w-[110px]">
-                    <p className="text-[12px] text-[#8B9FC4] uppercase font-semibold mb-1 tracking-wider">Order Dt</p>
-                    <p className="text-[15px] font-mono text-[#C4D2EE]">{order.orderDate}</p>
+                    <p className="text-[12px] text-[#64748B] uppercase font-semibold mb-1 tracking-wider">Order Dt</p>
+                    <p className="text-[15px] font-mono text-[#0F172A]">{order.orderDate}</p>
                   </div>
                   <div className="w-[110px]">
-                    <p className="text-[12px] text-[#8B9FC4] uppercase font-semibold mb-1 tracking-wider">Deliv Dt</p>
-                    <p className="text-[15px] font-mono text-[#C4D2EE]">{order.deliveryDate}</p>
+                    <p className="text-[12px] text-[#64748B] uppercase font-semibold mb-1 tracking-wider">Deliv Dt</p>
+                    <p className="text-[15px] font-mono text-[#0F172A]">{order.deliveryDate}</p>
                   </div>
                 </div>
 

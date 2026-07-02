@@ -74,17 +74,17 @@ export function OrderTimelineDrawer({
       )}>
         <div 
           className={cn(
-            "bg-[#050810] border border-[#243050] rounded-2xl w-full max-w-[500px] shadow-2xl flex flex-col overflow-hidden max-h-[90vh] transition-transform duration-300 ease-out",
+            "bg-[#F4F6FB] border border-[#E0E7FF] rounded-2xl w-full max-w-[500px] shadow-2xl flex flex-col overflow-hidden max-h-[90vh] transition-transform duration-300 ease-out",
             isOpen ? "scale-100 translate-y-0" : "scale-95 translate-y-4"
           )}
         >
         {/* Header */}
-        <div className="sticky top-0 z-10 bg-[#0C1221]/95 backdrop-blur-md border-b border-[#243050] px-6 py-5 flex items-center justify-between shrink-0">
+        <div className="sticky top-0 z-10 bg-[#FFFFFF]/95 backdrop-blur-md border-b border-[#E0E7FF] px-6 py-5 flex items-center justify-between shrink-0">
           <div>
-            <h2 className="text-xl font-bold text-[#EEF3FF] tracking-tight">Production Timeline</h2>
-            <p className="text-[#8B9FC4] text-sm mt-1">{schedule?.customerOrderNo || 'Loading...'}</p>
+            <h2 className="text-xl font-bold text-[#172554] tracking-tight">Production Timeline</h2>
+            <p className="text-[#64748B] text-sm mt-1">{schedule?.customerOrderNo || 'Loading...'}</p>
           </div>
-          <button onClick={onClose} className="p-2 text-[#5A6E90] hover:text-[#EEF3FF] hover:bg-[#1A263D] rounded-lg transition-colors">
+          <button onClick={onClose} className="p-2 text-[#94A3B8] hover:text-[#172554] hover:bg-[#EEF2FF] rounded-lg transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -92,27 +92,27 @@ export function OrderTimelineDrawer({
         <div className="flex-1 overflow-y-auto p-6">
           {loading || !schedule ? (
             <div className="flex flex-col items-center justify-center h-40 space-y-4">
-              <div className="w-8 h-8 border-4 border-[#243050] border-t-[#D4521A] rounded-full animate-spin" />
-              <p className="text-[#8B9FC4]">Loading timeline...</p>
+              <div className="w-8 h-8 border-4 border-[#E0E7FF] border-t-[#4F46E5] rounded-full animate-spin" />
+              <p className="text-[#64748B]">Loading timeline...</p>
             </div>
           ) : (
             <div className="space-y-8">
                {/* Order Context */}
-               <div className="bg-[#0C1221] border border-[#243050] rounded-xl p-4">
+               <div className="bg-[#FFFFFF] border border-[#E0E7FF] rounded-xl p-4">
                   <div className="grid grid-cols-2 gap-4">
                      <div>
-                        <p className="text-[#5A6E90] text-xs uppercase tracking-wider mb-1">Customer</p>
-                        <p className="text-[#EEF3FF] font-medium">{schedule.customer}</p>
+                        <p className="text-[#94A3B8] text-xs uppercase tracking-wider mb-1">Customer</p>
+                        <p className="text-[#172554] font-medium">{schedule.customer}</p>
                      </div>
                      <div>
-                        <p className="text-[#5A6E90] text-xs uppercase tracking-wider mb-1">Schedule Date</p>
-                        <p className="text-[#EEF3FF] font-medium">{new Date(schedule.date).toLocaleDateString()}</p>
+                        <p className="text-[#94A3B8] text-xs uppercase tracking-wider mb-1">Schedule Date</p>
+                        <p className="text-[#172554] font-medium">{new Date(schedule.date).toLocaleDateString()}</p>
                      </div>
                   </div>
                </div>
 
                {/* Timeline Stepper */}
-               <div className="relative pl-4 space-y-8 before:absolute before:inset-y-0 before:left-[23px] before:w-px before:bg-[#243050]">
+               <div className="relative pl-4 space-y-8 before:absolute before:inset-y-0 before:left-[23px] before:w-px before:bg-[#E0E7FF]">
                   {STAGES.map((stage, idx) => {
                      const stageData = schedule.stages[stage.key] || { planned: 0, completed: 0, pending: 0, variance: 0 }
                      const isCompleted = stageData.completed > 0 && stageData.completed >= stageData.planned
@@ -125,30 +125,30 @@ export function OrderTimelineDrawer({
                         <div key={stage.key} className="relative flex gap-6">
                            <div className={cn(
                               "relative z-10 flex shrink-0 items-center justify-center w-5 h-5 rounded-full mt-1 border-2",
-                              isCompleted ? "bg-[#1A263D] border-green-500 text-green-500" :
-                              isInProgress ? "bg-[#1A263D] border-[#D4521A] text-[#D4521A]" :
-                              "bg-[#050810] border-[#5A6E90] text-[#5A6E90]"
+                              isCompleted ? "bg-[#EEF2FF] border-green-500 text-green-500" :
+                              isInProgress ? "bg-[#EEF2FF] border-[#4F46E5] text-[#4F46E5]" :
+                              "bg-[#F4F6FB] border-[#94A3B8] text-[#94A3B8]"
                            )}>
-                              {isCompleted ? <CheckCircle weight="fill" className="w-5 h-5 absolute -left-[2px] -top-[2px] bg-green-500 text-[#050810] rounded-full" /> : <div className="w-2 h-2 rounded-full bg-current" />}
+                              {isCompleted ? <CheckCircle weight="fill" className="w-5 h-5 absolute -left-[2px] -top-[2px] bg-green-500 text-[#F4F6FB] rounded-full" /> : <div className="w-2 h-2 rounded-full bg-current" />}
                            </div>
                            
-                           <div className="flex-1 bg-[#0C1221] border border-[#243050] rounded-xl p-4 transition-colors hover:border-[#5A6E90]">
-                              <h3 className={cn("text-sm font-bold uppercase tracking-wider mb-3", isCompleted ? "text-green-400" : "text-[#EEF3FF]")}>
+                           <div className="flex-1 bg-[#FFFFFF] border border-[#E0E7FF] rounded-xl p-4 transition-colors hover:border-[#94A3B8]">
+                              <h3 className={cn("text-sm font-bold uppercase tracking-wider mb-3", isCompleted ? "text-green-400" : "text-[#172554]")}>
                                  {stage.label}
                               </h3>
                               
                               <div className="grid grid-cols-3 gap-2">
-                                 <div className="bg-[#050810] rounded-md p-2 text-center">
-                                    <p className="text-[#5A6E90] text-[10px] uppercase mb-1">Planned</p>
-                                    <p className="text-[#EEF3FF] font-mono text-lg">{stageData.planned}</p>
+                                 <div className="bg-[#F4F6FB] rounded-md p-2 text-center">
+                                    <p className="text-[#94A3B8] text-[10px] uppercase mb-1">Planned</p>
+                                    <p className="text-[#172554] font-mono text-lg">{stageData.planned}</p>
                                  </div>
-                                 <div className="bg-[#050810] rounded-md p-2 text-center">
-                                    <p className="text-[#5A6E90] text-[10px] uppercase mb-1">Completed</p>
-                                    <p className="text-[#EEF3FF] font-mono text-lg">{stageData.completed}</p>
+                                 <div className="bg-[#F4F6FB] rounded-md p-2 text-center">
+                                    <p className="text-[#94A3B8] text-[10px] uppercase mb-1">Completed</p>
+                                    <p className="text-[#172554] font-mono text-lg">{stageData.completed}</p>
                                  </div>
-                                 <div className="bg-[#050810] rounded-md p-2 text-center">
-                                    <p className="text-[#5A6E90] text-[10px] uppercase mb-1">Pending</p>
-                                    <p className="text-[#EEF3FF] font-mono text-lg">{stageData.pending}</p>
+                                 <div className="bg-[#F4F6FB] rounded-md p-2 text-center">
+                                    <p className="text-[#94A3B8] text-[10px] uppercase mb-1">Pending</p>
+                                    <p className="text-[#172554] font-mono text-lg">{stageData.pending}</p>
                                  </div>
                               </div>
                            </div>

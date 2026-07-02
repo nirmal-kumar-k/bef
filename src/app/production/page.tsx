@@ -191,20 +191,20 @@ export default function ProductionTrackingPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-[#EEF3FF] font-heading tracking-tight">Production Tracking</h1>
-          <p className="text-[#8B9FC4] mt-1 text-sm">Monitor daily execution, actuals, and variances</p>
+          <h1 className="text-3xl font-bold text-[#172554] font-heading tracking-tight">Production Tracking</h1>
+          <p className="text-[#64748B] mt-1 text-sm">Monitor daily execution, actuals, and variances</p>
         </div>
         <div className="flex items-center gap-3">
           <Input 
             type="date" 
             value={dateFilter}
             onChange={e => setDateFilter(e.target.value)}
-            className="w-40 bg-[#0C1221] border-[#243050] text-[#EEF3FF]"
+            className="w-40 bg-[#FFFFFF] border-[#E0E7FF] text-[#172554]"
           />
-          <Button variant="outline" onClick={handleSaveProgress} className="border-[#243050] text-[#8B9FC4] hover:text-[#EEF3FF] hover:bg-[#1A263D]">
+          <Button variant="outline" onClick={handleSaveProgress} className="border-[#E0E7FF] text-[#64748B] hover:text-[#172554] hover:bg-[#EEF2FF]">
             Save Progress
           </Button>
-          <Button onClick={() => setIsCloseDayOpen(true)} disabled={schedules.length === 0} className="bg-[#D4521A] hover:bg-[#E56020] text-white">
+          <Button onClick={() => setIsCloseDayOpen(true)} disabled={schedules.length === 0} className="bg-[#4F46E5] hover:bg-[#E56020] text-white">
             <CalendarCheck className="w-4 h-4 mr-2" />
             Close Day
           </Button>
@@ -213,30 +213,30 @@ export default function ProductionTrackingPage() {
 
       {/* KPI Dashboard Strip */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-         <Card className="bg-[#0C1221] border-[#243050] p-4 flex flex-row items-center justify-between">
+         <Card className="bg-[#FFFFFF] border-[#E0E7FF] p-4 flex flex-row items-center justify-between">
             <div>
-               <p className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider mb-1">Furnace Utilization</p>
-               <h3 className="text-2xl font-bold text-[#EEF3FF]">{meltingUtil}%</h3>
+               <p className="text-[#64748B] text-xs font-semibold uppercase tracking-wider mb-1">Furnace Utilization</p>
+               <h3 className="text-2xl font-bold text-[#172554]">{meltingUtil}%</h3>
             </div>
             <div className="text-right flex flex-col justify-center gap-1">
-               <h4 className="text-[#EEF3FF] text-sm font-bold uppercase tracking-wider">Completed: {totalMeltingCompleted}</h4>
-               <h4 className="text-[#EEF3FF] text-sm font-bold uppercase tracking-wider">Planned: {totalMeltingPlanned}</h4>
+               <h4 className="text-[#172554] text-sm font-bold uppercase tracking-wider">Completed: {totalMeltingCompleted}</h4>
+               <h4 className="text-[#172554] text-sm font-bold uppercase tracking-wider">Planned: {totalMeltingPlanned}</h4>
             </div>
          </Card>
-         <Card className="bg-[#0C1221] border-[#243050] p-4 flex flex-row items-center justify-between">
+         <Card className="bg-[#FFFFFF] border-[#E0E7FF] p-4 flex flex-row items-center justify-between">
             <div>
-               <p className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider mb-1">Moulding Line Utilization</p>
-               <h3 className="text-2xl font-bold text-[#EEF3FF]">{mouldingUtil}%</h3>
+               <p className="text-[#64748B] text-xs font-semibold uppercase tracking-wider mb-1">Moulding Line Utilization</p>
+               <h3 className="text-2xl font-bold text-[#172554]">{mouldingUtil}%</h3>
             </div>
             <div className="text-right flex flex-col justify-center gap-1">
-               <h4 className="text-[#EEF3FF] text-sm font-bold uppercase tracking-wider">Completed: {totalMouldingCompleted}</h4>
-               <h4 className="text-[#EEF3FF] text-sm font-bold uppercase tracking-wider">Planned: {totalMouldingPlanned}</h4>
+               <h4 className="text-[#172554] text-sm font-bold uppercase tracking-wider">Completed: {totalMouldingCompleted}</h4>
+               <h4 className="text-[#172554] text-sm font-bold uppercase tracking-wider">Planned: {totalMouldingPlanned}</h4>
             </div>
          </Card>
-         <Card className="bg-[#0C1221] border-[#243050] p-4 flex flex-row items-center justify-between">
+         <Card className="bg-[#FFFFFF] border-[#E0E7FF] p-4 flex flex-row items-center justify-between">
             <div>
-               <p className="text-[#8B9FC4] text-xs font-semibold uppercase tracking-wider mb-1">Active Scheduled Jobs</p>
-               <h3 className="text-2xl font-bold text-[#EEF3FF]">{schedules.length}</h3>
+               <p className="text-[#64748B] text-xs font-semibold uppercase tracking-wider mb-1">Active Scheduled Jobs</p>
+               <h3 className="text-2xl font-bold text-[#172554]">{schedules.length}</h3>
             </div>
          </Card>
       </div>
@@ -250,13 +250,13 @@ export default function ProductionTrackingPage() {
               className={cn(
                 "px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-300 relative overflow-hidden",
                 activeStage === stage.key
-                  ? "text-[#EEF3FF] bg-[#1A263D] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] border border-[#243050]"
-                  : "text-[#5A6E90] hover:text-[#C4D2EE] hover:bg-[#0C1221] border border-transparent"
+                  ? "text-[#172554] bg-[#EEF2FF] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] border border-[#E0E7FF]"
+                  : "text-[#94A3B8] hover:text-[#0F172A] hover:bg-[#FFFFFF] border border-transparent"
               )}
             >
               <div className="flex items-center gap-2 relative z-10">
                 {activeStage === stage.key ? (
-                  <CheckCircle weight="fill" className="w-4 h-4 text-[#D4521A]" />
+                  <CheckCircle weight="fill" className="w-4 h-4 text-[#4F46E5]" />
                 ) : (
                   <ClockCounterClockwise weight="bold" className="w-4 h-4 opacity-50" />
                 )}
@@ -265,7 +265,7 @@ export default function ProductionTrackingPage() {
             </button>
             
             {idx < STAGES.length - 1 && (
-              <ArrowRight weight="bold" className="w-3 h-3 text-[#243050] mx-1" />
+              <ArrowRight weight="bold" className="w-3 h-3 text-[#E0E7FF] mx-1" />
             )}
           </div>
         ))}
@@ -273,58 +273,58 @@ export default function ProductionTrackingPage() {
 
       {/* Search Bar */}
       <div className="relative">
-         <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5A6E90]" />
+         <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
          <Input 
             type="text" 
             placeholder="Search by Order No or Customer..." 
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="pl-9 bg-[#0C1221] border-[#243050] text-[#EEF3FF]"
+            className="pl-9 bg-[#FFFFFF] border-[#E0E7FF] text-[#172554]"
          />
       </div>
 
       {/* Main Table */}
-      <div className="bg-[#0C1221] border border-[#243050] rounded-xl overflow-hidden mt-6">
+      <div className="bg-[#FFFFFF] border border-[#E0E7FF] rounded-xl overflow-hidden mt-6">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-[#1A263D] border-b border-[#243050]">
-              <th className="px-4 py-3 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider w-[25%]">Order Info</th>
-              <th className="px-4 py-3 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider text-center w-[15%]">Expected/Planned</th>
+            <tr className="bg-[#EEF2FF] border-b border-[#E0E7FF]">
+              <th className="px-4 py-3 text-xs font-semibold text-[#64748B] uppercase tracking-wider w-[25%]">Order Info</th>
+              <th className="px-4 py-3 text-xs font-semibold text-[#64748B] uppercase tracking-wider text-center w-[15%]">Expected/Planned</th>
               
               {activeStage === 'readyForDispatch' ? (
                 <>
-                  <th className="px-4 py-3 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider text-center w-[15%]">Dispatch Qty</th>
-                  <th className="px-4 py-3 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider text-center w-[25%]">Logistics (Inv / Veh)</th>
+                  <th className="px-4 py-3 text-xs font-semibold text-[#64748B] uppercase tracking-wider text-center w-[15%]">Dispatch Qty</th>
+                  <th className="px-4 py-3 text-xs font-semibold text-[#64748B] uppercase tracking-wider text-center w-[25%]">Logistics (Inv / Veh)</th>
                 </>
               ) : activeStage === 'grinding' || activeStage === 'inspection' ? (
                 <>
-                  <th className="px-4 py-3 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider text-center w-[10%]">Completed</th>
-                  <th className="px-4 py-3 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider text-center w-[10%]">Rework</th>
-                  <th className="px-4 py-3 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider text-center w-[10%]">Rejected</th>
+                  <th className="px-4 py-3 text-xs font-semibold text-[#64748B] uppercase tracking-wider text-center w-[10%]">Completed</th>
+                  <th className="px-4 py-3 text-xs font-semibold text-[#64748B] uppercase tracking-wider text-center w-[10%]">Rework</th>
+                  <th className="px-4 py-3 text-xs font-semibold text-[#64748B] uppercase tracking-wider text-center w-[10%]">Rejected</th>
                 </>
               ) : activeStage === 'knockout' ? (
                 <>
-                  <th className="px-4 py-3 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider text-center w-[15%]">Completed</th>
-                  <th className="px-4 py-3 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider text-center w-[15%]">Damaged (Rej)</th>
+                  <th className="px-4 py-3 text-xs font-semibold text-[#64748B] uppercase tracking-wider text-center w-[15%]">Completed</th>
+                  <th className="px-4 py-3 text-xs font-semibold text-[#64748B] uppercase tracking-wider text-center w-[15%]">Damaged (Rej)</th>
                 </>
               ) : (
-                <th className="px-4 py-3 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider text-center w-[30%]">Completed</th>
+                <th className="px-4 py-3 text-xs font-semibold text-[#64748B] uppercase tracking-wider text-center w-[30%]">Completed</th>
               )}
               
-              <th className="px-4 py-3 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider text-center w-[15%]">Pending</th>
-              <th className="px-4 py-3 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider text-center w-[15%]">Variance</th>
+              <th className="px-4 py-3 text-xs font-semibold text-[#64748B] uppercase tracking-wider text-center w-[15%]">Pending</th>
+              <th className="px-4 py-3 text-xs font-semibold text-[#64748B] uppercase tracking-wider text-center w-[15%]">Variance</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={8} className="px-6 py-12 text-center text-[#8B9FC4]">
+                <td colSpan={8} className="px-6 py-12 text-center text-[#64748B]">
                   Loading production data...
                 </td>
               </tr>
             ) : filteredSchedules.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-6 py-12 text-center text-[#8B9FC4]">
+                <td colSpan={8} className="px-6 py-12 text-center text-[#64748B]">
                   No active production scheduled for this date.
                 </td>
               </tr>
@@ -335,20 +335,20 @@ export default function ProductionTrackingPage() {
                 const unitLabel = stage.unit.charAt(0).toUpperCase() + stage.unit.slice(1)
                 
                 return (
-                  <tr key={sched.id} className="border-b border-[#243050] hover:bg-[#1A263D]/30 transition-colors">
+                  <tr key={sched.id} className="border-b border-[#E0E7FF] hover:bg-[#EEF2FF]/30 transition-colors">
                     <td className="px-4 py-3">
-                      <div className="font-bold text-[#EEF3FF] cursor-pointer hover:text-[#D4521A] transition-colors" onClick={() => setTimelineOrder(sched.id)}>
+                      <div className="font-bold text-[#172554] cursor-pointer hover:text-[#4F46E5] transition-colors" onClick={() => setTimelineOrder(sched.id)}>
                         {sched.customerOrderNo}
                       </div>
-                      <div className="text-sm text-[#8B9FC4]">{sched.customer}</div>
+                      <div className="text-sm text-[#64748B]">{sched.customer}</div>
                       {sched.priority === 'High' && <Badge variant="outline" className="mt-1 bg-red-500/10 text-red-500 border-red-500/20 text-[10px]">High Priority</Badge>}
                     </td>
                     
                     {/* Planned */}
                     <td className="px-4 py-3 text-center">
                       <div className="flex items-center justify-center gap-2">
-                        <span className="text-[#EEF3FF] font-bold text-base">{stage.planned}</span>
-                        <span className="text-[#5A6E90] text-xs">{stage.unit}</span>
+                        <span className="text-[#172554] font-bold text-base">{stage.planned}</span>
+                        <span className="text-[#94A3B8] text-xs">{stage.unit}</span>
                       </div>
                     </td>
                     
@@ -359,7 +359,7 @@ export default function ProductionTrackingPage() {
                           <Input 
                             type="number" min="0" value={stage.completed.toString()}
                             onChange={(e) => handleStageUpdate(sched.id, 'completed', e.target.value)}
-                            className="w-12 mx-auto h-7 text-xs font-mono font-medium text-center bg-[#EEF3FF]/10 border-transparent text-[#EEF3FF] rounded-md focus:border-[#D4521A] transition-colors px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            className="w-12 mx-auto h-7 text-xs font-mono font-medium text-center bg-[#172554]/10 border-transparent text-[#172554] rounded-md focus:border-[#4F46E5] transition-colors px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                           />
                         </td>
                         <td className="px-4 py-3">
@@ -367,12 +367,12 @@ export default function ProductionTrackingPage() {
                             <Input 
                               placeholder="Invoice No." value={stage.invoiceNumber || ''}
                               onChange={(e) => handleStageUpdate(sched.id, 'invoiceNumber', e.target.value)}
-                              className="w-32 h-8 text-xs bg-[#050810] border-[#243050] text-[#EEF3FF] focus:border-[#D4521A] text-center"
+                              className="w-32 h-8 text-xs bg-[#F4F6FB] border-[#E0E7FF] text-[#172554] focus:border-[#4F46E5] text-center"
                             />
                             <Input 
                               placeholder="Vehicle No." value={stage.vehicleNumber || ''}
                               onChange={(e) => handleStageUpdate(sched.id, 'vehicleNumber', e.target.value)}
-                              className="w-32 h-8 text-xs bg-[#050810] border-[#243050] text-[#EEF3FF] focus:border-[#D4521A] text-center"
+                              className="w-32 h-8 text-xs bg-[#F4F6FB] border-[#E0E7FF] text-[#172554] focus:border-[#4F46E5] text-center"
                             />
                           </div>
                         </td>
@@ -407,7 +407,7 @@ export default function ProductionTrackingPage() {
                           <Input 
                             type="number" min="0" value={stage.completed.toString()}
                             onChange={(e) => handleStageUpdate(sched.id, 'completed', e.target.value)}
-                            className="w-12 mx-auto h-7 text-xs font-mono font-medium text-center bg-[#EEF3FF]/10 border-transparent text-[#EEF3FF] rounded-md focus:border-[#D4521A] transition-colors px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            className="w-12 mx-auto h-7 text-xs font-mono font-medium text-center bg-[#172554]/10 border-transparent text-[#172554] rounded-md focus:border-[#4F46E5] transition-colors px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                           />
                         </td>
                         <td className="px-4 py-3 text-center">
@@ -423,7 +423,7 @@ export default function ProductionTrackingPage() {
                         <Input 
                           type="number" min="0" value={stage.completed.toString()}
                           onChange={(e) => handleStageUpdate(sched.id, 'completed', e.target.value)}
-                          className="w-12 mx-auto h-7 text-xs font-mono font-medium text-center bg-[#EEF3FF]/10 border-transparent text-[#EEF3FF] rounded-md focus:border-[#D4521A] transition-colors px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          className="w-12 mx-auto h-7 text-xs font-mono font-medium text-center bg-[#172554]/10 border-transparent text-[#172554] rounded-md focus:border-[#4F46E5] transition-colors px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         />
                       </td>
                     )}
@@ -443,7 +443,7 @@ export default function ProductionTrackingPage() {
                       <span className={cn(
                         "text-lg",
                         stage.variance > 0 ? "text-blue-400" : 
-                        stage.variance < 0 ? "text-red-400" : "text-[#EEF3FF]"
+                        stage.variance < 0 ? "text-red-400" : "text-[#172554]"
                       )}>
                         {stage.variance > 0 ? '+' : ''}{stage.variance}
                       </span>

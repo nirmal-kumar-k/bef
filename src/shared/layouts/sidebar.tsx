@@ -67,7 +67,7 @@ export function Sidebar() {
     <>
       {/* Mobile hamburger button */}
       <button
-        className="md:hidden fixed top-3 left-4 z-50 w-[34px] h-[34px] flex items-center justify-center border border-[#243050] rounded-md text-[#8B9FC4] bg-[#070B16]"
+        className="md:hidden fixed top-3 left-4 z-50 w-[34px] h-[34px] flex items-center justify-center border border-[#E0E7FF] rounded-md text-[#64748B] bg-[#F8FAFC]"
         onClick={() => setIsOpen(!isOpen)}
       >
         {isOpen ? <X weight="bold" size={20} /> : <List weight="duotone" size={20} />}
@@ -83,32 +83,32 @@ export function Sidebar() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-0 h-screen w-64 bg-[#070B16] border-r border-[#243050] transition-transform duration-300 z-40 md:translate-x-0 flex flex-col ${
+        className={`fixed left-0 top-0 h-screen w-64 bg-[#F8FAFC] border-r border-[#E0E7FF] transition-transform duration-300 z-40 md:translate-x-0 flex flex-col ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* Brand */}
-        <div className="flex items-center gap-[14px] px-5 h-[64px] border-b border-[#243050] shrink-0">
+        <div className="flex items-center gap-[14px] px-5 h-[64px] border-b border-[#E0E7FF] shrink-0">
           <svg className="w-[36px] h-[36px] shrink-0 relative" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
             <rect width="36" height="36" rx="9" fill="#111827"/>
             <rect width="36" height="36" rx="9" fill="url(#logo-grad)" opacity="0.3"/>
-            <path d="M10 8H20C22.76 8 25 10.24 25 13C25 14.56 24.27 15.94 23.14 16.87C24.27 17.79 25 19.17 25 20.72C25 23.76 22.76 26 20 26H10V8Z" fill="#162034"/>
-            <path d="M13 10H19.5C20.88 10 22 11.12 22 12.5C22 13.88 20.88 15 19.5 15H13V10Z" fill="#D4521A"/>
-            <path d="M13 15H20C21.66 15 23 16.34 23 18C23 19.66 21.66 21 20 21H13V15Z" fill="#D4521A"/>
+            <path d="M10 8H20C22.76 8 25 10.24 25 13C25 14.56 24.27 15.94 23.14 16.87C24.27 17.79 25 19.17 25 20.72C25 23.76 22.76 26 20 26H10V8Z" fill="#FFFFFF"/>
+            <path d="M13 10H19.5C20.88 10 22 11.12 22 12.5C22 13.88 20.88 15 19.5 15H13V10Z" fill="#4F46E5"/>
+            <path d="M13 15H20C21.66 15 23 16.34 23 18C23 19.66 21.66 21 20 21H13V15Z" fill="#4F46E5"/>
             <rect x="10" y="27" width="16" height="2.5" rx="1.25" fill="#9B3A0C"/>
-            <circle cx="29" cy="7" r="1.5" fill="#D4521A" opacity="0.7"/>
-            <circle cx="27" cy="4" r="1" fill="#D4521A" opacity="0.5"/>
-            <circle cx="32" cy="10" r="0.8" fill="#D4521A" opacity="0.4"/>
+            <circle cx="29" cy="7" r="1.5" fill="#4F46E5" opacity="0.7"/>
+            <circle cx="27" cy="4" r="1" fill="#4F46E5" opacity="0.5"/>
+            <circle cx="32" cy="10" r="0.8" fill="#4F46E5" opacity="0.4"/>
             <defs>
               <linearGradient id="logo-grad" x1="0" y1="0" x2="36" y2="36">
-                <stop offset="0%" stopColor="#D4521A"/>
-                <stop offset="100%" stopColor="#162034"/>
+                <stop offset="0%" stopColor="#4F46E5"/>
+                <stop offset="100%" stopColor="#FFFFFF"/>
               </linearGradient>
             </defs>
           </svg>
           <div className="flex flex-col gap-0">
-            <div className="font-heading text-[17px] font-extrabold text-[#EEF3FF] tracking-tight leading-[1.1]">BEF</div>
-            <div className="text-[9.5px] font-medium text-[#5A6E90] tracking-[0.14em] uppercase">Engineering Foundry</div>
+            <div className="font-heading text-[17px] font-extrabold text-[#172554] tracking-tight leading-[1.1]">BEF</div>
+            <div className="text-[9.5px] font-medium text-[#94A3B8] tracking-[0.14em] uppercase">Engineering Foundry</div>
           </div>
         </div>
 
@@ -116,7 +116,7 @@ export function Sidebar() {
         <nav className="flex-1 overflow-y-auto px-[10px] py-[14px] flex flex-col gap-[1px]">
           {filteredNavGroups.map((group, gIdx) => (
             <div key={gIdx} className="mb-1">
-              <div className="px-[12px] pt-[14px] pb-[5px] text-[9px] font-semibold tracking-[0.16em] uppercase text-[#3A4A68] font-heading">
+              <div className="px-[12px] pt-[14px] pb-[5px] text-[9px] font-semibold tracking-[0.16em] uppercase text-[#C7D2FE] font-heading">
                 {group.label}
               </div>
               {group.items.map((item) => {
@@ -128,16 +128,16 @@ export function Sidebar() {
                     onClick={() => setIsOpen(false)}
                     className={`group flex items-center gap-[11px] px-[12px] py-[9px] rounded-[10px] text-[13.5px] transition-all border border-transparent select-none tracking-[-0.1px] ${
                       active
-                        ? 'bg-[#D4521A]/20 border-[#D4521A]/35 text-[#D4521A] font-medium'
-                        : 'text-[#8B9FC4] font-normal hover:bg-[#1C2840] hover:text-[#EEF3FF]'
+                        ? 'bg-[#4F46E5]/20 border-[#4F46E5]/35 text-[#4F46E5] font-medium'
+                        : 'text-[#64748B] font-normal hover:bg-[#EEF2FF] hover:text-[#172554]'
                     }`}
                   >
-                    <div className={`${active ? 'text-[#D4521A]' : 'text-[#8B9FC4] group-hover:text-[#EEF3FF]'} transition-colors`}>
+                    <div className={`${active ? 'text-[#4F46E5]' : 'text-[#64748B] group-hover:text-[#172554]'} transition-colors`}>
                       {item.icon}
                     </div>
                     {item.label}
                     {item.badge && (
-                      <span className="ml-auto bg-[#D4521A] text-white text-[10px] font-bold font-heading px-[7px] py-[1px] rounded-full min-w-[20px] text-center">
+                      <span className="ml-auto bg-[#4F46E5] text-white text-[10px] font-bold font-heading px-[7px] py-[1px] rounded-full min-w-[20px] text-center">
                         {item.badge}
                       </span>
                     )}
@@ -149,15 +149,15 @@ export function Sidebar() {
         </nav>
 
         {/* Sidebar Foot */}
-        <div className="p-[14px_16px] border-t border-[#243050] flex items-center gap-[10px] shrink-0">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#D4521A] to-[#9B3A0C] flex items-center justify-center font-heading text-[12px] font-bold text-white shrink-0">
+        <div className="p-[14px_16px] border-t border-[#E0E7FF] flex items-center gap-[10px] shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#4F46E5] to-[#9B3A0C] flex items-center justify-center font-heading text-[12px] font-bold text-white shrink-0">
             RK
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-[12.5px] font-medium text-[#EEF3FF] truncate">Rajan Kumar</div>
-            <div className="text-[10.5px] text-[#5A6E90]">Foundry Manager</div>
+            <div className="text-[12.5px] font-medium text-[#172554] truncate">Rajan Kumar</div>
+            <div className="text-[10.5px] text-[#94A3B8]">Foundry Manager</div>
           </div>
-          <svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-[#3A4A68] shrink-0"><path d="M6 8l4 4 4-4"/></svg>
+          <svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-[#C7D2FE] shrink-0"><path d="M6 8l4 4 4-4"/></svg>
         </div>
       </aside>
     </>

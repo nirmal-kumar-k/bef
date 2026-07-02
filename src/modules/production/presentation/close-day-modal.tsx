@@ -136,17 +136,17 @@ export function CloseDayModal({ isOpen, schedules, date, onClose, onRefresh }: C
       />
       
       <div className="fixed inset-0 z-[101] flex items-start justify-center pt-8 pb-4 px-4">
-        <div className="bg-[#0C1221] border border-[#243050] rounded-2xl w-full max-w-[1200px] shadow-2xl flex flex-col overflow-hidden max-h-[90vh]">
+        <div className="bg-[#FFFFFF] border border-[#E0E7FF] rounded-2xl w-full max-w-[1200px] shadow-2xl flex flex-col overflow-hidden max-h-[90vh]">
           {/* Header */}
           <div className="px-6 py-5 flex items-center justify-between shrink-0">
             <div>
-              <h2 className="text-xl font-bold text-[#EEF3FF] tracking-tight flex items-center gap-2">
-                 <CalendarCheck weight="duotone" className="w-6 h-6 text-[#D4521A]" />
+              <h2 className="text-xl font-bold text-[#172554] tracking-tight flex items-center gap-2">
+                 <CalendarCheck weight="duotone" className="w-6 h-6 text-[#4F46E5]" />
                  End of Day Production Entry
               </h2>
-              <p className="text-[#8B9FC4] text-sm mt-1">{displayDate}</p>
+              <p className="text-[#64748B] text-sm mt-1">{displayDate}</p>
             </div>
-            <button onClick={onClose} className="p-2 text-[#5A6E90] hover:text-[#EEF3FF] hover:bg-[#1A263D] rounded-lg transition-colors">
+            <button onClick={onClose} className="p-2 text-[#94A3B8] hover:text-[#172554] hover:bg-[#EEF2FF] rounded-lg transition-colors">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -160,15 +160,15 @@ export function CloseDayModal({ isOpen, schedules, date, onClose, onRefresh }: C
              </div>
              
              {localSchedules.length === 0 ? (
-               <p className="text-[#8B9FC4] text-center py-4">No schedules found for this day.</p>
+               <p className="text-[#64748B] text-center py-4">No schedules found for this day.</p>
              ) : (
                  <div className="space-y-5">
                    {localSchedules.map((s, idx) => (
-                      <div key={s.id} className="bg-[#050810] border border-[#243050] rounded-xl p-5 space-y-4">
-                         <div className="flex justify-between items-center pb-3 border-b border-[#243050]">
+                      <div key={s.id} className="bg-[#F4F6FB] border border-[#E0E7FF] rounded-xl p-5 space-y-4">
+                         <div className="flex justify-between items-center pb-3 border-b border-[#E0E7FF]">
                             <div>
-                               <h3 className="text-lg font-bold text-[#EEF3FF]">{s.customerOrderNo}</h3>
-                               <p className="text-[#8B9FC4] text-sm mt-0.5">{s.customer}</p>
+                               <h3 className="text-lg font-bold text-[#172554]">{s.customerOrderNo}</h3>
+                               <p className="text-[#64748B] text-sm mt-0.5">{s.customer}</p>
                             </div>
                          </div>
                          
@@ -176,14 +176,14 @@ export function CloseDayModal({ isOpen, schedules, date, onClose, onRefresh }: C
                             <table className="w-full text-left border-collapse">
                                <thead>
                                   <tr>
-                                     <th className="py-3 px-4 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider bg-[#0C1221]/50 first:rounded-tl-lg">Stage</th>
-                                     <th className="py-3 px-4 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider bg-[#0C1221]/50 text-center">Planned</th>
-                                     <th className="py-3 px-4 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider bg-[#0C1221]/50">Unit</th>
-                                     <th className="py-3 px-4 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider bg-[#0C1221]/50 w-40 text-center">Actual Completed</th>
-                                     <th className="py-3 px-4 text-xs font-semibold text-[#8B9FC4] uppercase tracking-wider bg-[#0C1221]/50 text-center last:rounded-tr-lg">Variance</th>
+                                     <th className="py-3 px-4 text-xs font-semibold text-[#64748B] uppercase tracking-wider bg-[#FFFFFF]/50 first:rounded-tl-lg">Stage</th>
+                                     <th className="py-3 px-4 text-xs font-semibold text-[#64748B] uppercase tracking-wider bg-[#FFFFFF]/50 text-center">Planned</th>
+                                     <th className="py-3 px-4 text-xs font-semibold text-[#64748B] uppercase tracking-wider bg-[#FFFFFF]/50">Unit</th>
+                                     <th className="py-3 px-4 text-xs font-semibold text-[#64748B] uppercase tracking-wider bg-[#FFFFFF]/50 w-40 text-center">Actual Completed</th>
+                                     <th className="py-3 px-4 text-xs font-semibold text-[#64748B] uppercase tracking-wider bg-[#FFFFFF]/50 text-center last:rounded-tr-lg">Variance</th>
                                   </tr>
                                </thead>
-                               <tbody className="divide-y divide-[#243050]/50">
+                               <tbody className="divide-y divide-[#E0E7FF]/50">
                                   {['core', 'melting', 'moulding', 'pouring', 'knockout', 'shotBlasting', 'grinding', 'inspection', 'readyForDispatch'].map(stageKey => {
                                      const stage = s.stages[stageKey as keyof typeof s.stages]
                                      if (!stage || (stage.planned === 0 && stage.completed === 0)) return null
@@ -192,17 +192,17 @@ export function CloseDayModal({ isOpen, schedules, date, onClose, onRefresh }: C
                                      const stageName = stageKey.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())
 
                                      return (
-                                        <tr key={stageKey} className="hover:bg-[#0C1221]/30 transition-colors group">
-                                           <td className="py-2.5 px-4 text-[#EEF3FF] font-medium text-sm">{stageName}</td>
-                                           <td className="py-2.5 px-4 text-[#EEF3FF] text-sm text-center font-mono">{stage.planned}</td>
-                                           <td className="py-2.5 px-4 text-[#5A6E90] text-xs uppercase tracking-wider">{stage.unit}</td>
+                                        <tr key={stageKey} className="hover:bg-[#FFFFFF]/30 transition-colors group">
+                                           <td className="py-2.5 px-4 text-[#172554] font-medium text-sm">{stageName}</td>
+                                           <td className="py-2.5 px-4 text-[#172554] text-sm text-center font-mono">{stage.planned}</td>
+                                           <td className="py-2.5 px-4 text-[#94A3B8] text-xs uppercase tracking-wider">{stage.unit}</td>
                                            <td className="py-2 px-4 text-center">
                                               <Input 
                                                  type="number" 
                                                  min="0"
                                                  value={stage.completed?.toString() || '0'}
                                                  onChange={(e) => handleActualChange(idx, stageKey, e.target.value)}
-                                                 className="h-7 w-12 mx-auto text-xs font-mono font-medium text-center bg-[#EEF3FF]/10 border-transparent text-[#EEF3FF] rounded-md focus:border-[#D4521A] focus:bg-[#0C1221] transition-colors px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
+                                                 className="h-7 w-12 mx-auto text-xs font-mono font-medium text-center bg-[#172554]/10 border-transparent text-[#172554] rounded-md focus:border-[#4F46E5] focus:bg-[#FFFFFF] transition-colors px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
                                                  placeholder="0"
                                               />
                                            </td>
@@ -212,7 +212,7 @@ export function CloseDayModal({ isOpen, schedules, date, onClose, onRefresh }: C
                                                    {(stage.variance || 0) > 0 ? '+' : ''}{stage.variance || 0}
                                                 </span>
                                               ) : (
-                                                <span className="text-[#5A6E90] text-xs font-mono">-</span>
+                                                <span className="text-[#94A3B8] text-xs font-mono">-</span>
                                               )}
                                            </td>
                                         </tr>
@@ -228,11 +228,11 @@ export function CloseDayModal({ isOpen, schedules, date, onClose, onRefresh }: C
           </div>
           
           {/* Footer */}
-          <div className="px-6 py-4 flex justify-end gap-3 shrink-0 bg-[#0C1221] border-t border-[#243050]">
-             <Button variant="outline" onClick={onClose} className="border-[#243050] text-[#8B9FC4] hover:text-[#EEF3FF] hover:bg-[#1A263D] px-5 py-2 text-sm h-auto">
+          <div className="px-6 py-4 flex justify-end gap-3 shrink-0 bg-[#FFFFFF] border-t border-[#E0E7FF]">
+             <Button variant="outline" onClick={onClose} className="border-[#E0E7FF] text-[#64748B] hover:text-[#172554] hover:bg-[#EEF2FF] px-5 py-2 text-sm h-auto">
                 Cancel
              </Button>
-             <Button onClick={handleCloseDay} disabled={isSaving || localSchedules.length === 0} className="bg-[#D4521A] hover:bg-[#E56020] text-white px-5 py-2 text-sm h-auto font-medium">
+             <Button onClick={handleCloseDay} disabled={isSaving || localSchedules.length === 0} className="bg-[#4F46E5] hover:bg-[#E56020] text-white px-5 py-2 text-sm h-auto font-medium">
                 {isSaving ? 'Saving...' : 'Confirm & Close Day'}
              </Button>
           </div>

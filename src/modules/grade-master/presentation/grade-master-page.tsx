@@ -67,7 +67,7 @@ export default function GradeMasterPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold font-heading text-white">Grade Master</h1>
-          <p className="text-[#8B9FC4] mt-1">Manage chemical compositions for cast iron grades.</p>
+          <p className="text-[#64748B] mt-1">Manage chemical compositions for cast iron grades.</p>
         </div>
         <Button onClick={openAddModal} className="bg-amber-500 hover:bg-amber-600 text-black font-semibold">
           <Plus className="w-4 h-4 mr-2" />
@@ -75,10 +75,10 @@ export default function GradeMasterPage() {
         </Button>
       </div>
 
-      <div className="rounded-[14px] border border-white/[0.06] bg-[#0C1221] overflow-hidden">
+      <div className="rounded-[14px] border border-black/[0.04] bg-[#FFFFFF] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-[15px] text-left">
-            <thead className="bg-[#0C1221] border-b border-[#243050] text-[#8B9FC4] text-[13px] uppercase tracking-wider font-heading">
+            <thead className="bg-[#FFFFFF] border-b border-[#E0E7FF] text-[#64748B] text-[13px] uppercase tracking-wider font-heading">
               <tr>
                 <th className="px-6 py-4 font-medium">Grade Code</th>
                 <th className="px-6 py-4 font-medium">Grade Name</th>
@@ -90,19 +90,19 @@ export default function GradeMasterPage() {
                 <th className="px-6 py-4 font-medium text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#243050]">
+            <tbody className="divide-y divide-[#E0E7FF]">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-[#8B9FC4]">
+                  <td colSpan={8} className="px-6 py-12 text-center text-[#64748B]">
                     <div className="flex flex-col items-center gap-3">
-                      <div className="w-6 h-6 border-2 border-[#243050] border-t-[#D4521A] rounded-full animate-spin" />
+                      <div className="w-6 h-6 border-2 border-[#E0E7FF] border-t-[#4F46E5] rounded-full animate-spin" />
                       Loading grades...
                     </div>
                   </td>
                 </tr>
               ) : grades.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-[#8B9FC4]">
+                  <td colSpan={8} className="px-6 py-12 text-center text-[#64748B]">
                     No grades found. Add your first grade to get started.
                   </td>
                 </tr>
@@ -110,21 +110,21 @@ export default function GradeMasterPage() {
                 grades.map((grade) => (
                   <tr 
                     key={grade.id} 
-                    className="hover:bg-[#1A263D]/50 transition-colors group"
+                    className="hover:bg-[#EEF2FF]/50 transition-colors group"
                   >
-                    <td className="px-6 py-4 font-mono text-[#D4521A] font-medium">{grade.code}</td>
-                    <td className="px-6 py-4 text-[#EEF3FF] font-medium">{grade.name}</td>
-                    <td className="px-6 py-4 text-[#8B9FC4] font-mono text-sm">{grade.c}</td>
-                    <td className="px-6 py-4 text-[#8B9FC4] font-mono text-sm">{grade.si}</td>
-                    <td className="px-6 py-4 text-[#8B9FC4] font-mono text-sm">{grade.mn}</td>
-                    <td className="px-6 py-4 text-[#8B9FC4] font-mono text-sm">{grade.p}</td>
-                    <td className="px-6 py-4 text-[#8B9FC4] font-mono text-sm">{grade.s}</td>
+                    <td className="px-6 py-4 font-mono text-[#4F46E5] font-medium">{grade.code}</td>
+                    <td className="px-6 py-4 text-[#172554] font-medium">{grade.name}</td>
+                    <td className="px-6 py-4 text-[#64748B] font-mono text-sm">{grade.c}</td>
+                    <td className="px-6 py-4 text-[#64748B] font-mono text-sm">{grade.si}</td>
+                    <td className="px-6 py-4 text-[#64748B] font-mono text-sm">{grade.mn}</td>
+                    <td className="px-6 py-4 text-[#64748B] font-mono text-sm">{grade.p}</td>
+                    <td className="px-6 py-4 text-[#64748B] font-mono text-sm">{grade.s}</td>
                     <td className="px-6 py-4 text-right">
                       <Button 
                         variant="ghost" 
                         size="sm" 
                         onClick={() => openEditModal(grade)}
-                        className="text-[#8B9FC4] hover:text-[#EEF3FF] hover:bg-[#243050] h-8 px-2"
+                        className="text-[#64748B] hover:text-[#172554] hover:bg-[#E0E7FF] h-8 px-2"
                       >
                         <PencilSimple className="w-4 h-4 mr-1.5" />
                         Edit

@@ -74,9 +74,9 @@ export function GradeModal({ isOpen, onClose, onSave, grade }: GradeModalProps) 
       />
       
       {/* Modal */}
-      <div className="relative w-full max-w-3xl bg-[#050810] border border-sidebar-border rounded-xl shadow-2xl flex flex-col max-h-[90vh]">
+      <div className="relative w-full max-w-3xl bg-[#F4F6FB] border border-sidebar-border rounded-xl shadow-2xl flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-sidebar-border bg-[#0C1221] rounded-t-xl">
+        <div className="flex items-center justify-between p-6 border-b border-sidebar-border bg-[#FFFFFF] rounded-t-xl">
           <h2 className="text-xl font-bold text-foreground">
             {grade ? 'Edit Grade' : 'Add Grade'}
           </h2>
@@ -98,7 +98,7 @@ export function GradeModal({ isOpen, onClose, onSave, grade }: GradeModalProps) 
                 value={code} 
                 onChange={(e) => setCode(e.target.value)} 
                 placeholder="e.g. FC 200"
-                className="bg-[#0C1221] border-sidebar-border"
+                className="bg-[#FFFFFF] border-sidebar-border"
               />
             </div>
             <div className="space-y-1.5">
@@ -107,7 +107,7 @@ export function GradeModal({ isOpen, onClose, onSave, grade }: GradeModalProps) 
                 value={name} 
                 onChange={(e) => setName(e.target.value)} 
                 placeholder="e.g. Grey Cast Iron 200"
-                className="bg-[#0C1221] border-sidebar-border"
+                className="bg-[#FFFFFF] border-sidebar-border"
               />
             </div>
           </div>
@@ -121,7 +121,7 @@ export function GradeModal({ isOpen, onClose, onSave, grade }: GradeModalProps) 
                 value={c} 
                 onChange={(e) => setC(e.target.value)} 
                 placeholder="e.g. 3.1–3.4"
-                className="bg-[#0C1221] border-sidebar-border"
+                className="bg-[#FFFFFF] border-sidebar-border"
               />
             </div>
             <div className="space-y-1.5">
@@ -131,7 +131,7 @@ export function GradeModal({ isOpen, onClose, onSave, grade }: GradeModalProps) 
                 value={si} 
                 onChange={(e) => setSi(e.target.value)} 
                 placeholder="e.g. 1.9–2.3"
-                className="bg-[#0C1221] border-sidebar-border"
+                className="bg-[#FFFFFF] border-sidebar-border"
               />
             </div>
             <div className="space-y-1.5">
@@ -141,7 +141,7 @@ export function GradeModal({ isOpen, onClose, onSave, grade }: GradeModalProps) 
                 value={mn} 
                 onChange={(e) => setMn(e.target.value)} 
                 placeholder="e.g. 0.6–0.9"
-                className="bg-[#0C1221] border-sidebar-border"
+                className="bg-[#FFFFFF] border-sidebar-border"
               />
             </div>
           </div>
@@ -155,7 +155,7 @@ export function GradeModal({ isOpen, onClose, onSave, grade }: GradeModalProps) 
                 value={p} 
                 onChange={(e) => setP(e.target.value)} 
                 placeholder="e.g. ≤0.15"
-                className="bg-[#0C1221] border-sidebar-border"
+                className="bg-[#FFFFFF] border-sidebar-border"
               />
             </div>
             <div className="space-y-1.5">
@@ -165,7 +165,7 @@ export function GradeModal({ isOpen, onClose, onSave, grade }: GradeModalProps) 
                 value={s} 
                 onChange={(e) => setS(e.target.value)} 
                 placeholder="e.g. ≤0.12"
-                className="bg-[#0C1221] border-sidebar-border"
+                className="bg-[#FFFFFF] border-sidebar-border"
               />
             </div>
           </div>
@@ -176,13 +176,13 @@ export function GradeModal({ isOpen, onClose, onSave, grade }: GradeModalProps) 
               value={remarks} 
               onChange={(e) => setRemarks(e.target.value)} 
               placeholder="Add any additional notes..."
-              className="bg-[#0C1221] border-sidebar-border min-h-[100px] resize-none"
+              className="bg-[#FFFFFF] border-sidebar-border min-h-[100px] resize-none"
             />
           </div>
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-sidebar-border bg-[#0C1221] rounded-b-xl flex justify-end gap-3 shrink-0">
+        <div className="p-6 border-t border-sidebar-border bg-[#FFFFFF] rounded-b-xl flex justify-end gap-3 shrink-0">
           <Button 
             variant="outline" 
             onClick={onClose}
