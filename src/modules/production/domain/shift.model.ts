@@ -4,7 +4,8 @@ export interface IShift extends Document {
   name: string
   startTime: string
   endTime: string
-  breakDurationMins: number
+  breakStartTime?: string
+  breakEndTime?: string
   isActive: boolean
   createdAt: Date
   updatedAt: Date
@@ -15,7 +16,8 @@ const ShiftSchema: Schema = new Schema(
     name: { type: String, required: true, unique: true },
     startTime: { type: String, required: true },
     endTime: { type: String, required: true },
-    breakDurationMins: { type: Number, default: 0 },
+    breakStartTime: { type: String, required: false },
+    breakEndTime: { type: String, required: false },
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }

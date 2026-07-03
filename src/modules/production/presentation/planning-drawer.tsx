@@ -186,7 +186,7 @@ export function PlanningDrawer({
                 ))}
               </SelectContent>
             </Select>
-            <Button onClick={handleAddOrder} disabled={!selectedOrderToAdd} className="bg-[#4F46E5] hover:bg-[#b04213] text-white px-3">
+            <Button onClick={handleAddOrder} disabled={!selectedOrderToAdd} className="bg-[#4F46E5] hover:bg-[#4F46E5]/90 text-white px-3">
               <Plus weight="bold" className="w-5 h-5" />
             </Button>
           </div>
@@ -300,7 +300,7 @@ export function PlanningDrawer({
         <Button variant="ghost" onClick={onClose} className="text-[#64748B] hover:text-[#172554] hover:bg-[#EEF2FF]">
           Cancel
         </Button>
-        <Button onClick={handleSave} className="bg-[#4F46E5] hover:bg-[#b04213] text-white px-6">
+        <Button onClick={handleSave} className="bg-[#4F46E5] hover:bg-[#4F46E5]/90 text-white px-6">
           Save Day Plan
         </Button>
       </div>

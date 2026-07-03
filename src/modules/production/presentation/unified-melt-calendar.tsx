@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { Plus, Minus, X, Trash } from '@phosphor-icons/react'
+import { Plus, Minus, X, Trash, ListPlus } from '@phosphor-icons/react'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
@@ -20,13 +20,29 @@ const RECIPES: Record<string, { pigIron: number, scrap: number, feMn: number, ca
 }
 const ALL_GRADES = Object.keys(RECIPES)
 
-export function UnifiedMeltCalendar({ activeTab, openOrders, patterns, dailyPlans, onSaveDayPlan }: any) {
-  const [selectedDate, setSelectedDate] = useState<string | null>(null) // For tracking drawer
-  const [selectedDateForPlanning, setSelectedDateForPlanning] = useState<string | null>(null) // For planning modal
+export function UnifiedMeltCalendar({ activeTab, openOrders, products, patterns, dailyPlans, onSaveDayPlan }: any) {
+  const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const [selectedDateForPlanning, setSelectedDateForPlanning] = useState<string | null>(null)
   const [planningHeats, setPlanningHeats] = useState<any[]>([])
   
   const [actualsForms, setActualsForms] = useState<Record<string, any>>({})
   const [draggedHeats, setDraggedHeats] = useState<any[] | null>(null)
+
+  const [furnaces, setFurnaces] = useState<any[]>([])
+  const [activeFurnaceTab, setActiveFurnaceTab] = useState<string>('')
+  
+  const [allocationModalOpen, setAllocationModalOpen] = useState<{ idx: number, grade: string } | null>(null)
+
+  useEffect(() => {
+    fetch('/api/equipment')
+      .then(res => res.json())
+      .then(data => {
+        const furns = data.filter((e: any) => e.type === 'Furnace' && e.isActive)
+        setFurnaces(furns)
+        if (furns.length > 0) setActiveFurnaceTab(furns[0].id)
+      })
+      .catch(console.error)
+  }, [])
 
   const getDays = () => {
     const today = new Date()
@@ -57,10 +73,37 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, patterns, dailyPlan
     return map
   }, [dailyPlans])
 
-  const nextHeatNumber = useMemo(() => {
-    const count = dailyPlans.filter((p: any) => p.stage === 'Melt').length
-    return `H${(count + 1).toString().padStart(3, '0')}`
-  }, [dailyPlans])
+  const mouldBacklogs = useMemo(() => {
+    const list: any[] = []
+    openOrders?.forEach((order: any) => {
+      order.cart?.forEach((item: any, idx: number) => {
+        const uniqueId = `${order.id || order._id}-${idx}`
+        const product = products?.find((p: any) => p.name === item.productName || p.code === item.product)
+        const pattern = patterns?.find((p: any) => p.mappedProducts?.some((mp: any) => mp.name === product?.name))
+        
+        const produced = dailyPlans.filter((p: any) => p.stage === 'Mould' && p.itemId === uniqueId)
+          .reduce((sum: number, p: any) => sum + (p.actualQuantity ?? p.quantityScheduled ?? 0), 0)
+        
+        const poured = dailyPlans.filter((p: any) => p.stage === 'Melt' && p.allocations?.some((a: any) => a.itemId === uniqueId))
+          .reduce((sum: number, p: any) => {
+            const alloc = p.allocations.find((a: any) => a.itemId === uniqueId)
+            return sum + (alloc?.moulds || 0)
+          }, 0)
+
+        list.push({
+          itemId: uniqueId,
+          orderNo: order.customerOrderNo,
+          productName: item.productName,
+          grade: product?.grade || 'FC 200',
+          boxWeight: pattern?.totalWeight || 0,
+          producedMoulds: produced,
+          pouredMoulds: poured,
+          availableMoulds: Math.max(0, produced - poured)
+        })
+      })
+    })
+    return list
+  }, [openOrders, products, patterns, dailyPlans])
 
   const handleDrop = (e: React.DragEvent, targetDate: string) => {
     e.preventDefault()
@@ -81,57 +124,115 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, patterns, dailyPlan
     setPlanningHeats([...heats])
   }
 
+  const recalculateTimings = (heats: any[], startIndex: number, furnId: string) => {
+    const furnace = furnaces.find(f => f.id === furnId)
+    if (!furnace) return heats
+    const updated = [...heats]
+    
+    for (let i = startIndex; i < updated.length; i++) {
+      if (i > 0) {
+        updated[i].startTime = updated[i - 1].endTime
+      }
+      const durationMins = i === 0 ? (furnace.firstHeatDurationMins || 120) : (furnace.regularHeatDurationMins || 90)
+      const [sh, sm] = (updated[i].startTime || '08:00').split(':').map(Number)
+      let endMins = (sm || 0) + durationMins
+      let endHrs = (sh || 8) + Math.floor(endMins / 60)
+      endMins = endMins % 60
+      endHrs = endHrs % 24
+      updated[i].endTime = `${endHrs.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`
+    }
+    return updated
+  }
+
   const handleAddPlanningHeat = () => {
+    const furnaceHeats = planningHeats.filter(h => h.equipmentId === activeFurnaceTab && h.quantityScheduled !== 0)
     const newHeatNo = `H${(dailyPlans.filter((p: any) => p.stage === 'Melt').length + planningHeats.length + 1).toString().padStart(3, '0')}`
-    setPlanningHeats([
+    
+    let startTime = '08:00'
+    if (furnaceHeats.length > 0) {
+      startTime = furnaceHeats[furnaceHeats.length - 1].endTime || '10:00'
+    }
+
+    let updated = [
       ...planningHeats,
       {
         itemId: `manual-${Date.now()}`,
         heatNo: newHeatNo,
         grade: 'FC 200',
-        meltWeight: 150,
-        startTime: '08:00',
-        endTime: '10:30',
-        orderId: '',
-        orderNo: '-',
+        meltWeight: 0,
+        startTime,
+        endTime: '', // will be set by recalculate
+        equipmentId: activeFurnaceTab,
+        allocations: [],
         date: selectedDateForPlanning,
         stage: 'Melt'
       }
-    ])
+    ]
+    
+    const allFurnaceHeats = updated.filter(h => h.equipmentId === activeFurnaceTab && h.quantityScheduled !== 0)
+    const recalculated = recalculateTimings(allFurnaceHeats, 0, activeFurnaceTab)
+    
+    updated = updated.map(h => {
+       if (h.equipmentId === activeFurnaceTab && h.quantityScheduled !== 0) {
+         return recalculated.find(r => r.itemId === h.itemId) || h
+       }
+       return h
+    })
+
+    setPlanningHeats(updated)
   }
 
   const handleUpdatePlanningHeat = (index: number, field: string, value: any) => {
-    const updated = [...planningHeats]
+    let updated = [...planningHeats]
     updated[index] = { ...updated[index], [field]: value }
-    if (field === 'orderId') {
-      const order = openOrders.find((o: any) => o.id === value)
-      updated[index].orderNo = order ? order.customerOrderNo : '-'
-      
-      // Auto-calculate melt weight based on box weight of products
-      if (order && order.cart && order.cart.length > 0) {
-        const item = order.cart[0]
-        const prodName = item.productName || ''
-        const pattern = patterns?.find((p: any) => p.mappedProducts?.some((mp: any) => mp.name === prodName))
-        if (pattern) {
-          const mp = pattern.mappedProducts.find((m: any) => m.name === prodName)
-          const cavities = mp?.cavities || 1
-          const moulds = Math.ceil((item.quantity || 1) / cavities)
-          const boxWeight = pattern.totalWeight || 0
-          updated[index].meltWeight = moulds * boxWeight
-        }
-      }
+    
+    if (field === 'startTime' || field === 'endTime') {
+       if (field === 'startTime') {
+         const furnace = furnaces.find(f => f.id === activeFurnaceTab)
+         const furnaceHeats = updated.filter(h => h.equipmentId === activeFurnaceTab && h.quantityScheduled !== 0)
+         const heatIdxInFurnace = furnaceHeats.findIndex(h => h.itemId === updated[index].itemId)
+         const durationMins = heatIdxInFurnace === 0 ? (furnace?.firstHeatDurationMins || 120) : (furnace?.regularHeatDurationMins || 90)
+         const [sh, sm] = value.split(':').map(Number)
+         let endMins = sm + durationMins
+         let endHrs = sh + Math.floor(endMins / 60)
+         endMins = endMins % 60
+         endHrs = endHrs % 24
+         updated[index].endTime = `${endHrs.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`
+       }
+       
+       const allFurnaceHeats = updated.filter(h => h.equipmentId === activeFurnaceTab && h.quantityScheduled !== 0)
+       const heatIdxInFurnace = allFurnaceHeats.findIndex(h => h.itemId === updated[index].itemId)
+       
+       const recalculated = recalculateTimings(allFurnaceHeats, heatIdxInFurnace + 1, activeFurnaceTab)
+       updated = updated.map(h => {
+          if (h.equipmentId === activeFurnaceTab && h.quantityScheduled !== 0) {
+            return recalculated.find(r => r.itemId === h.itemId) || h
+          }
+          return h
+       })
     }
+    
     setPlanningHeats(updated)
   }
 
   const handleRemovePlanningHeat = (index: number) => {
-    const updated = [...planningHeats]
+    let updated = [...planningHeats]
     const heat = updated[index]
     if (heat.quantityScheduled !== undefined || heat._id) {
-      updated[index] = { ...heat, quantityScheduled: 0, meltWeight: 0 } // Marked for deletion
+      updated[index] = { ...heat, quantityScheduled: 0, meltWeight: 0 } 
     } else {
-      updated.splice(index, 1) // Just remove if it hasn't been saved to db yet
+      updated.splice(index, 1) 
     }
+    
+    const allFurnaceHeats = updated.filter(h => h.equipmentId === activeFurnaceTab && h.quantityScheduled !== 0)
+    const recalculated = recalculateTimings(allFurnaceHeats, 0, activeFurnaceTab)
+    updated = updated.map(h => {
+       if (h.equipmentId === activeFurnaceTab && h.quantityScheduled !== 0) {
+         return recalculated.find(r => r.itemId === h.itemId) || h
+       }
+       return h
+    })
+
     setPlanningHeats(updated)
   }
 
@@ -205,22 +306,22 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, patterns, dailyPlan
         <div className="flex justify-end">
           <button
             onClick={() => handleOpenPlanning(new Date().toISOString().split('T')[0])}
-            className="bg-[#4F46E5] hover:bg-[#E56020] text-white px-5 py-2.5 rounded-lg font-bold shadow-sm flex items-center gap-2 transition-transform hover:scale-105"
+            className="bg-[#4F46E5] hover:bg-[#4F46E5]/90 text-white px-5 py-2.5 rounded-lg font-bold shadow-sm flex items-center gap-2 transition-transform hover:scale-105"
           >
             <Plus weight="bold" className="w-4 h-4" />
             New Charge
           </button>
         </div>
       )}
-      <div className="bg-[#F4F6FB] border border-[#E0E7FF] rounded-xl overflow-hidden flex flex-col">
-        <div className="grid grid-cols-7 border-b border-[#E0E7FF] bg-[#FFFFFF]">
+      <div className="bg-[#F4F6FB] border border-[#E0E7FF] rounded-xl relative flex flex-col p-4 overflow-x-auto">
+        <div className="grid grid-cols-7 mb-2 min-w-[800px]">
           {weekDays.map(day => (
-            <div key={day} className="py-3 text-center text-xs font-semibold text-[#64748B] uppercase tracking-wider">
+            <div key={day} className="py-2 text-center text-xs font-semibold text-[#64748B] uppercase tracking-wider">
               {day}
             </div>
           ))}
         </div>
-        <div className="grid grid-cols-7 bg-[#E0E7FF] gap-[1px] flex-1">
+        <div className="grid grid-cols-7 gap-3 flex-1 min-w-[800px]">
           {days.map((date, i) => {
             const dateStr = date.toISOString().split('T')[0]
             const isToday = new Date().toISOString().split('T')[0] === dateStr
@@ -246,11 +347,11 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, patterns, dailyPlan
                   }
                 }}
                 className={cn(
-                  "p-2 transition-colors flex flex-col min-h-[120px] relative group border-[1px]",
-                  "bg-[#F4F6FB] hover:bg-[#FFFFFF] border-transparent",
-                  !isCurrentMonth && "opacity-50",
-                  activeTab === 'planning' && "cursor-pointer hover:border-[#4F46E5]/20",
-                  activeTab === 'tracking' && dayHeats.length > 0 && "cursor-pointer hover:border-[#374151]"
+                  "p-2 transition-all duration-300 ease-out flex flex-col min-h-[120px] relative group border rounded-[12px] shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:-translate-y-[2px] overflow-hidden relative",
+                  "bg-[#FFFFFF] border-[#E0E7FF]",
+                  !isCurrentMonth && "bg-[#F8FAFC]/50 opacity-70 hover:opacity-100",
+                  activeTab === 'planning' && "hover:border-[#4F46E5] hover:shadow-[0_4px_14px_rgba(79,70,229,0.12)] cursor-pointer",
+                  activeTab === 'tracking' && (dayHeats.length > 0 ? "hover:border-[#E0E7FF] hover:shadow-md cursor-pointer" : "cursor-default hover:shadow-sm hover:border-[#E0E7FF]")
                 )}
               >
                 {isToday && <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#4F46E5]" />}
@@ -262,7 +363,7 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, patterns, dailyPlan
                 
                 <div className="flex-1 space-y-1 pl-1">
                   {activeTab === 'planning' ? (
-                    <>
+                    <div className="flex flex-col gap-1 mt-1">
                       {dayHeats.length > 0 && (
                         <div 
                           draggable
@@ -270,9 +371,13 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, patterns, dailyPlan
                             e.stopPropagation(); 
                             setDraggedHeats(dayHeats);
                           }}
-                          className="px-2 py-1 text-[10px] font-bold uppercase rounded-md bg-[#4F46E5] text-white border border-[#4F46E5]/50 cursor-grab truncate shadow-md"
+                          className="flex items-center justify-between px-1.5 py-1 rounded-md hover:bg-[#F8FAFC] transition-colors cursor-grab"
                         >
-                          PLANNED {dayHeats.length}
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-1.5 h-1.5 rounded-full bg-orange-400" />
+                            <span className="text-[10.5px] font-medium text-[#64748B]">Planned</span>
+                          </div>
+                          <span className="text-[10.5px] font-bold text-[#0F172A]">{dayHeats.length}</span>
                         </div>
                       )}
                       {pending > 0 && (
@@ -282,30 +387,46 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, patterns, dailyPlan
                             e.stopPropagation(); 
                             setDraggedHeats(dayHeats.filter(h => !h.actualQuantity || h.actualQuantity <= 0));
                           }}
-                          className="px-2 py-1 text-[10px] font-bold uppercase rounded-md bg-red-500/10 text-red-500 border border-red-500/20 truncate cursor-grab shadow-md"
+                          className="flex items-center justify-between px-1.5 py-1 bg-red-50/50 hover:bg-red-50 rounded-md transition-colors cursor-grab mt-1"
                         >
-                          PENDING {pending}
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                            <span className="text-[10.5px] font-medium text-red-600">Pending</span>
+                          </div>
+                          <span className="text-[10.5px] font-bold text-red-600">{pending}</span>
                         </div>
                       )}
-                    </>
+                    </div>
                   ) : (
-                    <>
+                    <div className="flex flex-col gap-1 mt-1">
                       {dayHeats.length > 0 && (
-                        <div className="px-2 py-1 text-[10px] font-bold uppercase rounded-md bg-[#4F46E5]/20 text-[#4F46E5] border border-[#4F46E5]/30 truncate">
-                          PLANNED {dayHeats.length}
+                        <div className="flex items-center justify-between px-1.5 py-1 rounded-md hover:bg-[#F8FAFC] transition-colors">
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-1.5 h-1.5 rounded-full bg-orange-400" />
+                            <span className="text-[10.5px] font-medium text-[#64748B]">Planned</span>
+                          </div>
+                          <span className="text-[10.5px] font-bold text-[#0F172A]">{dayHeats.length}</span>
                         </div>
                       )}
                       {completed > 0 && (
-                        <div className="px-2 py-1 text-[10px] font-bold uppercase rounded-md bg-green-500/20 text-green-500 border border-green-600/30 truncate">
-                          DONE {completed}
+                        <div className="flex items-center justify-between px-1.5 py-1 rounded-md hover:bg-[#F8FAFC] transition-colors mt-1">
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                            <span className="text-[10.5px] font-medium text-[#64748B]">Done</span>
+                          </div>
+                          <span className="text-[10.5px] font-bold text-green-600">{completed}</span>
                         </div>
                       )}
                       {pending > 0 && (
-                        <div className="px-2 py-1 text-[10px] font-bold uppercase rounded-md bg-red-500/20 text-red-500 border border-red-500/30 truncate">
-                          PENDING {pending}
+                        <div className="flex items-center justify-between px-1.5 py-1 bg-red-50/50 hover:bg-red-50 rounded-md transition-colors mt-1">
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                            <span className="text-[10.5px] font-medium text-red-600">Pending</span>
+                          </div>
+                          <span className="text-[10.5px] font-bold text-red-600">{pending}</span>
                         </div>
                       )}
-                    </>
+                    </div>
                   )}
                 </div>
               </div>
@@ -316,24 +437,45 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, patterns, dailyPlan
 
       {/* DAILY HEAT PLANNING MODAL */}
       {selectedDateForPlanning && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setSelectedDateForPlanning(null)}>
-          <div className="bg-[#111827] border-t-2 border-[#4F46E5] rounded-[14px] text-white max-w-5xl w-full flex flex-col shadow-2xl h-[85vh] animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[40] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setSelectedDateForPlanning(null)}>
+          <div className="bg-[#FFFFFF] border-t-2 border-[#4F46E5] rounded-[14px] text-[#172554] max-w-5xl w-full flex flex-col shadow-2xl h-[85vh] animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center p-6 border-b border-[#1F2937] shrink-0 bg-[#FFFFFF] rounded-t-[14px]">
               <div>
                 <h2 className="text-2xl font-bold font-heading tracking-tight text-[#172554]">Daily Heat Plan</h2>
                 <p className="text-[#64748B] font-mono text-sm mt-1">{selectedDateForPlanning}</p>
               </div>
-              <button onClick={() => setSelectedDateForPlanning(null)} className="text-[#9CA3AF] hover:text-white transition-colors bg-[#1F2937] p-2 rounded-full hover:bg-[#374151]">
+              <button onClick={() => setSelectedDateForPlanning(null)} className="text-[#64748B] hover:text-white transition-colors bg-[#FFFFFF] p-2 rounded-full hover:bg-[#374151]">
                 <X className="w-5 h-5" />
               </button>
             </div>
             
+            {furnaces.length > 0 && (
+              <div className="flex border-b border-[#1F2937] bg-[#FFFFFF] px-6 overflow-x-auto">
+                {furnaces.map(f => (
+                  <button
+                    key={f.id}
+                    onClick={() => setActiveFurnaceTab(f.id)}
+                    className={cn(
+                      "px-6 py-3 font-semibold text-sm transition-colors border-b-2 whitespace-nowrap",
+                      activeFurnaceTab === f.id
+                        ? "border-b-2 border-[#4F46E5] text-[#4F46E5] bg-[#EEF2FF]"
+                        : "border-transparent text-[#64748B] hover:text-[#172554] hover:bg-[#F4F6FB]"
+                    )}
+                  >
+                    {f.name}
+                  </button>
+                ))}
+              </div>
+            )}
+            
             <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-[#F4F6FB]">
-              {planningHeats.filter(h => h.quantityScheduled !== 0).map((heat, idx) => (
-                <div key={heat.itemId || idx} className="bg-[#111827] border border-[#E0E7FF] rounded-xl overflow-hidden shadow-sm">
+              {planningHeats.filter(h => h.equipmentId === activeFurnaceTab && h.quantityScheduled !== 0).map((heat, filteredIdx) => {
+                const idx = planningHeats.findIndex(h => h.itemId === heat.itemId)
+                return (
+                <div key={heat.itemId || idx} className="bg-[#FFFFFF] border border-[#E0E7FF] rounded-xl overflow-hidden shadow-sm">
                   <div className="flex items-center gap-4 p-4 border-b border-[#E0E7FF] bg-[#FFFFFF]">
                     <div className="w-8 h-8 rounded-full bg-[#4F46E5]/10 text-[#4F46E5] flex items-center justify-center font-bold font-mono border border-[#4F46E5]/20">
-                      {idx + 1}
+                      {filteredIdx + 1}
                     </div>
                     <Input 
                       value={heat.heatNo || ''} 
@@ -342,7 +484,7 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, patterns, dailyPlan
                       placeholder="H001"
                     />
                     <div className="ml-auto flex items-center gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => handleRemovePlanningHeat(idx)} className="text-[#9CA3AF] hover:text-red-400 hover:bg-red-500/10">
+                      <Button variant="ghost" size="sm" onClick={() => handleRemovePlanningHeat(idx)} className="text-[#64748B] hover:text-red-400 hover:bg-red-500/10">
                         <Trash className="w-4 h-4" />
                       </Button>
                     </div>
@@ -356,14 +498,14 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, patterns, dailyPlan
                           type="time" 
                           value={heat.startTime || '08:00'} 
                           onChange={e => handleUpdatePlanningHeat(idx, 'startTime', e.target.value)} 
-                          className="bg-[#1F2937] border-[#374151] text-[#F3F4F6] font-mono h-10" 
+                          className="bg-[#FFFFFF] border-[#E0E7FF] text-[#172554] font-mono h-10" 
                         />
                         <span className="text-[#94A3B8] font-bold">—</span>
                         <Input 
                           type="time" 
                           value={heat.endTime || '10:30'} 
                           onChange={e => handleUpdatePlanningHeat(idx, 'endTime', e.target.value)} 
-                          className="bg-[#1F2937] border-[#374151] text-[#F3F4F6] font-mono h-10" 
+                          className="bg-[#FFFFFF] border-[#E0E7FF] text-[#172554] font-mono h-10" 
                         />
                       </div>
                     </div>
@@ -371,47 +513,48 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, patterns, dailyPlan
                     <div className="space-y-2">
                       <Label className="text-xs font-bold text-[#94A3B8] uppercase tracking-wider">Grade</Label>
                       <Select value={heat.grade || 'FC 200'} onValueChange={v => handleUpdatePlanningHeat(idx, 'grade', v)}>
-                        <SelectTrigger className="bg-[#1F2937] border-[#374151] text-[#F3F4F6] h-10">
+                        <SelectTrigger className="bg-[#FFFFFF] border-[#E0E7FF] text-[#172554] h-10">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="bg-[#1F2937] border-[#374151]">
+                        <SelectContent className="bg-[#FFFFFF] border-[#E0E7FF]">
                           {ALL_GRADES.map(g => (
-                            <SelectItem key={g} value={g} className="text-[#F3F4F6] hover:bg-[#374151]">{g}</SelectItem>
+                            <SelectItem key={g} value={g} className="text-[#172554] hover:bg-[#374151]">{g}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
                     
                     <div className="space-y-2">
-                      <Label className="text-xs font-bold text-[#94A3B8] uppercase tracking-wider">Melt Weight (kg)</Label>
+                      <Label className="text-xs font-bold text-[#94A3B8] uppercase tracking-wider">Allocated Weight (kg)</Label>
                       <Input 
                         type="number" 
-                        value={heat.meltWeight || heat.quantityScheduled || 150} 
-                        onChange={e => handleUpdatePlanningHeat(idx, 'meltWeight', Number(e.target.value))} 
-                        className="bg-[#1F2937] border-[#374151] text-[#F3F4F6] font-mono h-10" 
+                        readOnly
+                        value={heat.meltWeight || heat.quantityScheduled || 0} 
+                        className="bg-[#374151] border-[#E0E7FF] text-[#64748B] font-mono h-10 cursor-not-allowed" 
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-xs font-bold text-[#94A3B8] uppercase tracking-wider">Target Sales Order</Label>
-                      <Select value={heat.orderId || ''} onValueChange={v => handleUpdatePlanningHeat(idx, 'orderId', v)}>
-                        <SelectTrigger className="bg-[#1F2937] border-[#374151] text-[#F3F4F6] h-10">
-                          <SelectValue placeholder="Select order..." />
-                        </SelectTrigger>
-                        <SelectContent className="bg-[#1F2937] border-[#374151]">
-                          {openOrders.map((o: any) => (
-                            <SelectItem key={o.id} value={o.id} className="text-[#F3F4F6] hover:bg-[#374151]">{o.customerOrderNo}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Label className="text-xs font-bold text-[#94A3B8] uppercase tracking-wider">Pouring Allocation</Label>
+                      <Button
+                        variant="outline"
+                        onClick={() => setAllocationModalOpen({ idx, grade: heat.grade })}
+                        className="w-full bg-[#FFFFFF] border-[#E0E7FF] text-[#172554] hover:bg-[#374151] hover:text-white h-10 justify-between"
+                      >
+                        <span className="truncate">
+                          {heat.allocations?.length > 0 ? `${heat.allocations.length} Products Allocated` : 'Select Moulds...'}
+                        </span>
+                        <ListPlus className="w-4 h-4 text-[#64748B]" />
+                      </Button>
                     </div>
                   </div>
                 </div>
-              ))}
+                )
+              })}
               
-              {planningHeats.filter(h => h.quantityScheduled !== 0).length === 0 && (
-                <div className="text-center text-[#94A3B8] py-20 bg-[#111827] border border-[#E0E7FF] rounded-xl border-dashed">
-                  No heats planned for this date.
+              {planningHeats.filter(h => h.equipmentId === activeFurnaceTab && h.quantityScheduled !== 0).length === 0 && (
+                <div className="text-center text-[#94A3B8] py-20 bg-[#FFFFFF] border border-[#E0E7FF] rounded-xl border-dashed">
+                  No heats planned for this furnace on {selectedDateForPlanning}.
                 </div>
               )}
 
@@ -430,40 +573,58 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, patterns, dailyPlan
                 Total Planned Weight: <span className="text-[#172554] font-mono font-bold ml-1">{planningHeats.filter(h => h.quantityScheduled !== 0).reduce((acc, curr) => acc + (curr.meltWeight || curr.quantityScheduled || 0), 0)} kg</span>
               </div>
               <div className="flex gap-3">
-                <Button variant="outline" onClick={() => setSelectedDateForPlanning(null)} className="border-[#374151] text-[#9CA3AF] hover:text-white bg-transparent">CANCEL</Button>
-                <Button onClick={handleSavePlanning} className="bg-[#4F46E5] hover:bg-[#E56020] text-white uppercase font-bold tracking-wider px-8 shadow-lg shadow-[#4F46E5]/20">SAVE DAY PLAN</Button>
+                <Button variant="outline" onClick={() => setSelectedDateForPlanning(null)} className="border-[#E0E7FF] text-[#64748B] hover:text-white bg-transparent">CANCEL</Button>
+                <Button onClick={handleSavePlanning} className="bg-[#4F46E5] hover:bg-[#4F46E5]/90 text-white uppercase font-bold tracking-wider px-8 shadow-lg shadow-[#4F46E5]/20">SAVE DAY PLAN</Button>
               </div>
             </div>
           </div>
         </div>
       )}
 
+      {/* ALLOCATION SUB-MODAL */}
+      {allocationModalOpen && (
+        <PouringAllocationModal
+          furnace={furnaces.find(f => f.id === activeFurnaceTab)}
+          heat={planningHeats[allocationModalOpen.idx]}
+          backlogs={mouldBacklogs.filter(b => b.grade === allocationModalOpen.grade)}
+          onSave={(allocations: any[], totalWeight: number) => {
+            let updated = [...planningHeats]
+            updated[allocationModalOpen.idx].allocations = allocations
+            updated[allocationModalOpen.idx].meltWeight = totalWeight
+            setPlanningHeats(updated)
+            setAllocationModalOpen(null)
+          }}
+          onClose={() => setAllocationModalOpen(null)}
+        />
+      )}
+
+      {/* TRACKING DRAWER */}
       {selectedDate && activeTab === 'tracking' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setSelectedDate(null)}>
-          <div className="bg-[#111827] border-t-2 border-[#4F46E5] rounded-[14px] text-white max-w-4xl w-full flex flex-col shadow-2xl max-h-[85vh] animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[40] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setSelectedDate(null)}>
+          <div className="bg-[#FFFFFF] border-t-2 border-[#4F46E5] rounded-[14px] text-[#172554] max-w-4xl w-full flex flex-col shadow-2xl max-h-[85vh] animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
             <div className="p-6 border-b border-[#1F2937] bg-[#FFFFFF] rounded-t-[14px] flex justify-between items-start shrink-0">
               <div>
-                <h2 className="text-xl font-bold text-[#F3F4F6] font-mono tracking-tight">{selectedDate}</h2>
+                <h2 className="text-xl font-bold text-[#172554] font-mono tracking-tight">{selectedDate}</h2>
                 <Badge variant="outline" className="mt-2 border-[#4F46E5]/30 text-[#4F46E5] bg-[#4F46E5]/10 uppercase text-[10px] font-bold tracking-wider">
                   MELT TRACKING
                 </Badge>
               </div>
-              <button onClick={() => setSelectedDate(null)} className="text-[#9CA3AF] hover:text-white transition-colors bg-[#1F2937] p-2 rounded-full hover:bg-[#374151]">
+              <button onClick={() => setSelectedDate(null)} className="text-[#64748B] hover:text-white transition-colors bg-[#FFFFFF] p-2 rounded-full hover:bg-[#374151]">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="bg-[#F4F6FB] p-6 border-b border-[#374151] shrink-0">
+            <div className="bg-[#F4F6FB] p-6 border-b border-[#E0E7FF] shrink-0">
               <div className="flex justify-between items-center text-sm font-medium mb-3">
-                <div className="text-[#F3F4F6]">Planned: {drawerPlanned}</div>
+                <div className="text-[#172554]">Planned: {drawerPlanned}</div>
                 <div className="text-green-400">Done: {drawerCompleted}</div>
                 <div className="text-red-400">Pending: {drawerPending}</div>
               </div>
               <div className="flex justify-between items-center mb-1">
-                <span className="text-xs text-[#9CA3AF] uppercase font-bold tracking-wider">Coverage</span>
-                <span className="text-xs text-[#F3F4F6] font-bold font-mono">{drawerCoverage.toFixed(0)}%</span>
+                <span className="text-xs text-[#64748B] uppercase font-bold tracking-wider">Coverage</span>
+                <span className="text-xs text-[#172554] font-bold font-mono">{drawerCoverage.toFixed(0)}%</span>
               </div>
-              <div className="w-full bg-[#111827] rounded-full h-2">
+              <div className="w-full bg-[#FFFFFF] rounded-full h-2">
                 <div className={cn("h-2 rounded-full", drawerCoverage === 100 ? "bg-green-500" : "bg-amber-500")} style={{ width: `${drawerCoverage}%` }} />
               </div>
             </div>
@@ -497,29 +658,29 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, patterns, dailyPlan
                 }
 
                 return (
-                  <details key={idx} className="group bg-[#1F2937] border border-[#374151] rounded-lg overflow-hidden" open={idx === 0}>
-                    <summary className="p-3 cursor-pointer select-none bg-[#1F2937] hover:bg-[#374151] transition-colors flex items-center justify-between outline-none">
+                  <details key={idx} className="group bg-[#FFFFFF] border border-[#E0E7FF] rounded-lg overflow-hidden" open={idx === 0}>
+                    <summary className="p-3 cursor-pointer select-none bg-[#FFFFFF] hover:bg-[#374151] transition-colors flex items-center justify-between outline-none">
                       <div className="flex items-center gap-3">
-                        <span className="font-bold text-[#F3F4F6] font-mono">{heat.heatNo || `H00${idx+1}`}</span>
-                        <Badge variant="outline" className="border-[#4B5563] text-[#D1D5DB] bg-[#111827] text-[10px] uppercase">
+                        <span className="font-bold text-[#172554] font-mono">{heat.heatNo || `H00${idx+1}`}</span>
+                        <Badge variant="outline" className="border-[#E0E7FF] text-[#64748B] bg-[#FFFFFF] text-[10px] uppercase">
                           {heat.grade}
                         </Badge>
                       </div>
-                      <div className="text-[#9CA3AF] text-sm font-mono">{weight}kg</div>
+                      <div className="text-[#64748B] text-sm font-mono">{weight}kg</div>
                     </summary>
-                    <div className="p-4 border-t border-[#374151] bg-[#111827] space-y-4">
+                    <div className="p-4 border-t border-[#E0E7FF] bg-[#FFFFFF] space-y-4">
                       <div className="grid grid-cols-[80px_1fr_1fr_1fr] gap-2 items-center text-xs">
                         <div className="font-semibold text-[#6B7280] uppercase">Plan</div>
-                        <div className="text-[#9CA3AF] font-mono text-center">Pig {pPig.toFixed(1)}</div>
-                        <div className="text-[#9CA3AF] font-mono text-center">Scrap {pScrap.toFixed(1)}</div>
-                        <div className="text-[#9CA3AF] font-mono text-center">FeMn {pFeMn.toFixed(1)}</div>
+                        <div className="text-[#64748B] font-mono text-center">Pig {pPig.toFixed(1)}</div>
+                        <div className="text-[#64748B] font-mono text-center">Scrap {pScrap.toFixed(1)}</div>
+                        <div className="text-[#64748B] font-mono text-center">FeMn {pFeMn.toFixed(1)}</div>
                       </div>
                       
                       <div className="grid grid-cols-[80px_1fr_1fr_1fr] gap-2 items-center text-xs">
-                        <div className="font-semibold text-[#F3F4F6] uppercase">Actual</div>
-                        <Input value={form.pigIron} onChange={e => handleActualChange(heatId, 'pigIron', e.target.value)} className="h-7 text-center font-mono bg-[#1F2937] border-[#374151] text-[#F3F4F6] px-1" placeholder="0" />
-                        <Input value={form.scrap} onChange={e => handleActualChange(heatId, 'scrap', e.target.value)} className="h-7 text-center font-mono bg-[#1F2937] border-[#374151] text-[#F3F4F6] px-1" placeholder="0" />
-                        <Input value={form.feMn} onChange={e => handleActualChange(heatId, 'feMn', e.target.value)} className="h-7 text-center font-mono bg-[#1F2937] border-[#374151] text-[#F3F4F6] px-1" placeholder="0" />
+                        <div className="font-semibold text-[#172554] uppercase">Actual</div>
+                        <Input value={form.pigIron} onChange={e => handleActualChange(heatId, 'pigIron', e.target.value)} className="h-7 text-center font-mono bg-[#FFFFFF] border-[#E0E7FF] text-[#172554] px-1" placeholder="0" />
+                        <Input value={form.scrap} onChange={e => handleActualChange(heatId, 'scrap', e.target.value)} className="h-7 text-center font-mono bg-[#FFFFFF] border-[#E0E7FF] text-[#172554] px-1" placeholder="0" />
+                        <Input value={form.feMn} onChange={e => handleActualChange(heatId, 'feMn', e.target.value)} className="h-7 text-center font-mono bg-[#FFFFFF] border-[#E0E7FF] text-[#172554] px-1" placeholder="0" />
                       </div>
 
                       <div className="grid grid-cols-[80px_1fr_1fr_1fr] gap-2 items-center text-xs">
@@ -532,13 +693,13 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, patterns, dailyPlan
                       <div className="h-px w-full bg-[#374151] my-2" />
                       
                       <div className="flex items-center justify-between">
-                        <Label className="text-xs text-[#9CA3AF] uppercase font-bold">Heats Completed</Label>
+                        <Label className="text-xs text-[#64748B] uppercase font-bold">Heats Completed</Label>
                         <div className="flex items-center gap-2">
                           <Input 
                             type="number" 
                             value={form.meltWeight} 
                             onChange={e => handleActualChange(heatId, 'meltWeight', e.target.value)} 
-                            className="w-20 h-8 text-center font-mono font-bold bg-[#1F2937] border-[#374151] text-[#F3F4F6]" 
+                            className="w-20 h-8 text-center font-mono font-bold bg-[#FFFFFF] border-[#E0E7FF] text-[#172554]" 
                           />
                           <span className="text-[#6B7280] text-sm">/ {weight}kg</span>
                         </div>
@@ -548,20 +709,152 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, patterns, dailyPlan
                 )
               })}
               {dayHeatsForDrawer.length === 0 && (
-                <div className="text-center text-[#94A3B8] py-20 bg-[#111827] border border-[#E0E7FF] rounded-xl border-dashed">
+                <div className="text-center text-[#94A3B8] py-20 bg-[#FFFFFF] border border-[#E0E7FF] rounded-xl border-dashed">
                   No heats scheduled for this date.
                 </div>
               )}
             </div>
 
             <div className="p-6 border-t border-[#1F2937] bg-[#FFFFFF] rounded-b-[14px] flex justify-end gap-3 shrink-0">
-              <Button variant="outline" onClick={() => setSelectedDate(null)} className="border-[#374151] text-[#9CA3AF] hover:text-white bg-transparent">CANCEL</Button>
-              <Button onClick={handleSaveActuals} className="bg-[#4F46E5] hover:bg-[#E56020] text-white uppercase font-bold tracking-wider px-8 shadow-lg shadow-[#4F46E5]/20">SAVE ACTUALS</Button>
+              <Button variant="outline" onClick={() => setSelectedDate(null)} className="border-[#E0E7FF] text-[#64748B] hover:text-white bg-transparent">CANCEL</Button>
+              <Button onClick={handleSaveActuals} className="bg-[#4F46E5] hover:bg-[#4F46E5]/90 text-white uppercase font-bold tracking-wider px-8 shadow-lg shadow-[#4F46E5]/20">SAVE ACTUALS</Button>
             </div>
           </div>
         </div>
       )}
 
+    </div>
+  )
+}
+
+function PouringAllocationModal({ furnace, heat, backlogs, onSave, onClose }: any) {
+  const [allocs, setAllocs] = useState<Record<string, number>>({})
+
+  useEffect(() => {
+    const init: Record<string, number> = {}
+    heat.allocations?.forEach((a: any) => {
+      init[a.itemId] = a.moulds
+    })
+    setAllocs(init)
+  }, [heat])
+
+  const furnaceCapacity = furnace?.weightCapacity || 500
+  
+  const totalAllocatedWeight = Object.entries(allocs).reduce((acc, [itemId, qty]) => {
+    const b = backlogs.find((x: any) => x.itemId === itemId)
+    return acc + (qty * (b?.boxWeight || 0))
+  }, 0)
+
+  const handleAllocationChange = (itemId: string, value: string) => {
+    const qty = parseInt(value, 10) || 0
+    setAllocs(prev => ({
+      ...prev,
+      [itemId]: qty
+    }))
+  }
+
+  const handleSave = () => {
+    if (totalAllocatedWeight > furnaceCapacity) {
+      alert(`Cannot exceed furnace capacity of ${furnaceCapacity} kg!`)
+      return
+    }
+    
+    const allocationsToSave = Object.entries(allocs)
+      .filter(([_, qty]) => qty > 0)
+      .map(([itemId, qty]) => {
+        const b = backlogs.find((x: any) => x.itemId === itemId)
+        return {
+          itemId,
+          moulds: qty,
+          boxWeight: b?.boxWeight || 0
+        }
+      })
+      
+    onSave(allocationsToSave, totalAllocatedWeight)
+  }
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
+      <div className="bg-[#FFFFFF] border border-[#E0E7FF] rounded-[14px] text-[#172554] max-w-3xl w-full flex flex-col shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+        <div className="flex justify-between items-center p-5 border-b border-[#E0E7FF]">
+          <div>
+            <h3 className="text-xl font-bold font-heading">Pouring Allocation</h3>
+            <p className="text-[#64748B] text-sm mt-1 font-mono">{furnace?.name} ({furnaceCapacity}kg) - Grade {heat.grade}</p>
+          </div>
+          <button onClick={onClose} className="text-[#64748B] hover:text-[#172554] transition-colors bg-[#F3F4F6] p-2 rounded-full hover:bg-[#E5E7EB]">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        
+        <div className="flex-1 overflow-y-auto p-5 space-y-4 max-h-[60vh]">
+          {backlogs.length === 0 ? (
+            <div className="text-center text-[#9CA3AF] py-10 italic">
+              No produced moulds found for Grade {heat.grade}.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {backlogs.map((b: any) => {
+                const maxPossible = b.boxWeight > 0 ? Math.floor(furnaceCapacity / b.boxWeight) : 0
+                return (
+                  <div key={b.itemId} className="bg-[#1F2937] border border-[#374151] rounded-lg p-4 flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-[#F3F4F6]">{b.productName}</span>
+                        <Badge variant="outline" className="border-[#374151] text-[#9CA3AF] bg-[#111827] text-[10px]">
+                          {b.orderNo}
+                        </Badge>
+                      </div>
+                      <div className="text-[#9CA3AF] text-xs mt-2 flex gap-4">
+                        <span>Produced: <strong className="text-white">{b.producedMoulds}</strong></span>
+                        <span>Available: <strong className="text-green-400">{b.availableMoulds}</strong></span>
+                        <span>Box Wt: <strong className="text-white font-mono">{b.boxWeight}kg</strong></span>
+                      </div>
+                      <div className="text-[#6B7280] text-[10px] mt-1 font-mono uppercase tracking-wider">
+                        Max Possible Moulds for Furnace: {maxPossible}
+                      </div>
+                    </div>
+                    
+                    <div className="w-24">
+                      <Label className="text-[10px] text-[#9CA3AF] uppercase mb-1 block">Allocate</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max={Math.min(b.availableMoulds, maxPossible)}
+                        value={allocs[b.itemId] || ''}
+                        onChange={e => handleAllocationChange(b.itemId, e.target.value)}
+                        className="bg-[#111827] border-[#4B5563] text-white font-mono h-9 text-center"
+                        placeholder="0"
+                      />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+        
+        <div className="p-5 border-t border-[#1F2937] bg-[#111827] rounded-b-[14px] flex justify-between items-center">
+          <div className="text-sm text-[#9CA3AF]">
+            Allocated Weight:{' '}
+            <span className={cn(
+              "font-mono font-bold ml-1 text-lg",
+              totalAllocatedWeight > furnaceCapacity ? "text-red-500" : "text-green-400"
+            )}>
+              {totalAllocatedWeight} / {furnaceCapacity} kg
+            </span>
+          </div>
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={onClose} className="border-[#374151] text-[#9CA3AF] hover:text-white bg-transparent">Cancel</Button>
+            <Button 
+              onClick={handleSave} 
+              disabled={totalAllocatedWeight > furnaceCapacity}
+              className="bg-[#4F46E5] hover:bg-[#4F46E5]/90 text-white font-bold"
+            >
+              Apply Allocation
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

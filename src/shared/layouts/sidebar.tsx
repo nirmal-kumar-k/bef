@@ -126,13 +126,13 @@ export function Sidebar() {
                     key={item.href}
                     href={item.href}
                     onClick={() => setIsOpen(false)}
-                    className={`group flex items-center gap-[11px] px-[12px] py-[9px] rounded-[10px] text-[13.5px] transition-all border border-transparent select-none tracking-[-0.1px] ${
+                    className={`group flex items-center gap-[11px] px-[12px] py-[9px] rounded-[8px] text-[13.5px] transition-all duration-300 ease-in-out select-none tracking-[-0.1px] ${
                       active
-                        ? 'bg-[#4F46E5]/20 border-[#4F46E5]/35 text-[#4F46E5] font-medium'
-                        : 'text-[#64748B] font-normal hover:bg-[#EEF2FF] hover:text-[#172554]'
+                        ? 'bg-[#4F46E5]/[0.18] text-[#4F46E5] font-semibold'
+                        : 'text-[#64748B] font-medium hover:bg-[#4F46E5]/[0.08] hover:text-[#4F46E5]'
                     }`}
                   >
-                    <div className={`${active ? 'text-[#4F46E5]' : 'text-[#64748B] group-hover:text-[#172554]'} transition-colors`}>
+                    <div className={`${active ? 'text-[#4F46E5]' : 'text-[#64748B] group-hover:text-[#4F46E5]'} transition-colors duration-300 ease-in-out`}>
                       {item.icon}
                     </div>
                     {item.label}

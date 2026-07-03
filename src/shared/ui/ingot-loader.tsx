@@ -255,7 +255,7 @@ export function IngotLoader() {
   }, [])
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: '#F8FAFC', overflow: 'hidden' }}>
+    <div style={{ position: 'fixed', inset: 0, background: '#04060D', overflow: 'hidden' }}>
 
       <Canvas
         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
@@ -268,7 +268,7 @@ export function IngotLoader() {
           toneMappingExposure: 1.12,
         }}
       >
-        <color attach="background" args={['#F8FAFC']} />
+        <color attach="background" args={['#04060D']} />
         <Suspense fallback={null}>
           <Scene />
         </Suspense>
@@ -294,7 +294,7 @@ export function IngotLoader() {
           style={{
             fontFamily:    'var(--font-heading), "Space Grotesk", sans-serif',
             fontWeight:    700,
-            fontSize:      '2.6rem',
+            fontSize:      '3.6rem',
             letterSpacing: '0.5em',
             color:         '#F0F0F0',
             lineHeight:    1,
@@ -306,7 +306,7 @@ export function IngotLoader() {
         {/* Status label */}
         <span
           style={{
-            fontSize:      '8.5px',
+            fontSize:      '11px',
             letterSpacing: '0.55em',
             color:         '#6C7A96',
             textTransform: 'uppercase',
@@ -321,9 +321,9 @@ export function IngotLoader() {
           style={{
             marginTop:    '14px',
             position:     'relative',
-            width:        '180px',
-            height:       '2px',
-            borderRadius: '1px',
+            width:        '240px',
+            height:       '4px',
+            borderRadius: '2px',
             background:   'rgba(255,255,255,0.06)',
             overflow:     'hidden',
           }}
@@ -342,7 +342,7 @@ export function IngotLoader() {
           position:         absolute;
           inset:            0;
           width:            45%;
-          border-radius:    1px;
+          border-radius:    2px;
           background:       linear-gradient(
             to right,
             rgba(232, 88, 26, 0),

@@ -218,7 +218,7 @@ export function PlanningPopupCard({
         <DialogHeader>
           <div className="flex items-center justify-between pr-4">
             <div>
-              <DialogTitle className="text-lg font-heading text-white">
+              <DialogTitle className="text-lg font-heading text-[#172554]">
                 {dateString}
               </DialogTitle>
               <div className="flex items-center gap-2 mt-1">
@@ -262,7 +262,7 @@ export function PlanningPopupCard({
           <Button variant="ghost" onClick={onClose} className="text-[#64748B] hover:text-[#172554] hover:bg-[#EEF2FF]">
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={!selectedOrder} className="bg-[#4F46E5] hover:bg-[#b04213] text-white">
+          <Button onClick={handleSave} disabled={!selectedOrder} className="bg-[#4F46E5] hover:bg-[#4F46E5]/90 text-white">
             Save Day Plan
           </Button>
         </DialogFooter>

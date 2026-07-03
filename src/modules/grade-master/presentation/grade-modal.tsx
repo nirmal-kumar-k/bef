@@ -193,7 +193,7 @@ export function GradeModal({ isOpen, onClose, onSave, grade }: GradeModalProps) 
           <Button 
             onClick={handleSave}
             disabled={!code.trim() || !name.trim()}
-            className="bg-amber-500 hover:bg-amber-600 text-black font-semibold min-w-[120px]"
+            className="bg-[#4F46E5] hover:bg-[#4F46E5]/90 text-white font-semibold min-w-[120px]"
           >
             Save Grade
           </Button>

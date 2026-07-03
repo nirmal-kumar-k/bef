@@ -22,6 +22,7 @@ export interface IPattern extends Document {
   customer: string
   category: string
   goodWeight: number
+  runnerRiserWeight?: number
   totalWeight: number
   topMatchplate: boolean
   bottomMatchplate: boolean
@@ -77,14 +78,15 @@ const PatternSchema = new Schema<IPattern>(
     customer: { type: String, default: '' },
     category: { type: String, default: 'Machine Moulding' },
     goodWeight: { type: Number, default: 0 },
+    runnerRiserWeight: { type: Number, default: 0 },
     totalWeight: { type: Number, default: 0 },
     topMatchplate: { type: Boolean, default: false },
     bottomMatchplate: { type: Boolean, default: false },
     coreBoxes: { type: Number, default: 0 },
     sharedCoreBoxes: { type: [CoreBoxSchema], default: [] },
-    topOwner: { type: String, default: 'Foundry' },
+    topOwner: { type: String, default: 'Customer' },
     topImages: { type: [String], default: [] },
-    bottomOwner: { type: String, default: 'Foundry' },
+    bottomOwner: { type: String, default: 'Customer' },
     bottomImages: { type: [String], default: [] },
     avgMouldsPerHour: { type: Number },
     patternImages: { type: [String], default: [] },

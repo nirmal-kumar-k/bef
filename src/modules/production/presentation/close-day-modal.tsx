@@ -232,7 +232,7 @@ export function CloseDayModal({ isOpen, schedules, date, onClose, onRefresh }: C
              <Button variant="outline" onClick={onClose} className="border-[#E0E7FF] text-[#64748B] hover:text-[#172554] hover:bg-[#EEF2FF] px-5 py-2 text-sm h-auto">
                 Cancel
              </Button>
-             <Button onClick={handleCloseDay} disabled={isSaving || localSchedules.length === 0} className="bg-[#4F46E5] hover:bg-[#E56020] text-white px-5 py-2 text-sm h-auto font-medium">
+             <Button onClick={handleCloseDay} disabled={isSaving || localSchedules.length === 0} className="bg-[#4F46E5] hover:bg-[#4F46E5]/90 text-white px-5 py-2 text-sm h-auto font-medium">
                 {isSaving ? 'Saving...' : 'Confirm & Close Day'}
              </Button>
           </div>

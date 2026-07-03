@@ -44,7 +44,7 @@ export function TopBar() {
                 "px-[12px] py-[5px] rounded-[4px] text-[12px] font-medium transition-all",
                 role === r
                   ? "bg-[#4F46E5]/20 text-[#4F46E5]"
-                  : "text-[#94A3B8] hover:text-[#172554]"
+                  : "text-[#94A3B8] hover:bg-[#4F46E5]/10 hover:text-[#4F46E5]"
               )}
             >
               {r}
@@ -53,7 +53,7 @@ export function TopBar() {
         </div>
 
         <div className="relative sm:ml-2">
-          <button className="w-[34px] h-[34px] rounded-md border border-black/[0.04] bg-transparent text-[#64748B] flex items-center justify-center hover:bg-black/[0.03] hover:text-[#172554] transition-all relative">
+          <button className="w-[34px] h-[34px] rounded-md border border-black/[0.04] bg-transparent text-[#64748B] flex items-center justify-center hover:bg-[#4F46E5]/10 hover:text-[#4F46E5] transition-all relative">
             <Bell weight="duotone" size={18} />
             <span className="absolute top-[5px] right-[5px] w-[7px] h-[7px] rounded-full bg-[#4F46E5] border-[1.5px] border-[#F4F6FB]"></span>
           </button>

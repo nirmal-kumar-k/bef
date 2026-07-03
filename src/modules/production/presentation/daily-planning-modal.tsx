@@ -186,7 +186,7 @@ export function DailyPlanningModal({
               )}
 
               <Button 
-                className="w-full bg-[#4F46E5] hover:bg-[#b04213] text-white mt-2"
+                className="w-full bg-[#4F46E5] hover:bg-[#4F46E5]/90 text-white mt-2"
                 onClick={handleAdd}
                 disabled={!selectedBacklog || !quantity || Number(quantity) <= 0 || !laborers || Number(laborers) <= 0 || Number(quantity) > maxAvailable}
               >

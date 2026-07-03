@@ -63,6 +63,9 @@ export function EquipmentModal({ isOpen, onClose, initialData }: EquipmentModalP
         payload.firstHeatDurationMins = undefined
         payload.regularHeatDurationMins = undefined
       }
+      if (payload.type !== 'Knockout') {
+        payload.avgPiecesPerHour = undefined
+      }
       
       const res = await fetch(url, {
         method,
@@ -161,7 +164,7 @@ export function EquipmentModal({ isOpen, onClose, initialData }: EquipmentModalP
             </div>
           )}
 
-          {!isFurnace && (
+          {formData.type === 'Knockout' && (
             <div className="grid gap-2">
               <Label htmlFor="avgPieces" className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">Avg Pieces Per Hour</Label>
               <Input

@@ -78,7 +78,7 @@ export function NewPatternModal({
 
   // Top Matchplate/Cope
   const [topPresent, setTopPresent] = useState<'Yes' | 'No'>('Yes')
-  const [topOwner, setTopOwner] = useState<'Foundry' | 'Customer'>('Foundry')
+  const [topOwner, setTopOwner] = useState<'Foundry' | 'Customer'>('Customer')
   const [topImages, setTopImages] = useState<string[]>([])
 
   // Top Core Boxes
@@ -87,7 +87,7 @@ export function NewPatternModal({
 
   // Bottom Matchplate/Drag
   const [bottomPresent, setBottomPresent] = useState<'Yes' | 'No'>('Yes')
-  const [bottomOwner, setBottomOwner] = useState<'Foundry' | 'Customer'>('Foundry')
+  const [bottomOwner, setBottomOwner] = useState<'Foundry' | 'Customer'>('Customer')
   const [bottomImages, setBottomImages] = useState<string[]>([])
 
   // Bottom Core Boxes
@@ -107,7 +107,13 @@ export function NewPatternModal({
 
   // Weights
   const [goodCastingWeight, setGoodCastingWeight] = useState<number | ''>('')
-  const [totalBoxWeight, setTotalBoxWeight] = useState<number | ''>('')
+  const [runnerRiserWeight, setRunnerRiserWeight] = useState<number | ''>('')
+
+  const totalBoxWeight = useMemo(() => {
+    const gw = typeof goodCastingWeight === 'number' ? goodCastingWeight : 0
+    const rw = typeof runnerRiserWeight === 'number' ? runnerRiserWeight : 0
+    return gw + rw > 0 ? gw + rw : ''
+  }, [goodCastingWeight, runnerRiserWeight])
 
   // Photos Preview
   const [patternImages, setPatternImages] = useState<string[]>([])
@@ -133,12 +139,12 @@ export function NewPatternModal({
     setCategory('Machine Moulding')
     setRemarks('')
     setTopPresent('Yes')
-    setTopOwner('Foundry')
+    setTopOwner('Customer')
     setTopImages([])
     setTopCoreBoxPresent('Yes')
     setTopCoreBoxes([{ id: Date.now().toString(), code: '', owner: 'Foundry', images: [] }])
     setBottomPresent('Yes')
-    setBottomOwner('Foundry')
+    setBottomOwner('Customer')
     setBottomImages([])
     setBottomCoreBoxPresent('Yes')
     setBottomCoreBoxes([{ id: (Date.now() + 1).toString(), code: '', owner: 'Foundry', images: [] }])
@@ -146,7 +152,7 @@ export function NewPatternModal({
     setSharedCoreBoxes([])
     setAvgMouldsPerHour('')
     setGoodCastingWeight('')
-    setTotalBoxWeight('')
+    setRunnerRiserWeight('')
     setPatternImages([])
   }
 
@@ -159,6 +165,7 @@ export function NewPatternModal({
       customer: customerLabel,
       category,
       goodWeight: typeof goodCastingWeight === 'number' ? goodCastingWeight : 0,
+      runnerRiserWeight: typeof runnerRiserWeight === 'number' ? runnerRiserWeight : 0,
       totalWeight: typeof totalBoxWeight === 'number' ? totalBoxWeight : 0,
       topMatchplate: topPresent === 'Yes',
       topOwner: topPresent === 'Yes' ? topOwner : 'Foundry',
@@ -189,7 +196,7 @@ export function NewPatternModal({
       >
         <DialogHeader>
           <div className="flex items-center gap-3">
-            <DialogTitle className="text-xl font-heading text-white">
+            <DialogTitle className="text-xl font-heading text-[#172554]">
               New Pattern
             </DialogTitle>
             {showMatchplateBadge && (
@@ -208,9 +215,23 @@ export function NewPatternModal({
             
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
+                <Label className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">Avg Moulds per Hour</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  placeholder="e.g. 12"
+                  value={avgMouldsPerHour}
+                  onChange={(e) => setAvgMouldsPerHour(e.target.value === '' ? '' : Number(e.target.value))}
+                  className="bg-[#FFFFFF] border-[#E0E7FF] text-[#172554]"
+                />
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="pattern-code">Pattern Code</Label>
                 <Input id="pattern-code" placeholder="Enter pattern code" value={patternCode} onChange={e => setPatternCode(e.target.value)} className="bg-[#FFFFFF] border-[#E0E7FF]" />
               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Customer</Label>
                 <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
@@ -275,17 +296,6 @@ export function NewPatternModal({
                     <SelectItem value="Hand Moulding">Hand Moulding</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">Avg Moulds per Hour</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  placeholder="e.g. 12"
-                  value={avgMouldsPerHour}
-                  onChange={(e) => setAvgMouldsPerHour(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="bg-[#FFFFFF] border-[#E0E7FF] text-[#172554]"
-                />
               </div>
             </div>
 
@@ -514,15 +524,24 @@ export function NewPatternModal({
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-[#172554]">Total Box Wt (kg)</Label>
+                  <Label className="text-[#172554]">Runner/Riser Wt (kg)</Label>
                   <Input
                     type="number"
                     min="0"
-                    min={0}
-                    value={totalBoxWeight}
-                    onChange={(e) => setTotalBoxWeight(e.target.value === '' ? '' : Number(e.target.value))}
+                    value={runnerRiserWeight}
+                    onChange={(e) => setRunnerRiserWeight(e.target.value === '' ? '' : Number(e.target.value))}
                     placeholder="0.0"
                     className="bg-[#FFFFFF] border-[#E0E7FF] text-[#172554]"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[#172554]">Total Box Wt (kg)</Label>
+                  <Input
+                    type="number"
+                    readOnly
+                    value={totalBoxWeight}
+                    placeholder="0.0"
+                    className="bg-[#EEF2FF]/50 border-[#E0E7FF] text-[#172554] cursor-not-allowed"
                   />
                 </div>
               </div>

@@ -152,14 +152,14 @@ export default function ProductionSchedulePage() {
           <p className="text-[#64748B] mt-1 text-sm">Assign daily production quotas across 9 stages</p>
         </div>
         <div className="flex items-center gap-3 bg-[#FFFFFF] px-4 py-2 border border-[#E0E7FF] rounded-xl">
-          <Label htmlFor="view-mode" className={cn("text-sm font-semibold cursor-pointer", view === 'weekly' ? 'text-white' : 'text-[#94A3B8]')}>Weekly</Label>
+          <Label htmlFor="view-mode" className={cn("text-sm font-semibold cursor-pointer", view === 'weekly' ? 'text-[#4F46E5]' : 'text-[#94A3B8]')}>Weekly</Label>
           <Switch 
             id="view-mode" 
             checked={view === 'monthly'} 
             onCheckedChange={(c) => setView(c ? 'monthly' : 'weekly')}
             className="data-[state=checked]:bg-[#4F46E5] data-[state=unchecked]:bg-[#C7D2FE]"
           />
-          <Label htmlFor="view-mode" className={cn("text-sm font-semibold cursor-pointer", view === 'monthly' ? 'text-white' : 'text-[#94A3B8]')}>Monthly</Label>
+          <Label htmlFor="view-mode" className={cn("text-sm font-semibold cursor-pointer", view === 'monthly' ? 'text-[#4F46E5]' : 'text-[#94A3B8]')}>Monthly</Label>
         </div>
       </div>
 
@@ -168,18 +168,18 @@ export default function ProductionSchedulePage() {
           <p className="text-[#64748B] text-lg animate-pulse">Loading schedule...</p>
         </div>
       ) : (
-        <div className="bg-[#F4F6FB] border border-[#E0E7FF] rounded-xl overflow-hidden">
+        <div className="bg-[#F4F6FB] border border-[#E0E7FF] rounded-xl relative flex flex-col p-4 overflow-x-auto">
           {/* Calendar Header Row */}
-          <div className="grid grid-cols-7 bg-[#FFFFFF] border-b border-[#E0E7FF]">
+          <div className="grid grid-cols-7 mb-2 min-w-[800px]">
             {weekDays.map(day => (
-              <div key={day} className="py-3 text-center text-xs font-semibold text-[#64748B] uppercase tracking-wider">
+              <div key={day} className="py-2 text-center text-xs font-semibold text-[#64748B] uppercase tracking-wider">
                 {day}
               </div>
             ))}
           </div>
 
           {/* Calendar Grid */}
-          <div className="grid grid-cols-7 bg-[#E0E7FF] gap-px">
+          <div className="grid grid-cols-7 gap-3 min-w-[800px]">
             {days.map((date, i) => {
               const dateStr = date.toISOString().split('T')[0]
               const isToday = new Date().toISOString().split('T')[0] === dateStr
@@ -196,8 +196,8 @@ export default function ProductionSchedulePage() {
                   key={i}
                   onClick={() => setSelectedDate(dateStr)}
                   className={cn(
-                    "min-h-[140px] bg-[#F4F6FB] p-2 hover:bg-[#EEF2FF]/50 transition-colors cursor-pointer group flex flex-col gap-1 relative",
-                    !isCurrentMonth && "opacity-50"
+                    "min-h-[140px] bg-[#FFFFFF] p-2 rounded-[12px] border border-[#E0E7FF] shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:border-[#4F46E5] hover:shadow-[0_4px_14px_rgba(79,70,229,0.12)] hover:-translate-y-[2px] transition-all duration-300 ease-out cursor-pointer group flex flex-col gap-1 relative overflow-hidden",
+                    !isCurrentMonth && "bg-[#F8FAFC]/50 opacity-70 hover:opacity-100"
                   )}
                 >
                   <div className="flex justify-between items-center w-full">
@@ -216,26 +216,43 @@ export default function ProductionSchedulePage() {
                   </div>
                   
                   {/* Badges */}
-                  <div className="flex flex-col gap-1.5 mt-1">
+                  <div className="flex flex-col gap-1 mt-1">
                     {counts?.hasPending && (
-                      <Badge variant="outline" className="bg-red-500/10 text-red-400 border-red-500/20 text-[11px] font-medium justify-center w-full rounded-md py-0.5 shadow-sm">
-                        Pending Items
-                      </Badge>
+                      <div className="flex items-center gap-1.5 px-1.5 py-0.5 bg-red-50/50 rounded-md">
+                        <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                        <span className="text-[10.5px] font-medium text-red-600">Pending Items</span>
+                      </div>
                     )}
                     {counts?.core ? (
-                      <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20 text-[11px] font-medium justify-center w-full rounded-md py-0.5">
-                        Core {counts.coreDone} / {counts.core}
-                      </Badge>
+                      <div className="flex items-center justify-between px-1.5 py-0.5 rounded-md hover:bg-[#F8FAFC] transition-colors">
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-1.5 h-1.5 rounded-full bg-yellow-400" />
+                          <span className="text-[10.5px] font-medium text-[#64748B]">Core</span>
+                        </div>
+                        <span className="text-[10.5px] font-bold text-[#0F172A]">{counts.coreDone} <span className="text-[#94A3B8] font-normal mx-0.5">/</span> {counts.core}</span>
+                      </div>
                     ) : null}
                     {counts?.melting ? (
-                      <Badge variant="outline" className={cn("text-[11px] font-medium justify-center w-full rounded-md py-0.5", isMeltingOverload ? "bg-red-500/20 text-red-400 border-red-500/30" : "bg-orange-500/10 text-orange-500 border-orange-500/20")}>
-                        Melting {counts.meltingDone} / {counts.melting}
-                      </Badge>
+                      <div className={cn("flex items-center justify-between px-1.5 py-0.5 rounded-md transition-colors", isMeltingOverload ? "bg-red-50/50" : "hover:bg-[#F8FAFC]")}>
+                        <div className="flex items-center gap-1.5">
+                          <div className={cn("w-1.5 h-1.5 rounded-full", isMeltingOverload ? "bg-red-500 animate-pulse" : "bg-orange-400")} />
+                          <span className={cn("text-[10.5px] font-medium", isMeltingOverload ? "text-red-600" : "text-[#64748B]")}>Melting</span>
+                        </div>
+                        <span className={cn("text-[10.5px] font-bold", isMeltingOverload ? "text-red-600" : "text-[#0F172A]")}>
+                          {counts.meltingDone} <span className={cn("font-normal mx-0.5", isMeltingOverload ? "text-red-400" : "text-[#94A3B8]")}>/</span> {counts.melting}
+                        </span>
+                      </div>
                     ) : null}
                     {counts?.moulding ? (
-                      <Badge variant="outline" className={cn("text-[11px] font-medium justify-center w-full rounded-md py-0.5", isMouldingOverload ? "bg-red-500/20 text-red-400 border-red-500/30" : "bg-blue-500/10 text-blue-500 border-blue-500/20")}>
-                        Moulding {counts.mouldingDone} / {counts.moulding}
-                      </Badge>
+                      <div className={cn("flex items-center justify-between px-1.5 py-0.5 rounded-md transition-colors", isMouldingOverload ? "bg-red-50/50" : "hover:bg-[#F8FAFC]")}>
+                        <div className="flex items-center gap-1.5">
+                          <div className={cn("w-1.5 h-1.5 rounded-full", isMouldingOverload ? "bg-red-500 animate-pulse" : "bg-[#4F46E5]")} />
+                          <span className={cn("text-[10.5px] font-medium", isMouldingOverload ? "text-red-600" : "text-[#64748B]")}>Moulding</span>
+                        </div>
+                        <span className={cn("text-[10.5px] font-bold", isMouldingOverload ? "text-red-600" : "text-[#0F172A]")}>
+                          {counts.mouldingDone} <span className={cn("font-normal mx-0.5", isMouldingOverload ? "text-red-400" : "text-[#94A3B8]")}>/</span> {counts.moulding}
+                        </span>
+                      </div>
                     ) : null}
                   </div>
                 </div>

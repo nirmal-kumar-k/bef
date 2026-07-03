@@ -294,7 +294,7 @@ export function ScheduleDrawer({
                   </SelectContent>
                 </Select>
               </div>
-              <Button onClick={handleAddOrder} disabled={!selectedOrder} className="bg-[#4F46E5] hover:bg-[#E56020] text-white">
+              <Button onClick={handleAddOrder} disabled={!selectedOrder} className="bg-[#4F46E5] hover:bg-[#4F46E5]/90 text-white">
                 <CalendarPlus className="w-4 h-4 mr-2" />
                 Add to Plan
               </Button>
@@ -351,7 +351,7 @@ export function ScheduleDrawer({
           <Button variant="outline" onClick={onClose} className="border-[#E0E7FF] text-[#64748B] hover:text-[#172554] hover:bg-[#EEF2FF]">
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={isSaving} className="bg-[#172554] text-[#FFFFFF] hover:bg-white min-w-[120px]">
+          <Button onClick={handleSave} disabled={isSaving} className="bg-[#172554] text-[#FFFFFF] hover:bg-[#172554]/90 min-w-[120px]">
             {isSaving ? 'Saving...' : 'Save Day Plan'}
           </Button>
         </div>

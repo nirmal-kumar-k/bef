@@ -11,9 +11,8 @@ import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { BacklogItem } from './daily-planning-modal'
-import { CubeTransparent, CaretDown, CaretUp } from '@phosphor-icons/react'
+import { CubeTransparent } from '@phosphor-icons/react'
 import { cn } from '@/shared/lib/utils'
-
 import { generateTimeSlots, TimeSlot } from '@/shared/lib/utils'
 import type { Shift } from './shift-master-page'
 
@@ -63,7 +62,7 @@ export function CorePlanningModal({
             const activeShifts = data.filter((s: Shift) => s.isActive)
             setShifts(activeShifts)
             if (activeShifts.length > 0 && !selectedShiftId) {
-              setSelectedShiftId(activeShifts[0].id)
+              setSelectedShiftId(activeShifts[0].id!)
             }
           })
           .catch(console.error)
@@ -82,14 +81,12 @@ export function CorePlanningModal({
 
   const selectedShift = shifts.find(s => s.id === selectedShiftId) || shifts[0]
   const TIME_SLOTS: TimeSlot[] = selectedShift 
-    ? generateTimeSlots(selectedShift.startTime, selectedShift.endTime) 
+    ? generateTimeSlots(selectedShift.startTime, selectedShift.endTime, selectedShift.breakStartTime, selectedShift.breakEndTime) 
     : []
-
 
   // Initialization when order changes or modal opens
   useEffect(() => {
     if (isOpen && !selectedOrder && openOrders.length > 0) {
-      // Don't auto-select to match UI specification, but we can reset states
       setHourlyMatrix({})
       setWorkers({})
       setActuals({})
@@ -109,7 +106,6 @@ export function CorePlanningModal({
     const initActuals: Record<string, number> = {}
     const initEquipments: Record<string, string> = {}
 
-    // Pre-fill from existing plans
     existingPlans.forEach(p => {
       if (p.coreBoxCode) {
         initMatrix[p.coreBoxCode] = p.hourlyTargets || {}
@@ -138,12 +134,11 @@ export function CorePlanningModal({
     const orderCoreBacklog = backlogData.filter(b => b.orderNo === order.customerOrderNo)
     const plansToSave: any[] = []
 
-    // Save plans for any core box that has hourly targets or workers
     Object.keys(hourlyMatrix).forEach(code => {
       const hours = hourlyMatrix[code] || {}
       const totalScheduled = Object.values(hours).reduce((sum, val) => sum + (val || 0), 0)
       
-      if (totalScheduled > 0 || workers[code] > 0 || actuals[code] !== undefined) {
+      if (totalScheduled > 0 || (workers[code] && Object.values(workers[code]).some(w => w > 0)) || actuals[code] !== undefined) {
         const backlog = orderCoreBacklog.find(b => b.coreBoxCode === code)
         const maxWorkers = workers[code] && Object.values(workers[code]).length > 0 
           ? Math.max(...Object.values(workers[code])) 
@@ -155,8 +150,10 @@ export function CorePlanningModal({
           orderId: selectedOrder,
           itemId: backlog?.itemId || `${selectedOrder}-0`,
           stage: 'Core',
+          patternRef: backlog?.patternRef,
           coreBoxCode: code,
           quantityScheduled: totalScheduled || existingPlan?.quantityScheduled || 0,
+          shiftId: selectedShiftId,
           laborersAssigned: maxWorkers,
           workersAssigned: maxWorkers,
           equipmentId: selectedEquipments[code] || '',
@@ -193,7 +190,6 @@ export function CorePlanningModal({
     return Object.keys(hourlyMatrix).reduce((sum, code) => sum + getColTotal(code), 0)
   }
 
-  // Hourly input change
   const handleHourlyChange = (code: string, timeSlot: string, value: string) => {
     const numValue = value === '' ? undefined : parseInt(value, 10)
     setHourlyMatrix(prev => ({
@@ -221,20 +217,9 @@ export function CorePlanningModal({
       const w = codeWorkers[slot.time] || 0
       totalExpected += w * avgProd * slot.hours
     })
-    
-    // Adjust total expected if there is a break in this shift
-    if (selectedShift && selectedShift.breakDurationMins > 0) {
-       // A simple approach: Reduce the totalExpected proportionally by the break duration
-       const totalShiftMins = TIME_SLOTS.reduce((acc, s) => acc + (s.hours * 60), 0)
-       if (totalShiftMins > 0) {
-         const effectiveRatio = Math.max(0, (totalShiftMins - selectedShift.breakDurationMins) / totalShiftMins)
-         totalExpected = totalExpected * effectiveRatio
-       }
-    }
     return Math.round(totalExpected)
   }
 
-  // Section 1: Top-level fill (distributes equally across hours for quick entry)
   const handleFillRemaining = (code: string, remaining: number) => {
     const perHour = Math.floor(remaining / 12)
     let remainder = Math.max(0, remaining - (perHour * TIME_SLOTS.length))
@@ -253,23 +238,20 @@ export function CorePlanningModal({
   const dateObj = new Date(date || new Date())
   const dateString = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
 
-  // Active Core Boxes for the table: Group by coreBoxCode to avoid duplicate keys and merge requirements
+  // Active Core Boxes for the table (group by coreBoxCode)
   const activeCoreBoxes = useMemo(() => {
-    const unique = new Map<string, typeof orderCoreBacklogs[0]>()
+    const grouped = new Map<string, typeof orderCoreBacklogs[0]>()
     orderCoreBacklogs.forEach(b => {
-      const code = b.coreBoxCode || 'Unknown'
-      if (!unique.has(code)) {
-        unique.set(code, { ...b, coreBoxCode: code })
+      if (!b.coreBoxCode) return
+      if (grouped.has(b.coreBoxCode)) {
+        const existing = grouped.get(b.coreBoxCode)!
+        existing.totalRequired += b.totalRequired
+        existing.totalScheduled += b.totalScheduled
       } else {
-        const existing = unique.get(code)!
-        unique.set(code, {
-          ...existing,
-          totalRequired: existing.totalRequired + b.totalRequired,
-          totalScheduled: existing.totalScheduled + b.totalScheduled,
-        })
+        grouped.set(b.coreBoxCode, { ...b })
       }
     })
-    return Array.from(unique.values())
+    return Array.from(grouped.values())
   }, [orderCoreBacklogs])
 
   return (
@@ -278,7 +260,7 @@ export function CorePlanningModal({
         <div className="flex flex-col w-full max-h-[90vh]">
           <DialogHeader className="p-6 pb-4 border-b border-[#E0E7FF] shrink-0">
           <div>
-            <DialogTitle className="text-xl font-heading text-white">
+            <DialogTitle className="text-xl font-heading text-[#172554]">
               {dateString}
             </DialogTitle>
             <div className="flex items-center gap-2 mt-2">
@@ -288,7 +270,7 @@ export function CorePlanningModal({
               </span>
               {shifts.length > 0 && (
                 <Select value={selectedShiftId} onValueChange={setSelectedShiftId}>
-                  <SelectTrigger className="h-6 px-2 text-[10px] font-bold uppercase rounded-md border border-amber-500/20 bg-amber-500/10 text-amber-500 ml-2 w-auto min-w-[100px] border-none focus:ring-0">
+                  <SelectTrigger className="h-6 px-2 text-[10px] font-bold uppercase rounded-md border border-[#4285F4]/20 bg-[#4285F4]/10 text-[#4285F4] ml-2 w-auto min-w-[100px] border-none focus:ring-0">
                     <SelectValue placeholder="Select Shift" />
                   </SelectTrigger>
                   <SelectContent className="bg-[#FFFFFF] border-[#E0E7FF]">
@@ -332,8 +314,26 @@ export function CorePlanningModal({
                   return (
                     <div key={cb.coreBoxCode} className="bg-gradient-to-br from-[#FFFFFF] to-[#EEF2FF] p-5 rounded-xl border border-[#E0E7FF] min-w-[280px] flex-1 shadow-md">
                       <div className="flex justify-between items-start mb-4">
-                        <h4 className="text-[#172554] font-mono font-bold text-base">{cb.coreBoxCode}</h4>
-                        <span className="text-xs font-medium text-[#64748B] bg-[#F4F6FB] px-2.5 py-1 rounded-md border border-[#E0E7FF]">Remaining: {remaining}</span>
+                        <div className="flex flex-col gap-1">
+                          <div className="text-[#172554] font-bold text-sm bg-[#EEF2FF] p-2 rounded border border-[#E0E7FF]">
+                            {cb.coreBoxCode}
+                            {cb.patternRef && <span className="text-[10px] text-[#94A3B8] ml-2 block">Pattern: {cb.patternRef}</span>}
+                          </div>
+                          <div>
+                            <Select 
+                              value={selectedEquipments[cb.coreBoxCode!] || ''} 
+                              onValueChange={(val) => setSelectedEquipments(prev => ({...prev, [cb.coreBoxCode!]: val}))}
+                            >
+                              <SelectTrigger className="h-7 text-[10px] bg-[#F4F6FB] border-[#E0E7FF] text-[#64748B]">
+                                <SelectValue placeholder="Machine" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-[#FFFFFF] border-[#E0E7FF]">
+                                {equipments.map(e => <SelectItem key={e.id} value={e.id!} className="text-[10px]">{e.name}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        <div className="mt-1 text-xs font-medium text-[#64748B] bg-[#F4F6FB] px-2.5 py-1 rounded-md border border-[#E0E7FF]">Remaining: {remaining}</div>
                       </div>
                       <div className="flex items-center gap-3">
                         <div className="flex-1 text-sm text-[#64748B]">Planned Today:</div>
@@ -368,11 +368,14 @@ export function CorePlanningModal({
                   <thead className="bg-[#FFFFFF] border-b border-[#E0E7FF] text-[#64748B] uppercase tracking-wider font-bold">
                     <tr>
                       <th rowSpan={2} className="px-6 py-4 sticky left-0 bg-[#FFFFFF] z-10 w-40 whitespace-nowrap text-xs align-bottom pb-6">Time Slot</th>
-                      {activeCoreBoxes.map(cb => (
-                        <th key={cb.coreBoxCode} colSpan={2} className="px-4 py-3 text-center text-[#4285F4] font-mono text-base border-b border-[#E0E7FF]/50">
-                          {cb.coreBoxCode}
-                        </th>
-                      ))}
+                      {activeCoreBoxes.map(cb => {
+                        return (
+                          <th key={cb.coreBoxCode} colSpan={2} className="px-4 py-3 text-center text-[#4285F4] font-mono text-base border-b border-[#E0E7FF]/50">
+                            {cb.coreBoxCode}
+                            <div className="text-[9px] text-[#94A3B8] tracking-wider mt-1 font-semibold">{cb.patternRef}</div>
+                          </th>
+                        )
+                      })}
                       <th rowSpan={2} className="px-6 py-4 text-center text-[#172554] whitespace-nowrap w-40 align-bottom pb-6">Slot Total</th>
                     </tr>
                     <tr>
@@ -439,11 +442,11 @@ export function CorePlanningModal({
                       {activeCoreBoxes.map(cb => {
                         const plannedTarget = getColTotal(cb.coreBoxCode!)
                         const pattern = patterns.find(p => p.code === cb.patternRef)
-                        const specificCoreBox = pattern?.sharedCoreBoxes?.find((scb: any) => scb.code === cb.coreBoxCode)
                         
                         const selectedEqId = selectedEquipments[cb.coreBoxCode!]
                         const selectedEq = equipments.find(e => e.id === selectedEqId)
-                        const avgProd = selectedEq?.avgPiecesPerHour || Number(specificCoreBox?.avgCoreProduction) || Number((pattern as any)?.avgCoreProduction) || 10
+                        const scb = pattern?.sharedCoreBoxes?.find((s: any) => s.code === cb.coreBoxCode)
+                        const avgProd = selectedEq?.avgPiecesPerHour || Number(scb?.avgCoreProduction) || Number(pattern?.avgMouldsPerHour) || 10
                         
                         const expectedOutput = getExpectedOutput(cb.coreBoxCode!, avgProd)
                         
@@ -482,7 +485,7 @@ export function CorePlanningModal({
             </div>
           )}
 
-          {/* SECTION 4: Actual Entry */}
+          {/* SECTION 3: Actual Entry */}
           {selectedOrder && activeCoreBoxes.length > 0 && (
             <div className="border border-[#E0E7FF] rounded-xl overflow-hidden mt-8">
               <div className="w-full flex items-center justify-between bg-[#EEF2FF] p-4 text-[#172554]">
@@ -502,23 +505,7 @@ export function CorePlanningModal({
                     return (
                       <div key={cb.coreBoxCode} className="flex items-center gap-4 p-3 bg-[#FFFFFF] border border-[#E0E7FF] rounded-lg">
                         <div className="w-32">
-                          <div className="text-[#172554] font-bold text-sm bg-[#EEF2FF] p-2 rounded border border-[#E0E7FF]">
-                            {cb.coreBoxCode}
-                            {cb.patternRef && <span className="text-[10px] text-[#94A3B8] ml-2 block">{cb.patternRef}</span>}
-                          </div>
-                          <div className="mt-1">
-                            <Select 
-                              value={selectedEquipments[cb.coreBoxCode!] || ''} 
-                              onValueChange={(val) => setSelectedEquipments(prev => ({...prev, [cb.coreBoxCode!]: val}))}
-                            >
-                              <SelectTrigger className="h-7 text-[10px] bg-[#F4F6FB] border-[#E0E7FF] text-[#64748B]">
-                                <SelectValue placeholder="Machine" />
-                              </SelectTrigger>
-                              <SelectContent className="bg-[#FFFFFF] border-[#E0E7FF]">
-                                {equipments.map(e => <SelectItem key={e.id} value={e.id!} className="text-[10px]">{e.name}</SelectItem>)}
-                              </SelectContent>
-                            </Select>
-                          </div>
+                          <h4 className="text-[#172554] font-mono font-bold text-sm">{cb.coreBoxCode}</h4>
                         </div>
                         <div className="w-24">
                           <span className="text-[10px] text-[#64748B] block uppercase font-bold mb-1">Planned</span>

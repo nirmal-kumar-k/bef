@@ -57,17 +57,33 @@ export interface TimeSlot {
   hours: number
 }
 
-export function generateTimeSlots(startTime: string, endTime: string): TimeSlot[] {
+export function generateTimeSlots(startTime: string, endTime: string, breakStartTime?: string, breakEndTime?: string): TimeSlot[] {
   let startMins = parseTimeToMinutes(startTime)
   let endMins = parseTimeToMinutes(endTime)
   if (endMins <= startMins) {
     endMins += 24 * 60 // spans across midnight
   }
   
+  let breakStartMins = breakStartTime ? parseTimeToMinutes(breakStartTime) : undefined
+  let breakEndMins = breakEndTime ? parseTimeToMinutes(breakEndTime) : undefined
+  
+  if (breakStartMins !== undefined && breakEndMins !== undefined) {
+    // If break falls on the next day relative to 00:00 but shift started previous day
+    if (breakStartMins < startMins) breakStartMins += 24 * 60
+    if (breakEndMins <= breakStartMins) breakEndMins += 24 * 60
+  }
+  
   const slots: TimeSlot[] = []
   let currentMins = startMins
   
   while (currentMins < endMins) {
+    if (breakStartMins !== undefined && breakEndMins !== undefined) {
+      if (currentMins >= breakStartMins && currentMins < breakEndMins) {
+        currentMins = breakEndMins
+        continue
+      }
+    }
+  
     let h = Math.floor((currentMins % (24 * 60)) / 60)
     let m = currentMins % 60
     const ampm = h >= 12 ? 'PM' : 'AM'
@@ -79,15 +95,24 @@ export function generateTimeSlots(startTime: string, endTime: string): TimeSlot[
     
     const slotStr = `${hStr}:${mStr} ${ampm}`
     
-    // Calculate duration. Normally 60 mins (1 hour), but could be less for the last slot
-    const nextHourMins = currentMins + 60
-    const durationMins = nextHourMins > endMins ? (endMins - currentMins) : 60
+    let nextHourMins = currentMins + 60
+    
+    if (breakStartMins !== undefined && currentMins < breakStartMins && nextHourMins > breakStartMins) {
+      nextHourMins = breakStartMins
+    }
+    
+    if (nextHourMins > endMins) {
+      nextHourMins = endMins
+    }
+    
+    const durationMins = nextHourMins - currentMins
     const durationHours = durationMins / 60
     
-    slots.push({ time: slotStr, hours: durationHours })
+    if (durationHours > 0) {
+      slots.push({ time: slotStr, hours: durationHours })
+    }
     
-    // Increment by 1 hour (60 mins)
-    currentMins += 60
+    currentMins = nextHourMins
   }
   return slots
 }

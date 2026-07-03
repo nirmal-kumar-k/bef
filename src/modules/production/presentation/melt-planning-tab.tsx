@@ -6,7 +6,7 @@ import { UnifiedMeltCalendar } from './unified-melt-calendar'
 import { CalendarBlank, List } from '@phosphor-icons/react'
 import { cn } from '@/shared/lib/utils'
 
-export function MeltPlanningTab({ defaultMetalQty, defaultGrade, openOrders, patterns, dailyPlans, onSaveDayPlan }: any) {
+export function MeltPlanningTab({ defaultMetalQty, defaultGrade, openOrders, products, patterns, dailyPlans, onSaveDayPlan }: any) {
   const [viewMode, setViewMode] = useState<'table' | 'calendar'>('calendar')
   const [activeTab, setActiveTab] = useState<'planning' | 'tracking'>('planning')
 
@@ -55,6 +55,7 @@ export function MeltPlanningTab({ defaultMetalQty, defaultGrade, openOrders, pat
           activeTab={activeTab}
           openOrders={openOrders} 
           patterns={patterns} 
+          products={products}
           dailyPlans={dailyPlans} 
           onSaveDayPlan={onSaveDayPlan} 
         />

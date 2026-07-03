@@ -88,7 +88,7 @@ export function CorePlanningTab({ coreBacklog, patterns, openOrders, dailyPlans,
     <div className="space-y-6">
       <div className="flex justify-end">
         <div className="flex items-center gap-3 bg-[#FFFFFF] px-4 py-2 border border-[#E0E7FF] rounded-xl">
-          <Label htmlFor="view-mode" className={cn("text-sm font-semibold cursor-pointer", viewMode === 'table' ? 'text-white' : 'text-[#94A3B8]')} onClick={() => setViewMode('table')}>Table</Label>
+          <Label htmlFor="view-mode" className={cn("text-sm font-semibold cursor-pointer", viewMode === 'table' ? 'text-[#4F46E5]' : 'text-[#94A3B8]')} onClick={() => setViewMode('table')}>Table</Label>
           <div 
             className="w-12 h-6 bg-[#F4F6FB] rounded-full relative cursor-pointer border border-[#E0E7FF]"
             onClick={() => setViewMode(v => v === 'table' ? 'calendar' : 'table')}
@@ -98,20 +98,20 @@ export function CorePlanningTab({ coreBacklog, patterns, openOrders, dailyPlans,
               viewMode === 'calendar' ? "left-[26px]" : "left-1"
             )} />
           </div>
-          <Label htmlFor="view-mode" className={cn("text-sm font-semibold cursor-pointer", viewMode === 'calendar' ? 'text-white' : 'text-[#94A3B8]')} onClick={() => setViewMode('calendar')}>Calendar</Label>
+          <Label htmlFor="view-mode" className={cn("text-sm font-semibold cursor-pointer", viewMode === 'calendar' ? 'text-[#4F46E5]' : 'text-[#94A3B8]')} onClick={() => setViewMode('calendar')}>Calendar</Label>
         </div>
       </div>
 
       {viewMode === 'calendar' ? (
-        <div className="bg-[#F4F6FB] border border-[#E0E7FF] rounded-xl overflow-hidden relative flex flex-col">
-          <div className="grid grid-cols-7 border-b border-[#E0E7FF] bg-[#FFFFFF]">
+        <div className="bg-[#F4F6FB] border border-[#E0E7FF] rounded-xl relative flex flex-col p-4 overflow-x-auto">
+          <div className="grid grid-cols-7 mb-2 min-w-[800px]">
             {weekDays.map(day => (
-              <div key={day} className="py-3 text-center text-xs font-semibold text-[#64748B] uppercase tracking-wider">
+              <div key={day} className="py-2 text-center text-xs font-semibold text-[#64748B] uppercase tracking-wider">
                 {day}
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-7 bg-[#E0E7FF] gap-[1px] flex-1">
+          <div className="grid grid-cols-7 gap-3 flex-1 min-w-[800px]">
             {days.map((date, i) => {
               const dateStr = date.toISOString().split('T')[0]
               const isToday = new Date().toISOString().split('T')[0] === dateStr
@@ -182,8 +182,8 @@ export function CorePlanningTab({ coreBacklog, patterns, openOrders, dailyPlans,
                     handleDrop(e)
                   }}
                   className={cn(
-                    "bg-[#F4F6FB] p-2 hover:bg-[#FFFFFF] transition-colors cursor-pointer flex flex-col min-h-[120px] border-[1px] border-transparent hover:border-[#4F46E5]/20",
-                    !isCurrentMonth && "opacity-50"
+                    "bg-[#FFFFFF] p-2 rounded-[12px] shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:-translate-y-[2px] transition-all duration-300 ease-out cursor-pointer flex flex-col min-h-[120px] border border-[#E0E7FF] hover:border-[#4F46E5] hover:shadow-[0_4px_14px_rgba(79,70,229,0.12)] group overflow-hidden relative",
+                    !isCurrentMonth && "bg-[#F8FAFC]/50 opacity-70 hover:opacity-100"
                   )}
                 >
                   <div className="flex justify-between items-start mb-2">
@@ -204,9 +204,13 @@ export function CorePlanningTab({ coreBacklog, patterns, openOrders, dailyPlans,
                           e.dataTransfer.effectAllowed = 'move'
                           e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'planned', plans: dayPlans }))
                         }}
-                        className="px-2 py-1 text-[10px] font-bold uppercase rounded-md bg-[#4285F4]/10 text-[#4285F4] border border-[#4285F4]/20 truncate cursor-grab shadow-md"
+                        className="flex items-center justify-between px-1.5 py-1 rounded-md hover:bg-[#F8FAFC] transition-colors cursor-grab"
                       >
-                        Core {sum}
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-1.5 h-1.5 rounded-full bg-[#4285F4]" />
+                          <span className="text-[10.5px] font-medium text-[#64748B]">Core</span>
+                        </div>
+                        <span className="text-[10.5px] font-bold text-[#0F172A]">{sum}</span>
                       </div>
                     )}
                     {isToday && hasPending && !hasCarryForward && (
@@ -217,9 +221,13 @@ export function CorePlanningTab({ coreBacklog, patterns, openOrders, dailyPlans,
                           e.dataTransfer.effectAllowed = 'move'
                           e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'pending' }))
                         }}
-                        className="px-2 py-1 text-[10px] font-bold uppercase rounded-md bg-red-500/10 text-red-500 border border-red-500/20 mt-2 truncate cursor-grab shadow-md"
+                        className="flex items-center justify-between px-1.5 py-1 bg-red-50/50 hover:bg-red-50 rounded-md transition-colors cursor-grab mt-1"
                       >
-                        Pending {pendingAmount}
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                          <span className="text-[10.5px] font-medium text-red-600">Pending</span>
+                        </div>
+                        <span className="text-[10.5px] font-bold text-red-600">{pendingAmount}</span>
                       </div>
                     )}
                     {hasCarryForward && (
@@ -230,9 +238,13 @@ export function CorePlanningTab({ coreBacklog, patterns, openOrders, dailyPlans,
                           e.dataTransfer.effectAllowed = 'move'
                           e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'pending' }))
                         }}
-                        className="px-2 py-1 text-[10px] font-bold uppercase rounded-md bg-red-500/10 text-red-500 border border-red-500/20 mt-2 truncate cursor-grab shadow-md"
+                        className="flex items-center justify-between px-1.5 py-1 bg-red-50/50 hover:bg-red-50 rounded-md transition-colors cursor-grab mt-1"
                       >
-                        Pending {carryForwardAmount}
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                          <span className="text-[10.5px] font-medium text-red-600">Pending</span>
+                        </div>
+                        <span className="text-[10.5px] font-bold text-red-600">{carryForwardAmount}</span>
                       </div>
                     )}
                   </div>

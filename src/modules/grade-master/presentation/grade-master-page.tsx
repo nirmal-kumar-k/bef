@@ -66,10 +66,10 @@ export default function GradeMasterPage() {
     <div className="p-8 max-w-[1200px] mx-auto w-full flex flex-col gap-8 h-full">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold font-heading text-white">Grade Master</h1>
+          <h1 className="text-3xl font-bold font-heading text-[#172554]">Grade Master</h1>
           <p className="text-[#64748B] mt-1">Manage chemical compositions for cast iron grades.</p>
         </div>
-        <Button onClick={openAddModal} className="bg-amber-500 hover:bg-amber-600 text-black font-semibold">
+        <Button onClick={openAddModal} className="bg-[#4F46E5] hover:bg-[#4F46E5]/90 text-white font-semibold">
           <Plus className="w-4 h-4 mr-2" />
           Add Grade
         </Button>

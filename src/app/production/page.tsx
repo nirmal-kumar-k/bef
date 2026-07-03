@@ -204,7 +204,7 @@ export default function ProductionTrackingPage() {
           <Button variant="outline" onClick={handleSaveProgress} className="border-[#E0E7FF] text-[#64748B] hover:text-[#172554] hover:bg-[#EEF2FF]">
             Save Progress
           </Button>
-          <Button onClick={() => setIsCloseDayOpen(true)} disabled={schedules.length === 0} className="bg-[#4F46E5] hover:bg-[#E56020] text-white">
+          <Button onClick={() => setIsCloseDayOpen(true)} disabled={schedules.length === 0} className="bg-[#4F46E5] hover:bg-[#4F46E5]/90 text-white">
             <CalendarCheck className="w-4 h-4 mr-2" />
             Close Day
           </Button>

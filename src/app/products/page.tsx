@@ -114,7 +114,7 @@ export default function ProductsPage() {
         </div>
         <Button
           onClick={() => setIsModalOpen(true)}
-          className="bg-[#4F46E5] text-white transition-all hover:bg-[#4F46E5] hover:shadow-[0_4px_14px_rgba(232,88,26,0.35)] hover:-translate-y-[1px]"
+          className="bg-[#4F46E5] text-white transition-all hover:bg-[#4F46E5] hover:shadow-[0_4px_14px_rgba(79,70,229,0.35)] hover:-translate-y-[1px]"
         >
           <Plus weight="bold" className="mr-2 h-4 w-4" />
           New Product
@@ -148,7 +148,7 @@ export default function ProductsPage() {
             <Funnel weight="duotone" className="h-4 w-4 text-muted-foreground hidden sm:block" />
             <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
               <PopoverTrigger
-                className="flex h-10 w-full sm:w-[240px] items-center justify-between rounded-md border border-sidebar-border bg-[#FFFFFF] px-3 py-2 text-sm hover:bg-[#EEF2FF] hover:text-white"
+                className="flex h-10 w-full sm:w-[240px] items-center justify-between rounded-md border border-sidebar-border bg-[#FFFFFF] px-3 py-2 text-sm hover:bg-[#EEF2FF] hover:text-[#4F46E5]"
                 aria-expanded={customerOpen}
               >
                 {selectedCustomerFilter
@@ -158,7 +158,7 @@ export default function ProductsPage() {
               </PopoverTrigger>
               <PopoverContent className="w-[240px] p-0 bg-[#FFFFFF] border-sidebar-border">
                 <Command className="bg-transparent">
-                  <CommandInput placeholder="Search customer..." className="text-white" />
+                  <CommandInput placeholder="Search customer..." className="text-[#172554]" />
                   <CommandList>
                     <CommandEmpty className="text-muted-foreground p-4 text-center text-sm">No customer found.</CommandEmpty>
                     <CommandGroup>
@@ -170,7 +170,7 @@ export default function ProductsPage() {
                             setSelectedCustomerFilter(currentValue === selectedCustomerFilter ? '' : currentValue)
                             setCustomerOpen(false)
                           }}
-                          className="text-[#64748B] hover:text-white hover:bg-[#EEF2FF] cursor-pointer"
+                          className="text-[#64748B] hover:text-[#4F46E5] hover:bg-[#EEF2FF] cursor-pointer"
                         >
                           <Check weight="duotone"
                             className={cn(
@@ -192,7 +192,7 @@ export default function ProductsPage() {
                 variant="ghost" 
                 size="icon"
                 onClick={() => setSelectedCustomerFilter('')}
-                className="h-10 w-10 text-muted-foreground hover:text-white hover:bg-[#EEF2FF] shrink-0"
+                className="h-10 w-10 text-muted-foreground hover:text-[#4F46E5] hover:bg-[#EEF2FF] shrink-0"
                 title="Clear filter"
               >
                 <X className="h-4 w-4" />
@@ -234,7 +234,7 @@ export default function ProductsPage() {
                     }}
                   >
                     <td className="px-6 py-4 font-mono text-[#4F46E5] font-medium">{product.code}</td>
-                    <td className="px-6 py-4 text-[#172554] font-medium group-hover:text-white transition-colors">{product.name}</td>
+                    <td className="px-6 py-4 text-[#172554] font-medium group-hover:text-[#4F46E5] transition-colors">{product.name}</td>
                     <td className="px-6 py-4 text-[#64748B] group-hover:text-[#0F172A] transition-colors">{product.customer}</td>
                     <td className="px-6 py-4 text-right text-[#0F172A]">{product.weight}</td>
                     <td className="px-6 py-4 text-right font-mono text-[#94A3B8] group-hover:text-[#64748B] transition-colors">{product.cavities}</td>

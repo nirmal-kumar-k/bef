@@ -106,7 +106,7 @@ export function PourPlanningTab({ patterns, openOrders, dailyPlans }: any) {
                     <Printer className="w-4 h-4 mr-2" />
                     Print Ticket
                   </Button>
-                  <Button className="bg-[#4F46E5] hover:bg-[#E56020] text-white font-bold shadow-lg shadow-[#4F46E5]/20">
+                  <Button className="bg-[#4F46E5] hover:bg-[#4F46E5]/90 text-white font-bold shadow-lg shadow-[#4F46E5]/20">
                     <CheckCircle weight="bold" className="w-4 h-4 mr-2" />
                     Approve Charge
                   </Button>

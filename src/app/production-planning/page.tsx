@@ -92,17 +92,29 @@ export default function ProductionPlanningPage() {
           mappedProduct.selectedCoreBoxes.forEach((cb: any) => {
             const qtyPerMould = cb.quantity || 1
             const totalCoreRequired = finalMoulds * qtyPerMould
-            const coreScheduled = plans.filter(p => p.stage === 'Core' && p.itemId === uniqueId && p.coreBoxCode === cb.coreBoxCode).reduce((sum, p) => sum + p.quantityScheduled, 0)
+            const codeToUse = cb.coreBoxCode || 'Unnamed Core Box'
+            const coreScheduled = plans.filter(p => p.stage === 'Core' && p.itemId === uniqueId && p.coreBoxCode === codeToUse).reduce((sum, p) => sum + p.quantityScheduled, 0)
             coreBacklog.push({
-              itemId: uniqueId, orderNo: order.customerOrderNo, patternRef: pattern?.code || '-', productName: item.productName, coreBoxCode: cb.coreBoxCode,
+              itemId: uniqueId, orderNo: order.customerOrderNo, patternRef: pattern?.code || '-', productName: item.productName, coreBoxCode: codeToUse,
               totalRequired: totalCoreRequired, totalScheduled: coreScheduled, unit: 'cores'
             })
           })
-        } else if (mappedProduct && mappedProduct.coreBoxesCount > 0) {
-          const totalCoreRequired = finalMoulds * mappedProduct.coreBoxesCount
+        } else if (pattern && pattern.sharedCoreBoxes && pattern.sharedCoreBoxes.length > 0) {
+          pattern.sharedCoreBoxes.forEach((cb: any) => {
+            const qtyPerMould = 1
+            const totalCoreRequired = finalMoulds * qtyPerMould
+            const codeToUse = cb.code || 'Unnamed Core Box'
+            const coreScheduled = plans.filter(p => p.stage === 'Core' && p.itemId === uniqueId && p.coreBoxCode === codeToUse).reduce((sum, p) => sum + p.quantityScheduled, 0)
+            coreBacklog.push({
+              itemId: uniqueId, orderNo: order.customerOrderNo, patternRef: pattern.code, productName: item.productName, coreBoxCode: codeToUse,
+              totalRequired: totalCoreRequired, totalScheduled: coreScheduled, unit: 'cores'
+            })
+          })
+        } else if (pattern && pattern.coreBoxes > 0) {
+          const totalCoreRequired = finalMoulds * pattern.coreBoxes
           const coreScheduled = plans.filter(p => p.stage === 'Core' && p.itemId === uniqueId && p.coreBoxCode === 'Legacy').reduce((sum, p) => sum + p.quantityScheduled, 0)
           coreBacklog.push({
-            itemId: uniqueId, orderNo: order.customerOrderNo, patternRef: pattern?.code || '-', productName: item.productName, coreBoxCode: 'Legacy',
+            itemId: uniqueId, orderNo: order.customerOrderNo, patternRef: pattern.code, productName: item.productName, coreBoxCode: 'Legacy',
             totalRequired: totalCoreRequired, totalScheduled: coreScheduled, unit: 'cores'
           })
         }
@@ -242,7 +254,7 @@ export default function ProductionPlanningPage() {
                 <MouldPlanningTab mouldBacklog={backlogData.Mould} patterns={patterns} openOrders={openOrders} dailyPlans={plans} onSaveDayPlan={handleSaveDayPlan} />
               )}
               {activeTab === 'Melt' && (
-                <MeltPlanningTab defaultMetalQty={totals.metal} patterns={patterns} openOrders={openOrders} dailyPlans={plans} onSaveDayPlan={handleSaveDayPlan} />
+                <MeltPlanningTab defaultMetalQty={totals.metal} products={products} patterns={patterns} openOrders={openOrders} dailyPlans={plans} onSaveDayPlan={handleSaveDayPlan} />
               )}
               {activeTab === 'Pour' && (
                 <PourPlanningTab patterns={patterns} openOrders={openOrders} dailyPlans={plans} />

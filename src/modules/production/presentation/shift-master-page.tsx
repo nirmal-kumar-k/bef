@@ -11,7 +11,8 @@ export interface Shift {
   name: string
   startTime: string
   endTime: string
-  breakDurationMins: number
+  breakStartTime?: string
+  breakEndTime?: string
   isActive: boolean
 }
 
@@ -26,7 +27,27 @@ export default function ShiftMasterPage() {
       const res = await fetch('/api/shifts')
       if (res.ok) {
         const data = await res.json()
-        setShifts(data)
+        
+        if (data.length === 0) {
+          // Auto-seed default shifts requested by user
+          await fetch('/api/shifts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: 'Shift 1', startTime: '08:00 AM', endTime: '08:30 PM', breakStartTime: '01:00 PM', breakEndTime: '01:30 PM' })
+          })
+          await fetch('/api/shifts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: 'Shift 2', startTime: '08:00 PM', endTime: '07:30 AM' })
+          })
+          const res2 = await fetch('/api/shifts')
+          if (res2.ok) {
+            const data2 = await res2.json()
+            setShifts(data2)
+          }
+        } else {
+          setShifts(data)
+        }
       }
     } catch (err) {
       console.error('Failed to fetch shifts:', err)
@@ -79,10 +100,10 @@ export default function ShiftMasterPage() {
     <div className="p-8 max-w-[1200px] mx-auto w-full flex flex-col gap-8 h-full">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold font-heading text-white">Shift Master</h1>
+          <h1 className="text-3xl font-bold font-heading text-[#172554]">Shift Master</h1>
           <p className="text-[#64748B] mt-1">Manage production shifts and timings.</p>
         </div>
-        <Button onClick={openAddModal} className="bg-amber-500 hover:bg-amber-600 text-black font-semibold">
+        <Button onClick={openAddModal} className="bg-[#4F46E5] hover:bg-[#4F46E5]/90 text-white font-semibold">
           <Plus className="w-4 h-4 mr-2" />
           Add Shift
         </Button>
@@ -96,7 +117,7 @@ export default function ShiftMasterPage() {
                 <th className="px-6 py-4 font-medium">Shift Name</th>
                 <th className="px-6 py-4 font-medium">Start Time</th>
                 <th className="px-6 py-4 font-medium">End Time</th>
-                <th className="px-6 py-4 font-medium">Break (Mins)</th>
+                <th className="px-6 py-4 font-medium">Break (Start - End)</th>
                 <th className="px-6 py-4 font-medium">Status</th>
                 <th className="px-6 py-4 font-medium text-right">Actions</th>
               </tr>
@@ -120,10 +141,12 @@ export default function ShiftMasterPage() {
               ) : (
                 shifts.map((shift) => (
                   <tr key={shift.id} className="hover:bg-[#EEF2FF]/50 transition-colors group">
-                    <td className="px-6 py-4 font-medium text-white">{shift.name}</td>
+                    <td className="px-6 py-4 font-medium text-[#172554]">{shift.name}</td>
                     <td className="px-6 py-4 text-[#172554] font-mono">{shift.startTime}</td>
                     <td className="px-6 py-4 text-[#172554] font-mono">{shift.endTime}</td>
-                    <td className="px-6 py-4 text-[#172554]">{shift.breakDurationMins}</td>
+                    <td className="px-6 py-4 text-[#172554] font-mono">
+                      {shift.breakStartTime && shift.breakEndTime ? `${shift.breakStartTime} - ${shift.breakEndTime}` : 'No Break'}
+                    </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                          <Switch 

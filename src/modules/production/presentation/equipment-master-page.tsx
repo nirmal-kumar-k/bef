@@ -139,7 +139,7 @@ export function EquipmentMasterPage() {
                           <th className="px-6 py-4 text-center">Regular Heat</th>
                         </>
                       )}
-                      {(activeTab === 'Knockout' || activeTab === 'Core Machine' || activeTab === 'Moulding Machine') && (
+                      {activeTab === 'Knockout' && (
                         <th className="px-6 py-4 text-center">Avg Pieces / Hr</th>
                       )}
                       <th className="px-6 py-4 text-center">Status</th>
@@ -167,7 +167,7 @@ export function EquipmentMasterPage() {
                           </>
                         )}
                         
-                        {(activeTab === 'Knockout' || activeTab === 'Core Machine' || activeTab === 'Moulding Machine') && (
+                        {activeTab === 'Knockout' && (
                           <td className="px-6 py-4 text-center text-[#64748B] font-mono">
                             {eq.avgPiecesPerHour || '-'}
                           </td>

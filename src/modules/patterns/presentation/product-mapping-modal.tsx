@@ -201,6 +201,12 @@ export function ProductMappingModal({
                 <span className="text-[#94A3B8] text-sm">Name:</span>
                 <span className="ml-2 text-[#172554]">Pump Housing B</span>
               </div>
+              <div>
+                <span className="text-[#94A3B8] text-sm">Core Boxes:</span>
+                <span className="ml-2 text-[#172554] font-medium">
+                  {coreBoxes && coreBoxes.length > 0 ? coreBoxes.map(cb => cb.code || 'Unnamed').join(', ') : 'None'}
+                </span>
+              </div>
             </div>
           </div>
 
