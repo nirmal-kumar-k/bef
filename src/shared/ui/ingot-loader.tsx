@@ -26,7 +26,7 @@ import * as THREE from 'three'
 
 // ─────────────────────────────────────────────────────────────────────────────
 const RING_R   = 1.08   // outer radius of each ring
-const ORANGE   = '#4F46E5'
+const PRIMARY   = '#4F46E5'
 
 // ─────────────────────────────────────────────────────────────────────────────
 function OrbitalCore() {
@@ -53,10 +53,10 @@ function OrbitalCore() {
     canvas.height = size
     const ctx = canvas.getContext('2d')!
     const grad = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2)
-    grad.addColorStop(0.00, 'rgba(255, 255, 255, 1.0)')
-    grad.addColorStop(0.25, 'rgba(255, 255, 255, 0.85)')
-    grad.addColorStop(0.55, 'rgba(255, 255, 255, 0.25)')
-    grad.addColorStop(1.00, 'rgba(255, 255, 255, 0.0)')
+    grad.addColorStop(0.00, 'rgba(79, 70, 229, 1.0)')
+    grad.addColorStop(0.25, 'rgba(79, 70, 229, 0.85)')
+    grad.addColorStop(0.55, 'rgba(79, 70, 229, 0.25)')
+    grad.addColorStop(1.00, 'rgba(79, 70, 229, 0.0)')
     ctx.fillStyle = grad
     ctx.fillRect(0, 0, size, size)
     return new THREE.CanvasTexture(canvas)
@@ -114,9 +114,9 @@ function OrbitalCore() {
       <mesh>
         <sphereGeometry args={[0.36, 56, 56]} />
         <MeshDistortMaterial
-          color="#07090F"
-          roughness={0.10}
-          metalness={0.90}
+          color="#E2E8F0"
+          roughness={0.20}
+          metalness={0.60}
           distort={0.05}
           speed={1.8}
           envMapIntensity={1.0}
@@ -127,8 +127,8 @@ function OrbitalCore() {
       <pointLight
         ref={innerLightRef}
         position={[0, 0, 0]}
-        color={ORANGE}
-        intensity={0.9}
+        color={PRIMARY}
+        intensity={0.6}
         distance={2.8}
         decay={2}
       />
@@ -143,9 +143,9 @@ function OrbitalCore() {
           <torusGeometry args={[RING_R, 0.022, 14, 180]} />
           <meshStandardMaterial
             ref={matARef}
-            color={ORANGE}
-            emissive={new THREE.Color(ORANGE)}
-            emissiveIntensity={2.5}
+            color={PRIMARY}
+            emissive={new THREE.Color(PRIMARY)}
+            emissiveIntensity={1.8}
             roughness={0.04}
             metalness={0.05}
             toneMapped={false}
@@ -162,9 +162,9 @@ function OrbitalCore() {
             <torusGeometry args={[RING_R, 0.017, 12, 180]} />
             <meshStandardMaterial
               ref={matBRef}
-              color="#D04810"
-              emissive={new THREE.Color('#C04010')}
-              emissiveIntensity={1.8}
+              color="#4285F4"
+              emissive={new THREE.Color('#3B82F6')}
+              emissiveIntensity={1.5}
               roughness={0.04}
               metalness={0.05}
               toneMapped={false}
@@ -182,9 +182,9 @@ function OrbitalCore() {
             <torusGeometry args={[RING_R, 0.013, 10, 180]} />
             <meshStandardMaterial
               ref={matCRef}
-              color="#A83408"
-              emissive={new THREE.Color('#903006')}
-              emissiveIntensity={1.4}
+              color="#818CF8"
+              emissive={new THREE.Color('#6366F1')}
+              emissiveIntensity={1.2}
               roughness={0.04}
               metalness={0.05}
               toneMapped={false}
@@ -199,14 +199,12 @@ function OrbitalCore() {
           <bufferGeometry>
             <bufferAttribute
               attach="attributes-position"
-              array={particles}
-              count={particles.length / 3}
-              itemSize={3}
+              args={[particles, 3]}
             />
           </bufferGeometry>
           <pointsMaterial
             map={particleTexture}
-            color="#FFFFFF"
+            color="#4F46E5"
             size={0.052}
             sizeAttenuation
             transparent
@@ -255,7 +253,7 @@ export function IngotLoader() {
   }, [])
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: '#04060D', overflow: 'hidden' }}>
+    <div style={{ position: 'fixed', inset: 0, background: '#F8FAFC', overflow: 'hidden' }}>
 
       <Canvas
         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
@@ -268,7 +266,7 @@ export function IngotLoader() {
           toneMappingExposure: 1.12,
         }}
       >
-        <color attach="background" args={['#04060D']} />
+        <color attach="background" args={['#F8FAFC']} />
         <Suspense fallback={null}>
           <Scene />
         </Suspense>
@@ -296,7 +294,7 @@ export function IngotLoader() {
             fontWeight:    700,
             fontSize:      '3.6rem',
             letterSpacing: '0.5em',
-            color:         '#F0F0F0',
+            color:         '#172554',
             lineHeight:    1,
           }}
         >
@@ -308,7 +306,7 @@ export function IngotLoader() {
           style={{
             fontSize:      '11px',
             letterSpacing: '0.55em',
-            color:         '#6C7A96',
+            color:         '#64748B',
             textTransform: 'uppercase',
             fontFamily:    '"Geist Mono", "Courier New", monospace',
           }}
@@ -324,7 +322,7 @@ export function IngotLoader() {
             width:        '240px',
             height:       '4px',
             borderRadius: '2px',
-            background:   'rgba(255,255,255,0.06)',
+            background:   'rgba(79,70,229,0.1)',
             overflow:     'hidden',
           }}
         >
@@ -345,12 +343,12 @@ export function IngotLoader() {
           border-radius:    2px;
           background:       linear-gradient(
             to right,
-            rgba(232, 88, 26, 0),
-            rgba(232, 88, 26, 0.6) 35%,
+            rgba(79, 70, 229, 0),
+            rgba(79, 70, 229, 0.6) 35%,
             #4F46E5 80%,
-            #FF9058 100%
+            #818CF8 100%
           );
-          box-shadow:       0 0 8px rgba(232, 88, 26, 0.7), 0 0 2px #4F46E5;
+          box-shadow:       0 0 8px rgba(79, 70, 229, 0.4), 0 0 2px #4F46E5;
           animation:        befSweep 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
         @keyframes befSweep {

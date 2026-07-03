@@ -6,6 +6,13 @@ export interface IStageData {
   pending: number
   variance: number
   unit: string
+  rejected?: number
+  rework?: number
+  operator?: string
+  remarks?: string
+  invoiceNumber?: string
+  vehicleNumber?: string
+  driverName?: string
 }
 
 export interface ISchedule extends Document {

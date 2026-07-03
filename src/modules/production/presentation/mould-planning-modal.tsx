@@ -49,9 +49,9 @@ export function MouldPlanningModal({
   const [activeMachineTab, setActiveMachineTab] = useState<string>('')
   
   // State maps keyed by `${machineId}_${patternRef}`
-  const [hourlyMatrix, setHourlyMatrix] = useState<Record<string, Record<string, number>>>({})
-  const [workers, setWorkers] = useState<Record<string, Record<string, number>>>({})
-  const [actuals, setActuals] = useState<Record<string, number>>({})
+  const [hourlyMatrix, setHourlyMatrix] = useState<Record<string, Record<string, number | undefined>>>({})
+  const [workers, setWorkers] = useState<Record<string, Record<string, number | undefined>>>({})
+  const [actuals, setActuals] = useState<Record<string, number | undefined>>({})
   
   // Toggle
   const [assignmentType, setAssignmentType] = useState<'equipment'|'labourer'>('equipment')

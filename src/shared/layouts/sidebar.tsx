@@ -27,7 +27,7 @@ const navGroups = [
       { href: '/production-planning', label: 'Production Planning', icon: <ListDashes weight="duotone" className="w-[18px] h-[18px] opacity-80 group-hover:opacity-100 transition-opacity" /> },
       { href: '/production-schedule', label: 'Production Schedule', icon: <CalendarBlank weight="duotone" className="w-[18px] h-[18px] opacity-80 group-hover:opacity-100 transition-opacity" /> },
       { href: '/production', label: 'Production Tracking', icon: <Factory weight="duotone" className="w-[18px] h-[18px] opacity-80 group-hover:opacity-100 transition-opacity" /> },
-      { href: '/orders', label: 'Sales Orders', badge: '12', icon: <ListDashes weight="duotone" className="w-[18px] h-[18px] opacity-80 group-hover:opacity-100 transition-opacity" /> },
+      { href: '/orders', label: 'Sales Orders', icon: <ListDashes weight="duotone" className="w-[18px] h-[18px] opacity-80 group-hover:opacity-100 transition-opacity" /> },
     ]
   },
   {

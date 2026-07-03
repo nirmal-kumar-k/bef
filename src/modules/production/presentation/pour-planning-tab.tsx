@@ -54,7 +54,7 @@ export function PourPlanningTab({ patterns, openOrders, dailyPlans }: any) {
   }, [dailyPlans, openOrders, patterns])
 
   // Default to first heat if available
-  const selectedHeat = heats.find(h => h.uid === selectedHeatId) || heats[0]
+  const selectedHeat = heats.find((h: any) => h.uid === selectedHeatId) || heats[0]
 
   return (
     <div className="space-y-6">
@@ -66,7 +66,7 @@ export function PourPlanningTab({ patterns, openOrders, dailyPlans }: any) {
             <SelectValue placeholder="Search by Heat Number or Product..." />
           </SelectTrigger>
           <SelectContent className="bg-[#FFFFFF] border-[#E0E7FF] max-h-80">
-            {heats.map(h => (
+            {heats.map((h: any) => (
               <SelectItem key={h.uid} value={h.uid} className="text-[#172554] hover:bg-[#EEF2FF] py-3 cursor-pointer">
                 <div className="flex flex-col">
                   <span className="font-mono font-bold text-[#172554]">{h.heatNo || 'H---'}</span>
@@ -218,7 +218,7 @@ export function PourPlanningTab({ patterns, openOrders, dailyPlans }: any) {
           <div className="flex-1 space-y-4">
             <Label className="text-xs font-bold text-[#94A3B8] uppercase tracking-wider pl-2 block">RECENT HEATS</Label>
             <div className="space-y-2">
-              {heats.map(h => (
+              {heats.map((h: any) => (
                 <div 
                   key={h.uid} 
                   onClick={() => setSelectedHeatId(h.uid)}

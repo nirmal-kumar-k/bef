@@ -40,9 +40,9 @@ export function CorePlanningModal({
   const [selectedOrder, setSelectedOrder] = useState<string>('')
   
   // State maps keyed by Core Box Code
-  const [hourlyMatrix, setHourlyMatrix] = useState<Record<string, Record<string, number>>>({})
+  const [hourlyMatrix, setHourlyMatrix] = useState<Record<string, Record<string, number | undefined>>>({})
   const [workers, setWorkers] = useState<Record<string, Record<string, number>>>({})
-  const [actuals, setActuals] = useState<Record<string, number>>({})
+  const [actuals, setActuals] = useState<Record<string, number | undefined>>({})
   
   // Equipment
   const [equipments, setEquipments] = useState<any[]>([])

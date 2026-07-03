@@ -129,7 +129,13 @@ export function NewOrderModal({
     setGstPercent('18')
   }
 
-  const handleCreateOrder = () => {
+  const handleUpdateCartItemCost = (index: number, val: string) => {
+    const newCart = [...cart]
+    newCart[index] = { ...newCart[index], unitCost: Number(val) || 0 }
+    setCart(newCart)
+  }
+
+  const handleCreateOrder = async () => {
     if (!customerOrderNo.trim() || cart.length === 0) return
     const customerLabel = customers.find(c => c.value === selectedCustomer)?.label || ''
     

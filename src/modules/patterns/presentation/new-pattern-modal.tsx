@@ -175,11 +175,11 @@ export function NewPatternModal({
       bottomImages: bottomPresent === 'Yes' ? bottomImages : [],
       coreBoxes: coreBoxPresent === 'Yes' ? sharedCoreBoxes.length : 0,
       sharedCoreBoxes: coreBoxPresent === 'Yes' ? sharedCoreBoxes : [],
-      avgMouldsPerHour: typeof avgMouldsPerHour === 'number' ? avgMouldsPerHour : null,
+      avgMouldsPerHour: typeof avgMouldsPerHour === 'number' ? avgMouldsPerHour : undefined,
       patternImages,
       remarks,
       mappedProducts: [],
-    })
+    } as any)
     resetForm()
   }
 
@@ -215,15 +215,8 @@ export function NewPatternModal({
             
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">Avg Moulds per Hour</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  placeholder="e.g. 12"
-                  value={avgMouldsPerHour}
-                  onChange={(e) => setAvgMouldsPerHour(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="bg-[#FFFFFF] border-[#E0E7FF] text-[#172554]"
-                />
+                <Label htmlFor="pattern-name">Pattern Name</Label>
+                <Input id="pattern-name" placeholder="Enter pattern name" value={patternName} onChange={e => setPatternName(e.target.value)} className="bg-[#FFFFFF] border-[#E0E7FF]" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="pattern-code">Pattern Code</Label>
@@ -236,7 +229,10 @@ export function NewPatternModal({
                 <Label>Customer</Label>
                 <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
                   <PopoverTrigger
-                    className="flex h-10 w-full items-center justify-between rounded-md border border-[#E0E7FF] bg-[#FFFFFF] px-3 py-2 text-sm hover:bg-[#EEF2FF] hover:text-white"
+                    className={cn(
+                      "flex h-10 w-full items-center justify-between rounded-md border border-[#E0E7FF] bg-[#FFFFFF] px-3 py-2 text-sm hover:bg-[#EEF2FF] hover:text-[#4F46E5]",
+                      selectedCustomer ? "text-[#172554]" : "text-[#94A3B8]"
+                    )}
                     aria-expanded={customerOpen}
                   >
                     {selectedCustomer
@@ -261,7 +257,7 @@ export function NewPatternModal({
                                 )
                                 setCustomerOpen(false)
                               }}
-                              className="text-white hover:bg-[#EEF2FF]"
+                              className="text-[#172554] hover:bg-[#EEF2FF]"
                             >
                               <Check weight="duotone"
                                 className={cn(
@@ -282,10 +278,6 @@ export function NewPatternModal({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="pattern-name">Pattern Name</Label>
-                <Input id="pattern-name" placeholder="Enter pattern name" value={patternName} onChange={e => setPatternName(e.target.value)} className="bg-[#FFFFFF] border-[#E0E7FF]" />
-              </div>
-              <div className="space-y-2">
                 <Label htmlFor="category">Category</Label>
                 <Select value={category} onValueChange={setCategory}>
                   <SelectTrigger className="bg-[#FFFFFF] border-[#E0E7FF]">
@@ -296,6 +288,17 @@ export function NewPatternModal({
                     <SelectItem value="Hand Moulding">Hand Moulding</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">Avg Moulds per Hour</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  placeholder="e.g. 12"
+                  value={avgMouldsPerHour}
+                  onChange={(e) => setAvgMouldsPerHour(e.target.value === '' ? '' : Number(e.target.value))}
+                  className="bg-[#FFFFFF] border-[#E0E7FF] text-[#172554]"
+                />
               </div>
             </div>
 

@@ -266,23 +266,27 @@ export function ProductMappingModal({
                 </div>
 
                 {/* Row 2: Core Box multi-select + per-box quantity */}
-                <div className="space-y-2 pt-1 border-t border-[#E0E7FF]">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-[#64748B] text-xs">Core Boxes</Label>
-                    {coreBoxes.length === 0 && (
-                      <span className="text-[11px] text-[#94A3B8] italic">No core boxes defined on this pattern</span>
+                {line.selectedProductId && (
+                  <div className="space-y-2 pt-3 mt-4 border-t border-[#E0E7FF] animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-[#172554] text-xs font-bold uppercase tracking-wider">Required Core Boxes</Label>
+                      {coreBoxes.length === 0 ? (
+                        <span className="text-[11px] text-[#94A3B8] italic">No core boxes defined on this pattern</span>
+                      ) : (
+                        <span className="text-[11px] text-[#64748B]">Select core boxes needed for this product</span>
+                      )}
+                    </div>
+
+                    {coreBoxes.length > 0 && (
+                      <CoreBoxMultiSelect
+                        coreBoxes={coreBoxes}
+                        selected={line.selectedCoreBoxes}
+                        onToggle={(id, code) => toggleCoreBox(line.id, id, code)}
+                        onQtyChange={(id, code, qty) => updateCoreBoxQty(line.id, id, code, qty)}
+                      />
                     )}
                   </div>
-
-                  {coreBoxes.length > 0 && (
-                    <CoreBoxMultiSelect
-                      coreBoxes={coreBoxes}
-                      selected={line.selectedCoreBoxes}
-                      onToggle={(id, code) => toggleCoreBox(line.id, id, code)}
-                      onQtyChange={(id, code, qty) => updateCoreBoxQty(line.id, id, code, qty)}
-                    />
-                  )}
-                </div>
+                )}
               </div>
             ))}
 

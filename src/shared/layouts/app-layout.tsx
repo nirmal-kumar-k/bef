@@ -3,11 +3,13 @@
 import { Sidebar } from '@/shared/layouts/sidebar'
 import { TopBar } from '@/shared/layouts/topbar'
 import { useState, useEffect } from 'react'
+import { usePathname } from 'next/navigation'
 import { IngotLoader } from '@/shared/ui/ingot-loader'
 import { PageTransition } from '@/shared/layouts/page-transition'
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
+  const pathname = usePathname()
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 2500)
@@ -16,6 +18,16 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (isLoading) {
     return <IngotLoader />
+  }
+
+  if (pathname === '/login') {
+    return (
+      <main className="min-h-screen bg-background">
+        <PageTransition>
+          {children}
+        </PageTransition>
+      </main>
+    )
   }
 
   return (

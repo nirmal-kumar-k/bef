@@ -245,7 +245,7 @@ export default function PatternsPage() {
                 <Card
                   key={pattern.id}
                   onClick={() => setViewPattern(pattern)}
-                  className="bg-[#FFFFFF] border border-black/[0.04] rounded-[14px] transition-all duration-150 hover:-translate-y-[2px] hover:shadow-[0_8px_24px_rgba(0,0,0,0.3)] hover:border-white/[0.1] overflow-hidden flex flex-col cursor-pointer"
+                  className="bg-[#FFFFFF] border border-[#E0E7FF] rounded-[14px] transition-all duration-300 hover:-translate-y-[2px] hover:shadow-[0_8px_24px_-4px_rgba(79,70,229,0.25)] hover:border-[#4F46E5]/30 overflow-hidden flex flex-col cursor-pointer"
                 >
                   <div className="p-5 flex-1 space-y-4">
                     <div className="flex justify-between items-start gap-2">

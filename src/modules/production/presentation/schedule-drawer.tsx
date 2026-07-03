@@ -278,26 +278,28 @@ export function ScheduleDrawer({
             </div>
 
             {/* Add Order to Day */}
-            <div className="bg-[#FFFFFF] border border-[#E0E7FF] rounded-xl p-4 flex gap-3 items-end">
-              <div className="flex-1 space-y-2">
-                <Label className="text-[#64748B] text-xs uppercase font-bold tracking-wider">Allocate New Order to Day</Label>
-                <Select value={selectedOrder} onValueChange={setSelectedOrder}>
-                  <SelectTrigger className="bg-[#F4F6FB] border-[#E0E7FF] text-[#172554]">
-                    <SelectValue placeholder="Select active customer order..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#FFFFFF] border-[#E0E7FF]">
-                    {validOrders.map(o => (
-                      <SelectItem key={String(o.id || o._id)} value={String(o.id || o._id)} className="text-[#172554] hover:bg-[#EEF2FF] focus:bg-[#EEF2FF] focus:text-[#172554] cursor-pointer">
-                        {`${o.customerOrderNo} - ${o.customer}`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            <div className="bg-[#FFFFFF] border border-[#E0E7FF] rounded-xl p-4">
+              <Label className="text-[#64748B] text-xs uppercase font-bold tracking-wider block mb-2">Allocate New Order to Day</Label>
+              <div className="flex gap-3 items-center">
+                <div className="flex-1">
+                  <Select value={selectedOrder} onValueChange={setSelectedOrder}>
+                    <SelectTrigger className="bg-[#F4F6FB] border-[#E0E7FF] text-[#172554] h-10">
+                      <SelectValue placeholder="Select active customer order..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#FFFFFF] border-[#E0E7FF]">
+                      {validOrders.map(o => (
+                        <SelectItem key={String(o.id || o._id)} value={String(o.id || o._id)} className="text-[#172554] hover:bg-[#EEF2FF] focus:bg-[#EEF2FF] focus:text-[#172554] cursor-pointer">
+                          {`${o.customerOrderNo} - ${o.customer}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button onClick={handleAddOrder} disabled={!selectedOrder} className="h-10 bg-[#4F46E5] hover:bg-[#4F46E5]/90 text-white">
+                  <CalendarPlus className="w-4 h-4 mr-2" />
+                  Add to Plan
+                </Button>
               </div>
-              <Button onClick={handleAddOrder} disabled={!selectedOrder} className="bg-[#4F46E5] hover:bg-[#4F46E5]/90 text-white">
-                <CalendarPlus className="w-4 h-4 mr-2" />
-                Add to Plan
-              </Button>
             </div>
 
             {/* Scheduled Orders List */}
