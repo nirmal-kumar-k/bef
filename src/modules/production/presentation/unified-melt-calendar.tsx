@@ -437,20 +437,20 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, products, patterns,
 
       {/* DAILY HEAT PLANNING MODAL */}
       {selectedDateForPlanning && (
-        <div className="fixed inset-0 z-[40] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setSelectedDateForPlanning(null)}>
-          <div className="bg-[#FFFFFF] border-t-2 border-[#4F46E5] rounded-[14px] text-[#172554] max-w-5xl w-full flex flex-col shadow-2xl h-[85vh] animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center p-6 border-b border-[#1F2937] shrink-0 bg-[#FFFFFF] rounded-t-[14px]">
+        <div className="fixed inset-0 z-[40] flex justify-center items-start pt-10 pb-10 bg-black/60 backdrop-blur-sm px-4 overflow-y-auto" onClick={() => setSelectedDateForPlanning(null)}>
+          <div className="bg-[#F4F6FB] border-t-2 border-[#4F46E5] rounded-[14px] text-[#172554] max-w-5xl w-full flex flex-col shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center p-6 border-b border-[#E0E7FF] shrink-0 bg-[#FFFFFF] rounded-t-[14px]">
               <div>
                 <h2 className="text-2xl font-bold font-heading tracking-tight text-[#172554]">Daily Heat Plan</h2>
                 <p className="text-[#64748B] font-mono text-sm mt-1">{selectedDateForPlanning}</p>
               </div>
-              <button onClick={() => setSelectedDateForPlanning(null)} className="text-[#64748B] hover:text-white transition-colors bg-[#FFFFFF] p-2 rounded-full hover:bg-[#374151]">
+              <button onClick={() => setSelectedDateForPlanning(null)} className="text-[#64748B] hover:text-[#172554] transition-colors bg-[#F4F6FB] p-2 rounded-full hover:bg-[#EEF2FF]">
                 <X className="w-5 h-5" />
               </button>
             </div>
             
             {furnaces.length > 0 && (
-              <div className="flex border-b border-[#1F2937] bg-[#FFFFFF] px-6 overflow-x-auto">
+              <div className="flex border-b border-[#E0E7FF] bg-[#FFFFFF] px-6 overflow-x-auto shrink-0">
                 {furnaces.map(f => (
                   <button
                     key={f.id}
@@ -518,7 +518,7 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, products, patterns,
                         </SelectTrigger>
                         <SelectContent className="bg-[#FFFFFF] border-[#E0E7FF]">
                           {ALL_GRADES.map(g => (
-                            <SelectItem key={g} value={g} className="text-[#172554] hover:bg-[#374151]">{g}</SelectItem>
+                            <SelectItem key={g} value={g} className="text-[#172554] hover:bg-[#EEF2FF]">{g}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -530,7 +530,7 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, products, patterns,
                         type="number" 
                         readOnly
                         value={heat.meltWeight || heat.quantityScheduled || 0} 
-                        className="bg-[#374151] border-[#E0E7FF] text-[#64748B] font-mono h-10 cursor-not-allowed" 
+                        className="bg-[#F8FAFC] border-[#E0E7FF] text-[#94A3B8] font-mono h-10 cursor-not-allowed" 
                       />
                     </div>
 
@@ -539,7 +539,7 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, products, patterns,
                       <Button
                         variant="outline"
                         onClick={() => setAllocationModalOpen({ idx, grade: heat.grade })}
-                        className="w-full bg-[#FFFFFF] border-[#E0E7FF] text-[#172554] hover:bg-[#374151] hover:text-white h-10 justify-between"
+                        className="w-full bg-[#FFFFFF] border-[#E0E7FF] text-[#172554] hover:bg-[#EEF2FF] hover:text-[#4F46E5] h-10 justify-between"
                       >
                         <span className="truncate">
                           {heat.allocations?.length > 0 ? `${heat.allocations.length} Products Allocated` : 'Select Moulds...'}
@@ -553,7 +553,7 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, products, patterns,
               })}
               
               {planningHeats.filter(h => h.equipmentId === activeFurnaceTab && h.quantityScheduled !== 0).length === 0 && (
-                <div className="text-center text-[#94A3B8] py-20 bg-[#FFFFFF] border border-[#E0E7FF] rounded-xl border-dashed">
+                <div className="text-center text-[#64748B] py-8 bg-[#FFFFFF] border border-[#E0E7FF] rounded-xl border-dashed">
                   No heats planned for this furnace on {selectedDateForPlanning}.
                 </div>
               )}
@@ -561,14 +561,14 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, products, patterns,
               <Button 
                 variant="outline" 
                 onClick={handleAddPlanningHeat} 
-                className="w-full border-dashed border-[#4F46E5]/50 text-[#4F46E5] hover:bg-[#4F46E5]/10 hover:text-[#E56020] hover:border-[#4F46E5] h-14 bg-transparent mt-4"
+                className="w-full border-dashed border-[#4F46E5]/50 text-[#4F46E5] hover:bg-[#4F46E5]/10 hover:text-[#4F46E5] hover:border-[#4F46E5] h-14 bg-transparent mt-4"
               >
                 <Plus className="w-5 h-5 mr-2" weight="bold" />
                 Add Heat Slot
               </Button>
             </div>
             
-            <div className="p-6 border-t border-[#1F2937] bg-[#FFFFFF] rounded-b-[14px] flex justify-between items-center shrink-0">
+            <div className="p-6 border-t border-[#E0E7FF] bg-[#FFFFFF] rounded-b-[14px] flex justify-between items-center shrink-0">
               <div className="text-[#94A3B8] text-sm">
                 Total Planned Weight: <span className="text-[#172554] font-mono font-bold ml-1">{planningHeats.filter(h => h.quantityScheduled !== 0).reduce((acc, curr) => acc + (curr.meltWeight || curr.quantityScheduled || 0), 0)} kg</span>
               </div>
@@ -600,16 +600,16 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, products, patterns,
 
       {/* TRACKING DRAWER */}
       {selectedDate && activeTab === 'tracking' && (
-        <div className="fixed inset-0 z-[40] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setSelectedDate(null)}>
-          <div className="bg-[#FFFFFF] border-t-2 border-[#4F46E5] rounded-[14px] text-[#172554] max-w-4xl w-full flex flex-col shadow-2xl max-h-[85vh] animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-            <div className="p-6 border-b border-[#1F2937] bg-[#FFFFFF] rounded-t-[14px] flex justify-between items-start shrink-0">
+        <div className="fixed inset-0 z-[40] flex justify-center items-start pt-10 pb-10 bg-black/60 backdrop-blur-sm px-4 overflow-y-auto" onClick={() => setSelectedDate(null)}>
+          <div className="bg-[#F4F6FB] border-t-2 border-[#4F46E5] rounded-[14px] text-[#172554] max-w-4xl w-full flex flex-col shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-[#E0E7FF] bg-[#FFFFFF] rounded-t-[14px] flex justify-between items-start shrink-0">
               <div>
                 <h2 className="text-xl font-bold text-[#172554] font-mono tracking-tight">{selectedDate}</h2>
                 <Badge variant="outline" className="mt-2 border-[#4F46E5]/30 text-[#4F46E5] bg-[#4F46E5]/10 uppercase text-[10px] font-bold tracking-wider">
                   MELT TRACKING
                 </Badge>
               </div>
-              <button onClick={() => setSelectedDate(null)} className="text-[#64748B] hover:text-white transition-colors bg-[#FFFFFF] p-2 rounded-full hover:bg-[#374151]">
+              <button onClick={() => setSelectedDate(null)} className="text-[#64748B] hover:text-[#172554] transition-colors bg-[#F4F6FB] p-2 rounded-full hover:bg-[#EEF2FF]">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -658,8 +658,8 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, products, patterns,
                 }
 
                 return (
-                  <details key={idx} className="group bg-[#FFFFFF] border border-[#E0E7FF] rounded-lg overflow-hidden" open={idx === 0}>
-                    <summary className="p-3 cursor-pointer select-none bg-[#FFFFFF] hover:bg-[#374151] transition-colors flex items-center justify-between outline-none">
+                  <details className="group [&_summary::-webkit-details-marker]:hidden" open>
+                    <summary className="p-3 cursor-pointer select-none bg-[#FFFFFF] hover:bg-[#EEF2FF] transition-colors flex items-center justify-between outline-none">
                       <div className="flex items-center gap-3">
                         <span className="font-bold text-[#172554] font-mono">{heat.heatNo || `H00${idx+1}`}</span>
                         <Badge variant="outline" className="border-[#E0E7FF] text-[#64748B] bg-[#FFFFFF] text-[10px] uppercase">
@@ -690,7 +690,7 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, products, patterns,
                         <div className="font-mono text-center">{formatVar(varFeMn)}</div>
                       </div>
 
-                      <div className="h-px w-full bg-[#374151] my-2" />
+                      <div className="h-px w-full bg-[#E0E7FF] my-2" />
                       
                       <div className="flex items-center justify-between">
                         <Label className="text-xs text-[#64748B] uppercase font-bold">Heats Completed</Label>
@@ -709,7 +709,7 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, products, patterns,
                 )
               })}
               {dayHeatsForDrawer.length === 0 && (
-                <div className="text-center text-[#94A3B8] py-20 bg-[#FFFFFF] border border-[#E0E7FF] rounded-xl border-dashed">
+                <div className="text-center text-[#64748B] py-8 bg-[#FFFFFF] border border-[#E0E7FF] rounded-xl border-dashed">
                   No heats scheduled for this date.
                 </div>
               )}
@@ -774,9 +774,9 @@ function PouringAllocationModal({ furnace, heat, backlogs, onSave, onClose }: an
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
-      <div className="bg-[#FFFFFF] border border-[#E0E7FF] rounded-[14px] text-[#172554] max-w-3xl w-full flex flex-col shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-        <div className="flex justify-between items-center p-5 border-b border-[#E0E7FF]">
+    <div className="fixed inset-0 z-[60] flex justify-center items-start pt-10 pb-10 bg-black/60 backdrop-blur-sm px-4 overflow-y-auto" onClick={onClose}>
+      <div className="bg-[#F4F6FB] border border-[#E0E7FF] rounded-[14px] text-[#172554] max-w-3xl w-full flex flex-col shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+        <div className="flex justify-between items-center p-5 border-b border-[#E0E7FF] bg-[#FFFFFF] rounded-t-[14px]">
           <div>
             <h3 className="text-xl font-bold font-heading">Pouring Allocation</h3>
             <p className="text-[#64748B] text-sm mt-1 font-mono">{furnace?.name} ({furnaceCapacity}kg) - Grade {heat.grade}</p>
@@ -796,33 +796,33 @@ function PouringAllocationModal({ furnace, heat, backlogs, onSave, onClose }: an
               {backlogs.map((b: any) => {
                 const maxPossible = b.boxWeight > 0 ? Math.floor(furnaceCapacity / b.boxWeight) : 0
                 return (
-                  <div key={b.itemId} className="bg-[#1F2937] border border-[#374151] rounded-lg p-4 flex items-center justify-between">
+                  <div key={b.itemId} className="bg-[#FFFFFF] border border-[#E0E7FF] rounded-lg p-4 flex items-center justify-between shadow-sm">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-[#F3F4F6]">{b.productName}</span>
-                        <Badge variant="outline" className="border-[#374151] text-[#9CA3AF] bg-[#111827] text-[10px]">
+                        <span className="font-bold text-[#172554]">{b.productName}</span>
+                        <Badge variant="outline" className="border-[#E0E7FF] text-[#64748B] bg-[#F4F6FB] text-[10px]">
                           {b.orderNo}
                         </Badge>
                       </div>
-                      <div className="text-[#9CA3AF] text-xs mt-2 flex gap-4">
-                        <span>Produced: <strong className="text-white">{b.producedMoulds}</strong></span>
-                        <span>Available: <strong className="text-green-400">{b.availableMoulds}</strong></span>
-                        <span>Box Wt: <strong className="text-white font-mono">{b.boxWeight}kg</strong></span>
+                      <div className="text-[#64748B] text-xs mt-2 flex gap-4">
+                        <span>Produced: <strong className="text-[#172554]">{b.producedMoulds}</strong></span>
+                        <span>Available: <strong className="text-green-600">{b.availableMoulds}</strong></span>
+                        <span>Box Wt: <strong className="text-[#172554] font-mono">{b.boxWeight}kg</strong></span>
                       </div>
-                      <div className="text-[#6B7280] text-[10px] mt-1 font-mono uppercase tracking-wider">
+                      <div className="text-[#64748B] text-[10px] mt-1 font-mono uppercase tracking-wider">
                         Max Possible Moulds for Furnace: {maxPossible}
                       </div>
                     </div>
                     
                     <div className="w-24">
-                      <Label className="text-[10px] text-[#9CA3AF] uppercase mb-1 block">Allocate</Label>
+                      <Label className="text-[10px] text-[#64748B] uppercase mb-1 block">Allocate</Label>
                       <Input
                         type="number"
                         min="0"
                         max={Math.min(b.availableMoulds, maxPossible)}
                         value={allocs[b.itemId] || ''}
                         onChange={e => handleAllocationChange(b.itemId, e.target.value)}
-                        className="bg-[#111827] border-[#4B5563] text-white font-mono h-9 text-center"
+                        className="bg-[#FFFFFF] border-[#E0E7FF] text-[#172554] font-mono h-9 text-center focus-visible:ring-1 focus-visible:ring-[#4F46E5]"
                         placeholder="0"
                       />
                     </div>
@@ -833,18 +833,18 @@ function PouringAllocationModal({ furnace, heat, backlogs, onSave, onClose }: an
           )}
         </div>
         
-        <div className="p-5 border-t border-[#1F2937] bg-[#111827] rounded-b-[14px] flex justify-between items-center">
-          <div className="text-sm text-[#9CA3AF]">
+        <div className="p-5 border-t border-[#E0E7FF] bg-[#F4F6FB] rounded-b-[14px] flex justify-between items-center">
+          <div className="text-sm text-[#64748B]">
             Allocated Weight:{' '}
             <span className={cn(
               "font-mono font-bold ml-1 text-lg",
-              totalAllocatedWeight > furnaceCapacity ? "text-red-500" : "text-green-400"
+              totalAllocatedWeight > furnaceCapacity ? "text-red-500" : "text-[#4F46E5]"
             )}>
               {totalAllocatedWeight} / {furnaceCapacity} kg
             </span>
           </div>
           <div className="flex gap-3">
-            <Button variant="outline" onClick={onClose} className="border-[#374151] text-[#9CA3AF] hover:text-white bg-transparent">Cancel</Button>
+            <Button variant="outline" onClick={onClose} className="border-[#E0E7FF] text-[#64748B] hover:text-[#172554] bg-transparent">Cancel</Button>
             <Button 
               onClick={handleSave} 
               disabled={totalAllocatedWeight > furnaceCapacity}

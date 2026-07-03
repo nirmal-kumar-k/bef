@@ -226,7 +226,7 @@ export function PourPlanningTab({ patterns, openOrders, dailyPlans }: any) {
                     "p-4 rounded-xl border flex items-center justify-between cursor-pointer transition-all duration-200",
                     selectedHeatId === h.uid || (!selectedHeatId && selectedHeat.uid === h.uid)
                       ? "bg-[#EEF2FF] border-[#4285F4]/30 shadow-md"
-                      : "bg-[#F4F6FB] border-[#E0E7FF] hover:bg-[#FFFFFF] hover:border-[#374151]"
+                      : "bg-[#F4F6FB] border-[#E0E7FF] hover:bg-[#FFFFFF] hover:border-[#4F46E5]"
                   )}
                 >
                   <div>

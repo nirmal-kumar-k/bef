@@ -57,31 +57,32 @@ export interface TimeSlot {
   hours: number
 }
 
-export function generateTimeSlots(startTime: string, endTime: string, breakStartTime?: string, breakEndTime?: string): TimeSlot[] {
+export function generateTimeSlots(startTime: string, endTime: string, breaks: {startTime: string, endTime: string}[] = []): TimeSlot[] {
   let startMins = parseTimeToMinutes(startTime)
   let endMins = parseTimeToMinutes(endTime)
   if (endMins <= startMins) {
     endMins += 24 * 60 // spans across midnight
   }
   
-  let breakStartMins = breakStartTime ? parseTimeToMinutes(breakStartTime) : undefined
-  let breakEndMins = breakEndTime ? parseTimeToMinutes(breakEndTime) : undefined
-  
-  if (breakStartMins !== undefined && breakEndMins !== undefined) {
+  // Parse and normalize breaks
+  const normalizedBreaks = breaks.map(b => {
+    let bs = parseTimeToMinutes(b.startTime)
+    let be = parseTimeToMinutes(b.endTime)
     // If break falls on the next day relative to 00:00 but shift started previous day
-    if (breakStartMins < startMins) breakStartMins += 24 * 60
-    if (breakEndMins <= breakStartMins) breakEndMins += 24 * 60
-  }
+    if (bs < startMins) bs += 24 * 60
+    if (be <= bs) be += 24 * 60
+    return { bs, be }
+  }).sort((a, b) => a.bs - b.bs) // sort by start time
   
   const slots: TimeSlot[] = []
   let currentMins = startMins
   
   while (currentMins < endMins) {
-    if (breakStartMins !== undefined && breakEndMins !== undefined) {
-      if (currentMins >= breakStartMins && currentMins < breakEndMins) {
-        currentMins = breakEndMins
-        continue
-      }
+    // Check if we are currently inside a break
+    const activeBreak = normalizedBreaks.find(b => currentMins >= b.bs && currentMins < b.be)
+    if (activeBreak) {
+      currentMins = activeBreak.be
+      continue
     }
   
     let h = Math.floor((currentMins % (24 * 60)) / 60)
@@ -97,8 +98,10 @@ export function generateTimeSlots(startTime: string, endTime: string, breakStart
     
     let nextHourMins = currentMins + 60
     
-    if (breakStartMins !== undefined && currentMins < breakStartMins && nextHourMins > breakStartMins) {
-      nextHourMins = breakStartMins
+    // Check if a break starts before the next hour mark
+    const nextBreak = normalizedBreaks.find(b => b.bs > currentMins && b.bs < nextHourMins)
+    if (nextBreak) {
+      nextHourMins = nextBreak.bs
     }
     
     if (nextHourMins > endMins) {

@@ -88,7 +88,7 @@ export function MouldPlanningModal({
 
   const selectedShift = shifts.find(s => s.id === selectedShiftId) || shifts[0]
   const TIME_SLOTS: TimeSlot[] = selectedShift 
-    ? generateTimeSlots(selectedShift.startTime, selectedShift.endTime, selectedShift.breakStartTime, selectedShift.breakEndTime) 
+    ? generateTimeSlots(selectedShift.startTime, selectedShift.endTime, selectedShift.breaks || []) 
     : []
 
   // Initialization when order changes or modal opens

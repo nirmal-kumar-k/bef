@@ -81,7 +81,7 @@ export function CorePlanningModal({
 
   const selectedShift = shifts.find(s => s.id === selectedShiftId) || shifts[0]
   const TIME_SLOTS: TimeSlot[] = selectedShift 
-    ? generateTimeSlots(selectedShift.startTime, selectedShift.endTime, selectedShift.breakStartTime, selectedShift.breakEndTime) 
+    ? generateTimeSlots(selectedShift.startTime, selectedShift.endTime, selectedShift.breaks || []) 
     : []
 
   // Initialization when order changes or modal opens
@@ -220,20 +220,40 @@ export function CorePlanningModal({
     return Math.round(totalExpected)
   }
 
-  const handleFillRemaining = (code: string, remaining: number) => {
-    const perHour = Math.floor(remaining / 12)
-    let remainder = Math.max(0, remaining - (perHour * TIME_SLOTS.length))
-    
+  const handleTargetQuantityChange = (code: string, targetStr: string) => {
+    const target = parseInt(targetStr, 10)
+    if (isNaN(target) || target < 0) {
+      setHourlyMatrix(prev => ({ ...prev, [code]: {} }))
+      setWorkers(prev => ({ ...prev, [code]: {} }))
+      return
+    }
+
+    const backlog = orderCoreBacklogs.find(b => b.coreBoxCode === code)
+    const pattern = patterns.find(p => p.code === backlog?.patternRef)
+    const selectedEqId = selectedEquipments[code]
+    const selectedEq = equipments.find(e => e.id === selectedEqId)
+    const scb = pattern?.sharedCoreBoxes?.find((s: any) => s.code === code)
+    const avgProd = selectedEq?.avgPiecesPerHour || Number(scb?.avgCoreProduction) || Number(pattern?.avgMouldsPerHour) || 10
+
     const newHours: Record<string, number> = {}
-    TIME_SLOTS.forEach((slot, idx) => {
-      newHours[slot.time] = perHour + (idx === 0 ? remainder : 0) // dump remainder in first hour
+    const newWorkers: Record<string, number> = {}
+    
+    const basePerSlot = Math.floor(target / TIME_SLOTS.length)
+    let remainder = target - (basePerSlot * TIME_SLOTS.length)
+
+    TIME_SLOTS.forEach(slot => {
+      const qtyForSlot = basePerSlot + (remainder > 0 ? 1 : 0)
+      if (remainder > 0) remainder--
+
+      newHours[slot.time] = qtyForSlot
+      // Calculate workers needed to achieve this quantity in this time slot
+      newWorkers[slot.time] = qtyForSlot > 0 ? Math.max(1, Math.ceil(qtyForSlot / (avgProd * slot.hours))) : 0
     })
     
-    setHourlyMatrix(prev => ({
-      ...prev,
-      [code]: newHours
-    }))
+    setHourlyMatrix(prev => ({ ...prev, [code]: newHours }))
+    setWorkers(prev => ({ ...prev, [code]: newWorkers }))
   }
+
 
   const dateObj = new Date(date || new Date())
   const dateString = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
@@ -337,13 +357,20 @@ export function CorePlanningModal({
                       </div>
                       <div className="flex items-center gap-3">
                         <div className="flex-1 text-sm text-[#64748B]">Planned Today:</div>
-                        <span className="font-mono text-[#4285F4] font-bold text-2xl">{plannedForDay}</span>
+                        <Input
+                          type="number"
+                          min="0"
+                          className="w-24 font-mono text-[#4285F4] font-bold text-xl text-center bg-[#FFFFFF] border-[#E0E7FF] focus-visible:ring-1 focus-visible:ring-[#4285F4] shadow-sm h-10 px-1"
+                          value={plannedForDay === 0 ? '' : plannedForDay}
+                          onChange={e => handleTargetQuantityChange(cb.coreBoxCode!, e.target.value)}
+                          placeholder="0"
+                        />
                         {remaining > 0 && plannedForDay === 0 && (
                           <Button 
                             variant="ghost" 
                             size="sm"
                             className="text-xs h-8 px-3 ml-2 text-[#4285F4] hover:bg-[#4285F4]/10 border border-[#4285F4]/30 bg-[#4285F4]/5 transition-colors"
-                            onClick={() => handleFillRemaining(cb.coreBoxCode!, remaining)}
+                            onClick={() => handleTargetQuantityChange(cb.coreBoxCode!, String(remaining))}
                           >
                             Fill
                           </Button>
