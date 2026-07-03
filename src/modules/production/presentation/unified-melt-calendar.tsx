@@ -157,6 +157,7 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, products, patterns,
       ...planningHeats,
       {
         itemId: `manual-${Date.now()}`,
+        orderId: 'BATCH-MELT',
         heatNo: newHeatNo,
         grade: 'FC 200',
         meltWeight: 0,
@@ -240,7 +241,9 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, products, patterns,
     if (!selectedDateForPlanning) return
     const heatsToSave = planningHeats.map(h => ({
       ...h,
-      quantityScheduled: h.meltWeight,
+      orderId: h.orderId || 'BATCH-MELT',
+      quantityScheduled: Number(h.meltWeight) || 0,
+      actualQuantity: h.actualQuantity,
       date: selectedDateForPlanning
     }))
     onSaveDayPlan(selectedDateForPlanning, heatsToSave)
@@ -277,7 +280,8 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, products, patterns,
       const form = actualsForms[h.itemId || h.heatNo]
       return {
         ...h,
-        actualQuantity: form.meltWeight ? Number(form.meltWeight) : undefined,
+        orderId: h.orderId || 'BATCH-MELT',
+        actualQuantity: form?.meltWeight ? Number(form.meltWeight) : undefined,
         actuals: {
           pigIron: form.pigIron ? Number(form.pigIron) : undefined,
           scrap: form.scrap ? Number(form.scrap) : undefined,
@@ -490,7 +494,7 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, products, patterns,
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6 p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-6 p-6">
                     <div className="space-y-2">
                       <Label className="text-xs font-bold text-[#94A3B8] uppercase tracking-wider">Time Slot</Label>
                       <div className="flex items-center gap-2">
@@ -531,6 +535,18 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, products, patterns,
                         readOnly
                         value={heat.meltWeight || heat.quantityScheduled || 0} 
                         className="bg-[#F8FAFC] border-[#E0E7FF] text-[#94A3B8] font-mono h-10 cursor-not-allowed" 
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label className="text-xs font-bold text-[#4285F4] uppercase tracking-wider">Actual Melt (kg)</Label>
+                      <Input 
+                        type="number"
+                        min="0"
+                        value={heat.actualQuantity || ''}
+                        onChange={e => handleUpdatePlanningHeat(idx, 'actualQuantity', e.target.value === '' ? undefined : Number(e.target.value))}
+                        className="bg-[#F4F6FB] border-[#4285F4]/30 focus:border-[#4285F4] text-[#4285F4] font-mono h-10 shadow-inner placeholder:text-[#94A3B8]" 
+                        placeholder="Act. kg"
                       />
                     </div>
 

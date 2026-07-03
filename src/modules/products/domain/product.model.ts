@@ -12,6 +12,7 @@ export interface IProduct extends Document {
   remarks?: string
   images?: string[]
   linkedPattern?: string
+  stock?: number
   createdAt: Date
   updatedAt: Date
 }
@@ -29,6 +30,7 @@ const ProductSchema = new Schema<IProduct>(
     remarks: { type: String },
     images: { type: [String] },
     linkedPattern: { type: String },
+    stock: { type: Number, default: 0 },
   },
   { timestamps: true }
 )

@@ -17,7 +17,7 @@ import { cn } from '@/shared/lib/utils'
 import { generateTimeSlots, TimeSlot } from '@/shared/lib/utils'
 import type { Shift } from './shift-master-page'
 
-interface MouldPlanningModalProps {
+interface KnockoutPlanningModalProps {
   isOpen: boolean
   onClose: () => void
   date: string
@@ -28,7 +28,7 @@ interface MouldPlanningModalProps {
   onSaveDayPlan: (date: string, plans: any[]) => void
 }
 
-export function MouldPlanningModal({
+export function KnockoutPlanningModal({
   isOpen,
   onClose,
   date,
@@ -37,7 +37,7 @@ export function MouldPlanningModal({
   dailyPlans,
   patterns,
   onSaveDayPlan
-}: MouldPlanningModalProps) {
+}: KnockoutPlanningModalProps) {
   const [selectedOrder, setSelectedOrder] = useState<string>('')
   
   // Shifts
@@ -74,10 +74,10 @@ export function MouldPlanningModal({
         fetch('/api/equipment')
           .then(res => res.json())
           .then(data => {
-            const mouldEquips = data.filter((e: any) => e.type === 'Moulding Machine' && e.isActive)
-            setEquipments(mouldEquips)
-            if (mouldEquips.length > 0 && !activeMachineTab) {
-              setActiveMachineTab(mouldEquips[0].id)
+            const knockoutEquips = data.filter((e: any) => e.type === 'Knockout Machine' && e.isActive)
+            setEquipments(knockoutEquips)
+            if (knockoutEquips.length > 0 && !activeMachineTab) {
+              setActiveMachineTab(knockoutEquips[0].id)
             }
           })
           .catch(console.error)
@@ -106,7 +106,7 @@ export function MouldPlanningModal({
     const order = openOrders.find(o => o.id === selectedOrder)
     if (!order) return
 
-    const existingPlans = dailyPlans.filter(p => p.orderId === selectedOrder && p.stage === 'Mould')
+    const existingPlans = dailyPlans.filter(p => p.orderId === selectedOrder && p.stage === 'Knockout')
     
     const initMatrix: Record<string, Record<string, number>> = {}
     const initWorkers: Record<string, Record<string, number>> = {}
@@ -137,7 +137,7 @@ export function MouldPlanningModal({
     const order = openOrders.find(o => o.id === selectedOrder)
     if (!order) return
 
-    const orderMouldBacklog = backlogData.filter(b => b.orderNo === order.customerOrderNo)
+    const orderKnockoutBacklog = backlogData.filter(b => b.orderNo === order.customerOrderNo)
     const plansToSave: any[] = []
 
     Object.keys(hourlyMatrix).forEach(key => {
@@ -146,17 +146,17 @@ export function MouldPlanningModal({
       const totalScheduled = Object.values(hours).reduce((sum, val) => sum + (val || 0), 0)
       
       if (totalScheduled > 0 || (workers[key] && Object.values(workers[key]).some(w => w > 0)) || actuals[key] !== undefined) {
-        const backlog = orderMouldBacklog.find(b => b.patternRef === code)
+        const backlog = orderKnockoutBacklog.find(b => b.patternRef === code)
         const maxWorkers = workers[key] && Object.values(workers[key]).length > 0 
           ? Math.max(...Object.values(workers[key])) 
           : 1
           
-        const existingPlan = dailyPlans.find(p => p.orderId === selectedOrder && p.stage === 'Mould' && p.patternRef === code && p.equipmentId === machineId)
+        const existingPlan = dailyPlans.find(p => p.orderId === selectedOrder && p.stage === 'Knockout' && p.patternRef === code && p.equipmentId === machineId)
           
         plansToSave.push({
           orderId: selectedOrder,
           itemId: backlog?.itemId || `${selectedOrder}-0`,
-          stage: 'Mould',
+          stage: 'Knockout',
           patternRef: code,
           quantityScheduled: totalScheduled || existingPlan?.quantityScheduled || 0,
           laborersAssigned: maxWorkers,
@@ -175,12 +175,12 @@ export function MouldPlanningModal({
   }
 
   const order = openOrders.find(o => o.id === selectedOrder)
-  const orderMouldBacklogs = order ? backlogData.filter(b => b.orderNo === order.customerOrderNo) : []
+  const orderKnockoutBacklogs = order ? backlogData.filter(b => b.orderNo === order.customerOrderNo) : []
   
-  // Get active moulds (group by patternRef to merge identical pattern requirements)
-  const activeMoulds = useMemo(() => {
-    const grouped = new Map<string, typeof orderMouldBacklogs[0]>()
-    orderMouldBacklogs.forEach(b => {
+  // Get active knockouts (group by patternRef to merge identical pattern requirements)
+  const activeKnockouts = useMemo(() => {
+    const grouped = new Map<string, typeof orderKnockoutBacklogs[0]>()
+    orderKnockoutBacklogs.forEach(b => {
       if (!b.patternRef) return
       if (grouped.has(b.patternRef)) {
         const existing = grouped.get(b.patternRef)!
@@ -191,7 +191,7 @@ export function MouldPlanningModal({
       }
     })
     return Array.from(grouped.values())
-  }, [orderMouldBacklogs])
+  }, [orderKnockoutBacklogs])
 
   // Get total for a pattern across ALL machines (for checking remaining quota)
   const getPatternTotalAcrossMachines = (patternRef: string) => {
@@ -207,11 +207,11 @@ export function MouldPlanningModal({
 
   // Smart Auto-fill logic when machine tab changes
   useEffect(() => {
-    if (!activeMachineTab || activeMoulds.length === 0 || TIME_SLOTS.length === 0) return
+    if (!activeMachineTab || activeKnockouts.length === 0 || TIME_SLOTS.length === 0) return
 
     setHourlyMatrix(prevMatrix => {
       let hasExistingPlan = false
-      activeMoulds.forEach(cb => {
+      activeKnockouts.forEach(cb => {
         const key = `${activeMachineTab}_${cb.patternRef}`
         const hours = prevMatrix[key] || {}
         if (Object.values(hours).some(v => v !== undefined && v > 0)) hasExistingPlan = true
@@ -221,10 +221,10 @@ export function MouldPlanningModal({
       const newMatrix = { ...prevMatrix }
       let updated = false
       
-      activeMoulds.forEach(cb => {
+      activeKnockouts.forEach(cb => {
         const key = `${activeMachineTab}_${cb.patternRef}`
         const pattern = patterns.find(p => p.code === cb.patternRef)
-        const avgProd = Number(pattern?.avgMouldsPerHour) || 10
+        const avgProd = Number(pattern?.avgKnockoutsPerHour) || 10
         
         let patternTotal = 0
         Object.keys(prevMatrix).forEach(k => {
@@ -254,7 +254,7 @@ export function MouldPlanningModal({
 
     setWorkers(prevWorkers => {
       let hasExistingWorkers = false
-      activeMoulds.forEach(cb => {
+      activeKnockouts.forEach(cb => {
         const key = `${activeMachineTab}_${cb.patternRef}`
         const w = prevWorkers[key] || {}
         if (Object.values(w).some(v => v !== undefined && v > 0)) hasExistingWorkers = true
@@ -264,10 +264,10 @@ export function MouldPlanningModal({
       const newWorkers = { ...prevWorkers }
       let updated = false
       
-      activeMoulds.forEach(cb => {
+      activeKnockouts.forEach(cb => {
         const key = `${activeMachineTab}_${cb.patternRef}`
         const pattern = patterns.find(p => p.code === cb.patternRef)
-        const avgProd = Number(pattern?.avgMouldsPerHour) || 10
+        const avgProd = Number(pattern?.avgKnockoutsPerHour) || 10
         
         let patternTotal = 0
         Object.keys(hourlyMatrix).forEach(k => {
@@ -296,28 +296,28 @@ export function MouldPlanningModal({
       
       return updated ? newWorkers : prevWorkers
     })
-  }, [activeMachineTab, activeMoulds.length, TIME_SLOTS.length, patterns])
+  }, [activeMachineTab, activeKnockouts.length, TIME_SLOTS.length, patterns])
 
   const getColTotal = (patternRef: string) => {
     const key = `${activeMachineTab}_${patternRef}`
     const hours = hourlyMatrix[key] || {}
     const sum = Object.values(hours).reduce((sum, val) => sum + (val || 0), 0)
     if (sum === 0) {
-      const existingPlan = dailyPlans.find(p => p.orderId === selectedOrder && p.stage === 'Mould' && p.patternRef === patternRef && p.equipmentId === activeMachineTab)
+      const existingPlan = dailyPlans.find(p => p.orderId === selectedOrder && p.stage === 'Knockout' && p.patternRef === patternRef && p.equipmentId === activeMachineTab)
       return existingPlan?.quantityScheduled || 0
     }
     return sum
   }
 
   const getRowTotal = (timeSlot: string) => {
-    return activeMoulds.reduce((sum, cb) => {
+    return activeKnockouts.reduce((sum, cb) => {
       const key = `${activeMachineTab}_${cb.patternRef}`
       return sum + (hourlyMatrix[key]?.[timeSlot] || 0)
     }, 0)
   }
 
   const getGrandTotal = () => {
-    return activeMoulds.reduce((sum, cb) => sum + getColTotal(cb.patternRef!), 0)
+    return activeKnockouts.reduce((sum, cb) => sum + getColTotal(cb.patternRef!), 0)
   }
 
   const handleHourlyChange = (patternRef: string, timeSlot: string, value: string) => {
@@ -434,7 +434,7 @@ export function MouldPlanningModal({
               </Select>
             </div>
 
-            {selectedOrder && activeMoulds.length > 0 && (
+            {selectedOrder && activeKnockouts.length > 0 && (
               <div className="flex border-b border-[#E0E7FF] mt-4 overflow-x-auto">
                 {equipments.map(eq => (
                   <button
@@ -453,13 +453,13 @@ export function MouldPlanningModal({
               </div>
             )}
             
-            {selectedOrder && activeMoulds.length === 0 && (
-              <p className="text-sm text-[#94A3B8] italic">No moulds mapped for this order.</p>
+            {selectedOrder && activeKnockouts.length === 0 && (
+              <p className="text-sm text-[#94A3B8] italic">No knockouts mapped for this order.</p>
             )}
           </div>
 
           {/* SECTION 2: Shift Time Table */}
-          {selectedOrder && activeMoulds.length > 0 && activeMachineTab && (
+          {selectedOrder && activeKnockouts.length > 0 && activeMachineTab && (
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <Label className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">Shift Time Table</Label>
@@ -471,9 +471,9 @@ export function MouldPlanningModal({
                   <thead className="bg-[#FFFFFF] border-b border-[#E0E7FF] text-[#64748B] uppercase tracking-wider font-bold">
                     <tr>
                       <th rowSpan={2} className="px-6 py-4 sticky left-0 bg-[#FFFFFF] z-10 w-40 whitespace-nowrap text-xs align-bottom pb-6">Time Slot</th>
-                      {activeMoulds.map(cb => {
+                      {activeKnockouts.map(cb => {
                         const pattern = patterns.find(p => p.code === cb.patternRef)
-                        const mouldingType = pattern?.category || 'Machine Moulding'
+                        const knockoutingType = pattern?.category || 'Machine Knockouting'
                         
                         const totalAcross = getPatternTotalAcrossMachines(cb.patternRef!)
                         const remaining = Math.max(0, cb.totalRequired - cb.totalScheduled)
@@ -481,7 +481,7 @@ export function MouldPlanningModal({
                         return (
                           <th key={cb.patternRef} colSpan={3} className="px-4 py-3 text-center text-[#4285F4] font-mono text-base border-b border-[#E0E7FF]/50">
                             <div>{cb.patternRef}</div>
-                            <div className="text-[9px] text-[#94A3B8] tracking-wider mt-1 font-semibold">{mouldingType}</div>
+                            <div className="text-[9px] text-[#94A3B8] tracking-wider mt-1 font-semibold">{knockoutingType}</div>
                             <div className="text-[10px] text-[#10B981] mt-1 font-medium bg-[#10B981]/10 rounded px-1 py-0.5 inline-block">Rem: {remaining - totalAcross}</div>
                           </th>
                         )
@@ -489,7 +489,7 @@ export function MouldPlanningModal({
                       <th rowSpan={2} className="px-6 py-4 text-center text-[#172554] whitespace-nowrap w-40 align-bottom pb-6">Slot Total</th>
                     </tr>
                     <tr>
-                      {activeMoulds.map(cb => [
+                      {activeKnockouts.map(cb => [
                         <th key={`${cb.patternRef}-hourly`} className="px-2 py-2 text-center text-[10px] text-[#94A3B8] w-32 font-medium border-r border-[#E0E7FF]/20">HOURLY PLAN</th>,
                         <th key={`${cb.patternRef}-assign`} className="px-2 py-2 text-center text-[10px] text-[#94A3B8] w-56 font-medium border-r border-[#E0E7FF]/20">
                           LABOURER ASSIGN.
@@ -504,7 +504,7 @@ export function MouldPlanningModal({
                         <td className="px-6 py-3 font-mono font-semibold text-sm text-[#172554] sticky left-0 bg-[#F4F6FB] z-10 whitespace-nowrap">
                           {slot.time}
                         </td>
-                        {activeMoulds.map(cb => {
+                        {activeKnockouts.map(cb => {
                           const key = `${activeMachineTab}_${cb.patternRef}`
                           const val = hourlyMatrix[key]?.[slot.time]
                           const workerCount = workers[key]?.[slot.time] || 0
@@ -563,12 +563,12 @@ export function MouldPlanningModal({
                     {/* Totals Row */}
                     <tr className="bg-[#EEF2FF] border-t-2 border-[#E0E7FF]">
                       <td className="px-6 py-4 font-bold text-sm text-[#172554] sticky left-0 bg-[#EEF2FF] z-10">COLUMN TOTAL</td>
-                      {activeMoulds.map(cb => {
+                      {activeKnockouts.map(cb => {
                         const plannedTarget = getColTotal(cb.patternRef!)
                         const pattern = patterns.find(p => p.code === cb.patternRef)
                         
                         const selectedEq = equipments.find(e => e.id === activeMachineTab)
-                        const avgProd = selectedEq?.avgPiecesPerHour || Number(pattern?.avgMouldsPerHour) || 10
+                        const avgProd = selectedEq?.avgPiecesPerHour || Number(pattern?.avgKnockoutsPerHour) || 10
                         
                         const expectedOutput = getExpectedOutput(cb.patternRef!, avgProd)
                         
@@ -607,7 +607,7 @@ export function MouldPlanningModal({
           )}
 
           {/* SECTION 3: Actual Entry */}
-          {selectedOrder && activeMoulds.length > 0 && activeMachineTab && (
+          {selectedOrder && activeKnockouts.length > 0 && activeMachineTab && (
             <div className="border border-[#E0E7FF] rounded-xl overflow-hidden mt-8">
               <div className="w-full flex items-center justify-between bg-[#EEF2FF] p-4 text-[#172554]">
                 <div className="flex items-center gap-2">
@@ -617,7 +617,7 @@ export function MouldPlanningModal({
               </div>
               
               <div className="p-4 bg-[#F4F6FB] space-y-3">
-                  {activeMoulds.map(cb => {
+                  {activeKnockouts.map(cb => {
                     const planned = getColTotal(cb.patternRef!)
                     const key = `${activeMachineTab}_${cb.patternRef}`
                     const act = actuals[key]

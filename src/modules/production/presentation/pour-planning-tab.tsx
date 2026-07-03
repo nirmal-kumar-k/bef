@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { MagnifyingGlass, Printer, CheckCircle, Clock, CaretRight } from '@phosphor-icons/react'
+import { useState, useMemo, useEffect } from 'react'
+import { MagnifyingGlass, Printer, CheckCircle, Clock, CaretRight, FloppyDisk } from '@phosphor-icons/react'
 import { Badge } from '@/shared/ui/badge'
 import { Label } from '@/shared/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { Button } from '@/shared/ui/button'
+import { Input } from '@/shared/ui/input'
 import { cn } from '@/shared/lib/utils'
 
 const RECIPES: Record<string, { pigIron: number, scrap: number, feMn: number, carburizer: number }> = {
@@ -18,8 +19,9 @@ const RECIPES: Record<string, { pigIron: number, scrap: number, feMn: number, ca
   'SG 600': { pigIron: 50, scrap: 42, feMn: 3, carburizer: 5 },
 }
 
-export function PourPlanningTab({ patterns, openOrders, dailyPlans }: any) {
+export function PourPlanningTab({ patterns, openOrders, dailyPlans, onSaveDayPlan }: any) {
   const [selectedHeatId, setSelectedHeatId] = useState<string>('')
+  const [actualPoured, setActualPoured] = useState<Record<string, number | undefined>>({})
 
   const heats = useMemo(() => {
     const meltPlans = dailyPlans.filter((p: any) => p.stage === 'Melt')
@@ -55,6 +57,23 @@ export function PourPlanningTab({ patterns, openOrders, dailyPlans }: any) {
 
   // Default to first heat if available
   const selectedHeat = heats.find((h: any) => h.uid === selectedHeatId) || heats[0]
+
+  useEffect(() => {
+    const init: Record<string, number> = {}
+    heats.forEach((h: any) => {
+      if (h.actualPouredMoulds !== undefined) {
+        init[h.uid] = h.actualPouredMoulds
+      }
+    })
+    setActualPoured(init)
+  }, [heats])
+
+  const handleSave = () => {
+    if (!selectedHeat || !onSaveDayPlan) return
+    const val = actualPoured[selectedHeat.uid]
+    const updatedHeat = { ...selectedHeat, actualPouredMoulds: val }
+    onSaveDayPlan(selectedHeat.date, [updatedHeat])
+  }
 
   return (
     <div className="space-y-6">
@@ -197,6 +216,7 @@ export function PourPlanningTab({ patterns, openOrders, dailyPlans }: any) {
                         <th className="px-6 py-4 font-semibold">Core Box Ref</th>
                         <th className="px-6 py-4 font-semibold text-center">Cavities</th>
                         <th className="px-6 py-4 font-semibold text-right">Moulds to Pour</th>
+                        <th className="px-6 py-4 font-semibold text-center text-[#4285F4]">Actual Poured</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#E0E7FF]">
@@ -205,9 +225,25 @@ export function PourPlanningTab({ patterns, openOrders, dailyPlans }: any) {
                         <td className="px-6 py-4 font-mono text-[#64748B]">{selectedHeat.coreBoxRef}</td>
                         <td className="px-6 py-4 text-center font-mono text-[#94A3B8]">{selectedHeat.cavities}</td>
                         <td className="px-6 py-4 text-right font-mono font-bold text-[#4285F4] text-lg">{selectedHeat.moulds}</td>
+                        <td className="px-6 py-4 text-center">
+                          <Input
+                            type="number"
+                            min="0"
+                            value={actualPoured[selectedHeat.uid] === undefined ? '' : actualPoured[selectedHeat.uid]}
+                            onChange={e => setActualPoured(prev => ({ ...prev, [selectedHeat.uid]: e.target.value === '' ? undefined : Number(e.target.value) }))}
+                            className="w-24 h-9 mx-auto bg-[#F4F6FB] border-[#4285F4]/30 focus:border-[#4285F4] font-mono text-[#4285F4] text-center px-2 text-sm shadow-inner placeholder:text-[#94A3B8]"
+                            placeholder="Act."
+                          />
+                        </td>
                       </tr>
                     </tbody>
                   </table>
+                </div>
+                <div className="flex justify-end mt-4">
+                  <Button onClick={handleSave} className="bg-[#4285F4] hover:bg-[#4285F4]/90 text-white font-bold uppercase tracking-wider px-6 h-10 shadow-lg shadow-[#4285F4]/20">
+                    <FloppyDisk className="w-5 h-5 mr-2" />
+                    Save Actuals
+                  </Button>
                 </div>
               </div>
 

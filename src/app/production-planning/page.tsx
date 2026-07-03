@@ -13,6 +13,7 @@ import { CorePlanningTab } from '@/modules/production/presentation/core-planning
 import { MouldPlanningTab } from '@/modules/production/presentation/mould-planning-tab'
 import { MeltPlanningTab } from '@/modules/production/presentation/melt-planning-tab'
 import { PourPlanningTab } from '@/modules/production/presentation/pour-planning-tab'
+import { KnockoutPlanningTab } from '@/modules/production/presentation/knockout-planning-tab'
 
 export default function ProductionPlanningPage() {
   const { role } = useRole()
@@ -24,7 +25,7 @@ export default function ProductionPlanningPage() {
   const [plans, setPlans] = useState<any[]>([])
   
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'Core' | 'Mould' | 'Melt'>('Core')
+  const [activeTab, setActiveTab] = useState<'Core' | 'Mould' | 'Melt' | 'Pour' | 'Knockout'>('Core')
 
   const fetchData = useCallback(async () => {
     try {
@@ -59,6 +60,7 @@ export default function ProductionPlanningPage() {
     const coreBacklog: BacklogItem[] = []
     const mouldBacklog: BacklogItem[] = []
     const meltBacklog: BacklogItem[] = []
+    const knockoutBacklog: BacklogItem[] = []
     
     openOrders.forEach(order => {
       order.cart?.forEach((item: any, idx: number) => {
@@ -85,6 +87,16 @@ export default function ProductionPlanningPage() {
           itemId: uniqueId, orderNo: order.customerOrderNo, patternRef: pattern?.code || '-', productName: item.productName,
           totalRequired: metalRequired, totalScheduled: meltScheduled, unit: 'kg'
         })
+        
+        // KNOCKOUT
+        const pouredMoulds = plans.filter(p => p.stage === 'Melt' && p.itemId === uniqueId).reduce((sum, p) => sum + (p.actualPouredMoulds || 0), 0)
+        const knockoutScheduled = plans.filter(p => p.stage === 'Knockout' && p.itemId === uniqueId).reduce((sum, p) => sum + p.quantityScheduled, 0)
+        if (pouredMoulds > 0) {
+          knockoutBacklog.push({
+            itemId: uniqueId, orderNo: order.customerOrderNo, patternRef: pattern?.code || '-', productName: item.productName,
+            totalRequired: pouredMoulds, totalScheduled: knockoutScheduled, unit: 'moulds'
+          })
+        }
 
         // CORE
         const mappedProduct = pattern?.mappedProducts?.find((mp: any) => mp.name === product?.name)
@@ -121,14 +133,15 @@ export default function ProductionPlanningPage() {
       })
     })
     
-    return { Core: coreBacklog, Mould: mouldBacklog, Melt: meltBacklog }
+    return { Core: coreBacklog, Mould: mouldBacklog, Melt: meltBacklog, Knockout: knockoutBacklog }
   }, [openOrders, products, patterns, plans])
 
   const totals = useMemo(() => {
     return {
       cores: backlogData.Core.reduce((acc, curr) => acc + curr.totalRequired, 0),
       moulds: backlogData.Mould.reduce((acc, curr) => acc + curr.totalRequired, 0),
-      metal: backlogData.Melt.reduce((acc, curr) => acc + curr.totalRequired, 0)
+      metal: backlogData.Melt.reduce((acc, curr) => acc + curr.totalRequired, 0),
+      knockouts: backlogData.Knockout.reduce((acc, curr) => acc + curr.totalRequired, 0)
     }
   }, [backlogData])
 
@@ -229,13 +242,13 @@ export default function ProductionPlanningPage() {
 
           {/* TAB CONTENT */}
           <div className="space-y-6">
-            <div className="flex gap-2 p-1 bg-[#F4F6FB] border border-[#E0E7FF] rounded-xl w-full sm:w-auto self-start inline-flex">
-              {(['Core', 'Mould', 'Melt', 'Pour'] as const).map(tab => (
+            <div className="flex border-b border-[#E0E7FF] overflow-x-auto">
+              {['Core', 'Mould', 'Melt', 'Pour', 'Knockout'].map(tab => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
                   className={cn(
-                    "px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200",
+                    "px-6 py-2.5 text-sm font-semibold transition-all duration-200 border-b-2",
                     activeTab === tab 
                       ? "bg-[#EEF2FF] text-[#172554] shadow-sm" 
                       : "text-[#64748B] hover:text-[#172554] hover:bg-[#FFFFFF]"
@@ -257,7 +270,10 @@ export default function ProductionPlanningPage() {
                 <MeltPlanningTab defaultMetalQty={totals.metal} products={products} patterns={patterns} openOrders={openOrders} dailyPlans={plans} onSaveDayPlan={handleSaveDayPlan} />
               )}
               {activeTab === 'Pour' && (
-                <PourPlanningTab patterns={patterns} openOrders={openOrders} dailyPlans={plans} />
+                <PourPlanningTab patterns={patterns} openOrders={openOrders} dailyPlans={plans} onSaveDayPlan={handleSaveDayPlan} />
+              )}
+              {activeTab === 'Knockout' && (
+                <KnockoutPlanningTab knockoutBacklog={backlogData.Knockout} patterns={patterns} openOrders={openOrders} dailyPlans={plans} onSaveDayPlan={handleSaveDayPlan} />
               )}
             </div>
           </div>

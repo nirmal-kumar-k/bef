@@ -42,11 +42,45 @@ export function CorePlanningModal({
   // State maps keyed by Core Box Code
   const [hourlyMatrix, setHourlyMatrix] = useState<Record<string, Record<string, number | undefined>>>({})
   const [workers, setWorkers] = useState<Record<string, Record<string, number>>>({})
+  const [hourlyActuals, setHourlyActuals] = useState<Record<string, Record<string, number | undefined>>>({})
   const [actuals, setActuals] = useState<Record<string, number | undefined>>({})
   
   // Equipment
   const [equipments, setEquipments] = useState<any[]>([])
   const [selectedEquipments, setSelectedEquipments] = useState<Record<string, string>>({})
+  const [hourlyEquipments, setHourlyEquipments] = useState<Record<string, Record<string, string>>>({})
+  
+  const handleHourlyEquipmentChange = (code: string, timeSlot: string, equipmentId: string) => {
+    setHourlyEquipments(prev => {
+      const codeEqs = prev[code] || {}
+      const isFirstAssignment = Object.keys(codeEqs).length === 0
+      
+      if (isFirstAssignment) {
+        // Auto-fill all time slots with this equipment if it's the first time assigning
+        const newEqs: Record<string, string> = {}
+        TIME_SLOTS.forEach(s => {
+          newEqs[s.time] = equipmentId
+        })
+        return { ...prev, [code]: newEqs }
+      } else {
+        // Only update this specific time slot
+        return {
+          ...prev,
+          [code]: {
+            ...codeEqs,
+            [timeSlot]: equipmentId
+          }
+        }
+      }
+    })
+    
+    setSelectedEquipments(prev => {
+      if (!prev[code]) {
+        return { ...prev, [code]: equipmentId }
+      }
+      return prev
+    })
+  }
   
   // Shifts
   const [shifts, setShifts] = useState<Shift[]>([])
@@ -89,6 +123,7 @@ export function CorePlanningModal({
     if (isOpen && !selectedOrder && openOrders.length > 0) {
       setHourlyMatrix({})
       setWorkers({})
+      setHourlyActuals({})
       setActuals({})
     }
   }, [isOpen, selectedOrder, openOrders.length])
@@ -103,15 +138,27 @@ export function CorePlanningModal({
     
     const initMatrix: Record<string, Record<string, number>> = {}
     const initWorkers: Record<string, Record<string, number>> = {}
+    const initHourlyActuals: Record<string, Record<string, number>> = {}
     const initActuals: Record<string, number> = {}
     const initEquipments: Record<string, string> = {}
+    const initHourlyEquipments: Record<string, Record<string, string>> = {}
 
     existingPlans.forEach(p => {
       if (p.coreBoxCode) {
         initMatrix[p.coreBoxCode] = p.hourlyTargets || {}
         initWorkers[p.coreBoxCode] = p.hourlyWorkers || {}
+        initHourlyActuals[p.coreBoxCode] = p.hourlyActuals || {}
         if (p.actualQuantity !== undefined && p.actualQuantity !== null) {
           initActuals[p.coreBoxCode] = p.actualQuantity
+        }
+        if (p.hourlyEquipments) {
+          initHourlyEquipments[p.coreBoxCode] = p.hourlyEquipments
+        } else if (p.equipmentId) {
+          const eqMap: Record<string, string> = {}
+          TIME_SLOTS.forEach(slot => {
+            eqMap[slot.time] = p.equipmentId!
+          })
+          initHourlyEquipments[p.coreBoxCode] = eqMap
         }
         if (p.equipmentId) {
           initEquipments[p.coreBoxCode] = p.equipmentId
@@ -121,8 +168,10 @@ export function CorePlanningModal({
 
     setHourlyMatrix(initMatrix)
     setWorkers(initWorkers)
+    setHourlyActuals(initHourlyActuals)
     setActuals(initActuals)
     setSelectedEquipments(initEquipments)
+    setHourlyEquipments(initHourlyEquipments)
   }, [selectedOrder, dailyPlans, openOrders])
 
   const handleSave = () => {
@@ -157,8 +206,10 @@ export function CorePlanningModal({
           laborersAssigned: maxWorkers,
           workersAssigned: maxWorkers,
           equipmentId: selectedEquipments[code] || '',
+          hourlyEquipments: hourlyEquipments[code] || {},
           hourlyTargets: hours,
           hourlyWorkers: workers[code] || {},
+          hourlyActuals: hourlyActuals[code] || {},
           actualQuantity: actuals[code]
         })
       }
@@ -199,6 +250,27 @@ export function CorePlanningModal({
         [timeSlot]: numValue
       }
     }))
+  }
+
+  const handleHourlyActualChange = (code: string, timeSlot: string, value: string) => {
+    const numValue = value === '' ? undefined : parseInt(value, 10)
+    setHourlyActuals(prev => {
+      const updated = {
+        ...prev,
+        [code]: {
+          ...(prev[code] || {}),
+          [timeSlot]: numValue
+        }
+      }
+      
+      // Auto-update End of Day actuals when hourly actuals change
+      const totalAct = Object.values(updated[code]).reduce((sum, val) => sum + (val || 0), 0)
+      if (totalAct > 0) {
+         setActuals(a => ({ ...a, [code]: totalAct }))
+      }
+      
+      return updated
+    })
   }
 
   const handleWorkerChange = (code: string, timeSlot: string, delta: number) => {
@@ -339,19 +411,6 @@ export function CorePlanningModal({
                             {cb.coreBoxCode}
                             {cb.patternRef && <span className="text-[10px] text-[#94A3B8] ml-2 block">Pattern: {cb.patternRef}</span>}
                           </div>
-                          <div>
-                            <Select 
-                              value={selectedEquipments[cb.coreBoxCode!] || ''} 
-                              onValueChange={(val) => setSelectedEquipments(prev => ({...prev, [cb.coreBoxCode!]: val}))}
-                            >
-                              <SelectTrigger className="h-7 text-[10px] bg-[#F4F6FB] border-[#E0E7FF] text-[#64748B]">
-                                <SelectValue placeholder="Machine" />
-                              </SelectTrigger>
-                              <SelectContent className="bg-[#FFFFFF] border-[#E0E7FF]">
-                                {equipments.map(e => <SelectItem key={e.id} value={e.id!} className="text-[10px]">{e.name}</SelectItem>)}
-                              </SelectContent>
-                            </Select>
-                          </div>
                         </div>
                         <div className="mt-1 text-xs font-medium text-[#64748B] bg-[#F4F6FB] px-2.5 py-1 rounded-md border border-[#E0E7FF]">Remaining: {remaining}</div>
                       </div>
@@ -397,7 +456,7 @@ export function CorePlanningModal({
                       <th rowSpan={2} className="px-6 py-4 sticky left-0 bg-[#FFFFFF] z-10 w-40 whitespace-nowrap text-xs align-bottom pb-6">Time Slot</th>
                       {activeCoreBoxes.map(cb => {
                         return (
-                          <th key={cb.coreBoxCode} colSpan={2} className="px-4 py-3 text-center text-[#4285F4] font-mono text-base border-b border-[#E0E7FF]/50">
+                          <th key={cb.coreBoxCode} colSpan={3} className="px-4 py-3 text-center text-[#4285F4] font-mono text-base border-b border-[#E0E7FF]/50">
                             {cb.coreBoxCode}
                             <div className="text-[9px] text-[#94A3B8] tracking-wider mt-1 font-semibold">{cb.patternRef}</div>
                           </th>
@@ -408,7 +467,9 @@ export function CorePlanningModal({
                     <tr>
                       {activeCoreBoxes.map(cb => [
                         <th key={`${cb.coreBoxCode}-hourly`} className="px-2 py-2 text-center text-[10px] text-[#94A3B8] w-32 font-medium border-r border-[#E0E7FF]/20">HOURLY PLAN</th>,
-                        <th key={`${cb.coreBoxCode}-assign`} className="px-2 py-2 text-center text-[10px] text-[#94A3B8] w-56 font-medium">LABOURER ASSIGNMENT</th>
+                        <th key={`${cb.coreBoxCode}-assign`} className="px-2 py-2 text-center text-[10px] text-[#94A3B8] w-32 font-medium border-r border-[#E0E7FF]/20">LABOURER ASSIGN.</th>,
+                        <th key={`${cb.coreBoxCode}-equip`} className="px-2 py-2 text-center text-[10px] text-[#94A3B8] w-40 font-medium border-r border-[#E0E7FF]/20">EQUIPMENT ASSIGN.</th>,
+                        <th key={`${cb.coreBoxCode}-actuals`} className="px-2 py-2 text-center text-[10px] text-[#94A3B8] w-32 font-medium text-[#4285F4]">ACTUALS</th>
                       ])}
                     </tr>
                   </thead>
@@ -435,7 +496,7 @@ export function CorePlanningModal({
                                 )}
                               />
                             </td>,
-                            <td key={`${cb.coreBoxCode}-assign`} className="px-2 py-2 text-center">
+                            <td key={`${cb.coreBoxCode}-assign`} className="px-2 py-2 text-center border-r border-[#E0E7FF]/20">
                               <div className="flex items-center justify-center gap-1.5">
                                 <Button 
                                   variant="outline" 
@@ -455,6 +516,29 @@ export function CorePlanningModal({
                                   +
                                 </Button>
                               </div>
+                            </td>,
+                            <td key={`${cb.coreBoxCode}-equip`} className="px-2 py-2 text-center border-r border-[#E0E7FF]/20">
+                              <Select 
+                                value={hourlyEquipments[cb.coreBoxCode!]?.[slot.time] || ''} 
+                                onValueChange={(val) => handleHourlyEquipmentChange(cb.coreBoxCode!, slot.time, val)}
+                              >
+                                <SelectTrigger className="h-8 w-[140px] mx-auto text-xs bg-[#FFFFFF] border-[#E0E7FF] text-[#172554] font-medium shadow-sm">
+                                  <SelectValue placeholder="Select Machine" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-[#FFFFFF] border-[#E0E7FF]">
+                                  {equipments.map(e => <SelectItem key={e.id} value={e.id!} className="text-xs">{e.name}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            </td>,
+                            <td key={`${cb.coreBoxCode}-actuals`} className="px-2 py-2 text-center border-r border-[#E0E7FF]/20">
+                              <Input
+                                type="number"
+                                min="0"
+                                value={hourlyActuals[cb.coreBoxCode!]?.[slot.time] === undefined ? '' : hourlyActuals[cb.coreBoxCode!]?.[slot.time]}
+                                onChange={e => handleHourlyActualChange(cb.coreBoxCode!, slot.time, e.target.value)}
+                                className="w-20 h-9 mx-auto bg-[#F4F6FB] border-[#4285F4]/30 focus:border-[#4285F4] font-mono text-[#4285F4] text-center px-2 text-sm shadow-inner placeholder:text-[#94A3B8]"
+                                placeholder="Act"
+                              />
                             </td>
                           ]
                         })}
@@ -477,8 +561,8 @@ export function CorePlanningModal({
                         
                         const expectedOutput = getExpectedOutput(cb.coreBoxCode!, avgProd)
                         
-                        const isOverrun = expectedOutput > plannedTarget && expectedOutput > 0 && expectedOutput > (plannedTarget * 1.1)
-                        const isOnTrack = expectedOutput >= plannedTarget && expectedOutput > 0 && !isOverrun
+                        const isAtRisk = expectedOutput < plannedTarget && plannedTarget > 0
+                        const isOnTrack = expectedOutput >= plannedTarget && plannedTarget > 0
                         
                         const totalWorkers = Math.max(0, ...Object.values(workers[cb.coreBoxCode!] || {}))
 
@@ -486,20 +570,20 @@ export function CorePlanningModal({
                           <td key={`${cb.coreBoxCode}-total`} className="px-4 py-4 text-center font-mono font-bold text-lg text-[#4285F4] border-r border-[#E0E7FF]/20">
                             {plannedTarget}
                           </td>,
-                          <td key={`${cb.coreBoxCode}-expected`} className="bg-[#EEF2FF] px-2 py-4 align-middle">
+                          <td key={`${cb.coreBoxCode}-expected`} className="bg-[#EEF2FF] px-2 py-4 align-middle border-r border-[#E0E7FF]/20">
                             <div className="flex flex-col items-center justify-center space-y-1.5">
-                              <span className="text-[10px] text-[#172554] font-mono font-bold">Exp: {expectedOutput.toFixed(0)}</span>
+                              <span className="text-[10px] text-[#172554] font-mono font-bold">Cap: {expectedOutput.toFixed(0)}</span>
                               {totalWorkers === 0 ? (
                                 <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-[#F4F6FB] text-[#64748B] border border-[#E0E7FF]">Unassigned</span>
-                              ) : isOnTrack ? (
-                                <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/20">On Track</span>
-                              ) : isOverrun ? (
-                                <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-red-500/10 text-red-500 border border-red-500/20">Overrun</span>
-                              ) : (
+                              ) : isAtRisk ? (
                                 <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20">At Risk</span>
+                              ) : (
+                                <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/20">On Track</span>
                               )}
                             </div>
-                          </td>
+                          </td>,
+                            <td key={`${cb.coreBoxCode}-empty-1`} className="bg-[#EEF2FF] border-r border-[#E0E7FF]/20"></td>,
+                          <td key={`${cb.coreBoxCode}-empty-2`} className="bg-[#EEF2FF]"></td>
                         ]
                       })}
                       <td className="px-6 py-4 font-mono font-bold text-center text-[#172554] text-xl bg-[#4F46E5]/20">

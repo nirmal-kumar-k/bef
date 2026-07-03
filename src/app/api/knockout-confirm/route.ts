@@ -1,42 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/infrastructure/db'
-import Schedule from '@/modules/production/domain/schedule.model'
+import ProductionPlan from '@/modules/production/domain/production-plan.model'
 import Product from '@/modules/products/domain/product.model'
+import Order from '@/modules/sales/domain/order.model'
 
 export async function POST(request: NextRequest) {
   try {
     await dbConnect()
-    const { itemIds } = await request.json()
+    const { planIds } = await request.json()
     
-    if (!itemIds || !Array.isArray(itemIds) || itemIds.length === 0) {
-      return NextResponse.json({ error: 'No items provided' }, { status: 400 })
+    if (!planIds || !Array.isArray(planIds) || planIds.length === 0) {
+      return NextResponse.json({ error: 'No plan IDs provided' }, { status: 400 })
     }
 
-    const schedules = await Schedule.find({ orderId: { $in: itemIds } })
+    const plans = await ProductionPlan.find({ _id: { $in: planIds }, stage: 'Knockout', isConfirmed: { $ne: true } })
     
-    for (const sched of schedules) {
-      const ko = sched.stages?.knockout
-      if (ko && ko.pending > 0) {
-        const piecesToGenerate = ko.pending
+    let processed = 0
+    for (const plan of plans) {
+      if (!plan.actualQuantity || plan.actualQuantity <= 0) continue;
+
+      const order = await Order.findById(plan.orderId);
+      if (!order || !order.cart) continue;
+      
+      const parts = plan.itemId.split('-');
+      const idx = parseInt(parts[parts.length - 1], 10);
+      const cartItem = order.cart[idx];
+      if (!cartItem) continue;
+
+      const productName = cartItem.productName;
+      const productCode = cartItem.product;
+      
+      const product = await Product.findOne({ $or: [{ name: productName }, { code: productCode }] });
+      if (product) {
+        const cavities = product.cavities || 1;
+        const piecesToGenerate = plan.actualQuantity * cavities;
         
-        // 1. Update Product Stock
-        const productName = sched.cart?.[0]?.productName
-        const productCode = sched.cart?.[0]?.product
-        if (productName || productCode) {
-           await Product.findOneAndUpdate(
-             { $or: [{ name: productName }, { code: productCode }] },
-             { $inc: { stock: piecesToGenerate } }
-           )
-        }
+        await Product.findByIdAndUpdate(product._id, { $inc: { stock: piecesToGenerate } });
         
-        // 2. Update Schedule Knockout Stage
-        ko.completed += piecesToGenerate
-        ko.pending = 0
-        await sched.save()
+        plan.isConfirmed = true;
+        await plan.save();
+        processed++;
       }
     }
 
-    return NextResponse.json({ success: true, message: 'Products generated and Knockout confirmed.' })
+    return NextResponse.json({ success: true, message: `Generated products for ${processed} knockout plans.` })
   } catch (error) {
     console.error('POST /api/knockout-confirm error:', error)
     return NextResponse.json({ error: 'Failed to confirm knockout' }, { status: 500 })

@@ -91,10 +91,6 @@ export function ScheduleDrawer({
        totalHeats += Math.ceil((calcMoulds * boxWeight) / furnaceCapacity)
     })
     
-    // For simplicity, default to 0 to let planner decide, or pre-fill with order totals if requested.
-    // The prompt says "for example we planned to hit 60 for today", so planner types it.
-    // We will just set them to 0 and let the cascade logic do the work when they type the moulds!
-
     const newSchedule = {
       isNew: true,
       orderId: order.id,
@@ -107,15 +103,15 @@ export function ScheduleDrawer({
       customer: order.customer,
       cart: order.cart,
       stages: {
-        core: { planned: 0, completed: 0, pending: 0, variance: 0, unit: 'cores' },
-        melting: { planned: 0, completed: 0, pending: 0, variance: 0, unit: 'heats' },
-        moulding: { planned: 0, completed: 0, pending: 0, variance: 0, unit: 'moulds' },
-        pouring: { planned: 0, completed: 0, pending: 0, variance: 0, unit: 'moulds' },
-        knockout: { planned: 0, completed: 0, pending: 0, variance: 0, unit: 'pieces' },
-        shotBlasting: { planned: 0, completed: 0, pending: 0, variance: 0, unit: 'pieces' },
-        grinding: { planned: 0, completed: 0, pending: 0, variance: 0, unit: 'pieces' },
-        inspection: { planned: 0, completed: 0, pending: 0, variance: 0, unit: 'pieces' },
-        readyForDispatch: { planned: 0, completed: 0, pending: 0, variance: 0, unit: 'pieces' },
+        core:               { planned: totalCores,  completed: 0, pending: 0, variance: 0, unit: 'cores' },
+        melting:            { planned: totalHeats,  completed: 0, pending: 0, variance: 0, unit: 'heats' },
+        moulding:           { planned: totalMoulds, completed: 0, pending: 0, variance: 0, unit: 'moulds' },
+        pouring:            { planned: totalMoulds, completed: 0, pending: 0, variance: 0, unit: 'moulds' },
+        knockout:           { planned: 0, completed: 0, pending: 0, variance: 0, unit: 'pieces' },
+        shotBlasting:       { planned: 0, completed: 0, pending: 0, variance: 0, unit: 'pieces' },
+        grinding:           { planned: 0, completed: 0, pending: 0, variance: 0, unit: 'pieces' },
+        inspection:         { planned: 0, completed: 0, pending: 0, variance: 0, unit: 'pieces' },
+        readyForDispatch:   { planned: 0, completed: 0, pending: 0, variance: 0, unit: 'pieces' },
       }
     }
     

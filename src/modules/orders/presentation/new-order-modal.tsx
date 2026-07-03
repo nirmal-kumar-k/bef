@@ -304,12 +304,12 @@ export function NewOrderModal({
 
                 <div className="space-y-2">
                   <Label className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">Order Date</Label>
-                  <Input type="date" value={orderDate} onChange={e => setOrderDate(e.target.value)} className="h-10 px-3 rounded-md bg-[#FFFFFF] border-[#E0E7FF] text-[#172554] text-sm [color-scheme:dark]" />
+                  <Input type="date" value={orderDate} onChange={e => setOrderDate(e.target.value)} className="h-10 px-3 rounded-md bg-[#FFFFFF] border-[#E0E7FF] text-[#172554] text-sm [color-scheme:light]" />
                 </div>
 
                 <div className="space-y-2">
                   <Label className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">Delivery Date</Label>
-                  <Input type="date" value={deliveryDate} onChange={e => setDeliveryDate(e.target.value)} className="h-10 px-3 rounded-md bg-[#FFFFFF] border-[#E0E7FF] text-[#172554] text-sm [color-scheme:dark]" />
+                  <Input type="date" value={deliveryDate} onChange={e => setDeliveryDate(e.target.value)} className="h-10 px-3 rounded-md bg-[#FFFFFF] border-[#E0E7FF] text-[#172554] text-sm [color-scheme:light]" />
                 </div>
 
                 
