@@ -73,8 +73,8 @@ export function DailyPlanningModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="w-full sm:max-w-2xl bg-[#F4F6FB] border-[#E0E7FF] text-foreground max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="w-[98vw] sm:max-w-[98vw] min-h-[60vh] max-h-[95vh] bg-[#F4F6FB] border-[#E0E7FF] text-foreground overflow-y-auto p-0 shadow-2xl">
+        <DialogHeader className="p-6 border-b border-[#E0E7FF] bg-[#FFFFFF] shrink-0">
           <DialogTitle className="text-xl font-heading text-[#172554]">
             {stage} Schedule for {dateString}
           </DialogTitle>

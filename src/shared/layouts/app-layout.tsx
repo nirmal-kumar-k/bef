@@ -4,8 +4,10 @@ import { Sidebar } from '@/shared/layouts/sidebar'
 import { TopBar } from '@/shared/layouts/topbar'
 import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
-import { IngotLoader } from '@/shared/ui/ingot-loader'
+import dynamic from 'next/dynamic'
 import { PageTransition } from '@/shared/layouts/page-transition'
+
+const IngotLoader = dynamic(() => import('@/shared/ui/ingot-loader').then(m => ({ default: m.IngotLoader })), { ssr: false })
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)

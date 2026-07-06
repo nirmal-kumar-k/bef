@@ -31,22 +31,26 @@ import { cn, handleEnterToTab } from '@/shared/lib/utils'
 import { type Product } from '@/modules/products/domain/product.types'
 import { ImageCarousel } from '@/shared/ui/image-carousel'
 import { useRole } from '@/shared/context/role-context'
+import { ConfirmDeleteDialog } from '@/shared/ui/confirm-delete-dialog'
 
 export function ViewProductModal({
   product,
   isOpen,
   onClose,
   onSave,
+  onDelete,
 }: {
   product: Product | null
   isOpen: boolean
   onClose: () => void
   onSave?: (product: Product) => void
+  onDelete?: (id: string) => void
 }) {
   const { role } = useRole()
   
   const [customerOpen, setCustomerOpen] = useState(false)
   const [selectedCustomer, setSelectedCustomer] = useState('')
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   // Fetched data from API
   const [customers, setCustomers] = useState<{ value: string; label: string }[]>([])
@@ -358,6 +362,15 @@ export function ViewProductModal({
         </div>
 
         <DialogFooter className="mt-2 shrink-0 border-t border-[#E0E7FF] pt-4">
+          {role === 'Admin' && onDelete && (
+            <Button
+              variant="ghost"
+              onClick={() => setShowDeleteConfirm(true)}
+              className="text-red-500 hover:text-red-400 hover:bg-red-50 mr-auto"
+            >
+              Delete Product
+            </Button>
+          )}
           <Button variant="ghost" onClick={onClose} className="text-[#64748B] hover:text-[#172554] hover:bg-[#EEF2FF]">
             Close
           </Button>
@@ -368,6 +381,20 @@ export function ViewProductModal({
           )}
         </DialogFooter>
       </DialogContent>
+
+      <ConfirmDeleteDialog
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        onConfirm={() => {
+          if (product?.id && onDelete) {
+            onDelete(product.id)
+            onClose()
+          }
+        }}
+        title="Delete Product?"
+        description="Are you sure you want to delete this product? All mapped orders and schedules will be affected."
+        itemName={product?.code || product?.name}
+      />
     </Dialog>
   )
 }

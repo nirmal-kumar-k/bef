@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, PencilSimple } from '@phosphor-icons/react'
+import { Plus, PencilSimple, Trash } from '@phosphor-icons/react'
 import { Button } from '@/shared/ui/button'
 import { ShiftModal } from './shift-modal'
 import { Switch } from '@/shared/ui/switch'
+import { ConfirmDeleteDialog } from '@/shared/ui/confirm-delete-dialog'
 
 export interface Shift {
   id?: string
@@ -20,6 +21,18 @@ export default function ShiftMasterPage() {
   const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingShift, setEditingShift] = useState<Shift | null>(null)
+  const [shiftToDelete, setShiftToDelete] = useState<Shift | null>(null)
+
+  const handleDeleteShift = async (id: string) => {
+    try {
+      const res = await fetch(`/api/shifts/${id}`, { method: 'DELETE' })
+      if (res.ok) {
+        await fetchShifts()
+      }
+    } catch (err) {
+      console.error('Failed to delete shift:', err)
+    }
+  }
 
   const fetchShifts = useCallback(async () => {
     try {
@@ -164,14 +177,24 @@ export default function ShiftMasterPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => openEditModal(shift)}
-                        className="text-[#64748B] hover:text-[#172554] hover:bg-[#E0E7FF]"
-                      >
-                        <PencilSimple className="w-4 h-4" />
-                      </Button>
+                      <div className="flex justify-end gap-1.5">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openEditModal(shift)}
+                          className="text-[#64748B] hover:text-[#172554] hover:bg-[#E0E7FF]"
+                        >
+                          <PencilSimple className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setShiftToDelete(shift)}
+                          className="text-[#64748B] hover:text-red-500 hover:bg-red-50"
+                        >
+                          <Trash className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -186,6 +209,14 @@ export default function ShiftMasterPage() {
         onClose={() => setIsModalOpen(false)}
         onSave={handleSaveShift}
         shift={editingShift}
+      />
+      <ConfirmDeleteDialog
+        open={!!shiftToDelete}
+        onOpenChange={(open) => !open && setShiftToDelete(null)}
+        onConfirm={() => shiftToDelete && shiftToDelete.id && handleDeleteShift(shiftToDelete.id)}
+        title="Delete Shift?"
+        description="Are you sure you want to delete this shift? Timings and shifts mapped to production schedules may be affected."
+        itemName={shiftToDelete?.name}
       />
     </div>
   )

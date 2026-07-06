@@ -17,14 +17,14 @@ import {
   CommandItem,
   CommandList,
 } from '@/shared/ui/command'
-import { Check, CaretUpDown, Funnel, Plus, X } from '@phosphor-icons/react'
+import { Check, CaretUpDown, Funnel, Plus, X, Trash } from '@phosphor-icons/react'
 import { cn } from '@/shared/lib/utils'
 import { NewPatternModal } from '@/modules/patterns/presentation/new-pattern-modal'
 import { ProductMappingModal } from '@/modules/patterns/presentation/product-mapping-modal'
 import { ViewPatternModal } from '@/modules/patterns/presentation/view-pattern-modal'
+import { ConfirmDeleteDialog } from '@/shared/ui/confirm-delete-dialog'
 import { type Pattern, type FilterCategory } from '@/modules/patterns/domain/pattern.types'
 import { useRole } from '@/shared/context/role-context'
-import { ShieldWarning } from '@phosphor-icons/react'
 
 export default function PatternsPage() {
   const [patterns, setPatterns] = useState<Pattern[]>([])
@@ -33,10 +33,23 @@ export default function PatternsPage() {
   const [isMappingModalOpen, setIsMappingModalOpen] = useState(false)
   const [mappingPatternId, setMappingPatternId] = useState<string | null>(null)
   const [viewPattern, setViewPattern] = useState<any | null>(null)
+  const [patternToDelete, setPatternToDelete] = useState<Pattern | null>(null)
   const [activeCategory, setActiveCategory] = useState<FilterCategory>('All')
   const [selectedCustomer, setSelectedCustomer] = useState('')
   const [customerOpen, setCustomerOpen] = useState(false)
   const { role } = useRole()
+
+  const handleDeletePattern = async (id: string) => {
+    try {
+      const res = await fetch(`/api/patterns/${id}`, { method: 'DELETE' })
+      if (res.ok) {
+        await fetchPatterns()
+        setViewPattern(null)
+      }
+    } catch (err) {
+      console.error('Failed to delete pattern:', err)
+    }
+  }
 
   // Fetched data from API
   const [customers, setCustomers] = useState<{ value: string; label: string }[]>([])
@@ -293,7 +306,7 @@ export default function PatternsPage() {
                       </div>
                     )}
                   </div>
-                  <div className="p-4 bg-[#FFFFFF]/50 border-t border-sidebar-border">
+                  <div className="p-4 bg-[#FFFFFF]/50 border-t border-sidebar-border flex gap-2">
                     <Button
                       variant="outline"
                       onClick={(e) => {
@@ -301,10 +314,23 @@ export default function PatternsPage() {
                         setMappingPatternId(pattern.id)
                         setIsMappingModalOpen(true)
                       }}
-                      className="w-full bg-transparent border-sidebar-border text-[#64748B] transition-colors hover:bg-[#EEF2FF] hover:text-[#172554] hover:border-[#C7D2FE]"
+                      className="flex-1 bg-transparent border-sidebar-border text-[#64748B] transition-colors hover:bg-[#EEF2FF] hover:text-[#172554] hover:border-[#C7D2FE]"
                     >
                       Map Products
                     </Button>
+                    {role === 'Admin' && (
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setPatternToDelete(pattern)
+                        }}
+                        className="bg-transparent border-red-100 text-red-500 hover:bg-red-50 hover:border-red-200 transition-colors shrink-0"
+                      >
+                        <Trash className="w-4 h-4" />
+                      </Button>
+                    )}
                   </div>
                 </Card>
               )
@@ -338,6 +364,15 @@ export default function PatternsPage() {
         isOpen={!!viewPattern}
         onClose={() => setViewPattern(null)}
         onSave={handleSavePatternEdit}
+        onDelete={viewPattern && role === 'Admin' ? handleDeletePattern : undefined}
+      />
+      <ConfirmDeleteDialog
+        open={!!patternToDelete}
+        onOpenChange={(open) => !open && setPatternToDelete(null)}
+        onConfirm={() => patternToDelete && handleDeletePattern(patternToDelete.id)}
+        title="Delete Pattern"
+        description="Are you sure you want to delete this physical pattern? This action will remove the pattern, all mapped products, and related core boxes."
+        itemName={patternToDelete?.code}
       />
     </div>
   )

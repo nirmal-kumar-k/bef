@@ -59,20 +59,12 @@ export function ScheduleDrawer({
     return orders.filter((o: any) => o.status === 'Received' || o.status === 'In Progress')
   }, [orders])
 
-  const handleAddOrder = () => {
-    if (!selectedOrder) return
-    const order = orders.find(o => (o.id || o._id) === selectedOrder)
-    if (!order) return
-    
-    // Check if already in today's schedule
-    if (daySchedules.find(s => s.orderId === selectedOrder)) return
-
-    // Attempt to calculate required quantities based on the order's cart
+  const calculateOrderRequirements = (cart: any[]) => {
     let totalMoulds = 0
     let totalCores = 0
     let totalHeats = 0
     
-    order.cart?.forEach((item: any) => {
+    cart?.forEach((item: any) => {
        const product = products.find((p: any) => p.name === item.productName || p.code === item.product)
        const pattern = patterns.find((p: any) => p.mappedProducts?.some((mp: any) => mp.name === product?.name))
        
@@ -90,7 +82,37 @@ export function ScheduleDrawer({
        totalCores += (calcMoulds * coreBoxesCount)
        totalHeats += Math.ceil((calcMoulds * boxWeight) / furnaceCapacity)
     })
+    return { reqMoulds: totalMoulds, reqCores: totalCores, reqHeats: totalHeats }
+  }
+
+  const handleAddOrder = () => {
+    if (!selectedOrder) return
+    const order = orders.find(o => (o.id || o._id) === selectedOrder)
+    if (!order) return
     
+    // Check if already in today's schedule
+    if (daySchedules.find(s => s.orderId === selectedOrder)) return
+
+    const { reqMoulds: totalMoulds, reqCores: totalCores, reqHeats: totalHeats } = calculateOrderRequirements(order.cart)
+    
+    // Calculate already planned across all days
+    let alreadyPlannedMoulds = 0
+    let alreadyPlannedCores = 0
+    let alreadyPlannedHeats = 0
+
+    schedules.forEach((s: any) => {
+      if (s.orderId === selectedOrder || s.orderId?._id === selectedOrder) {
+        // Exclude today's current edit session if they previously had it, though we already returned if it was in daySchedules
+        alreadyPlannedMoulds += (s.stages?.moulding?.planned || 0)
+        alreadyPlannedCores += (s.stages?.core?.planned || 0)
+        alreadyPlannedHeats += (s.stages?.melting?.planned || 0)
+      }
+    })
+
+    const remainingMoulds = Math.max(0, totalMoulds - alreadyPlannedMoulds)
+    const remainingCores = Math.max(0, totalCores - alreadyPlannedCores)
+    const remainingHeats = Math.max(0, totalHeats - alreadyPlannedHeats)
+
     const newSchedule = {
       isNew: true,
       orderId: order.id,
@@ -103,10 +125,10 @@ export function ScheduleDrawer({
       customer: order.customer,
       cart: order.cart,
       stages: {
-        core:               { planned: totalCores,  completed: 0, pending: 0, variance: 0, unit: 'cores' },
-        melting:            { planned: totalHeats,  completed: 0, pending: 0, variance: 0, unit: 'heats' },
-        moulding:           { planned: totalMoulds, completed: 0, pending: 0, variance: 0, unit: 'moulds' },
-        pouring:            { planned: totalMoulds, completed: 0, pending: 0, variance: 0, unit: 'moulds' },
+        core:               { planned: remainingCores,  completed: 0, pending: 0, variance: 0, unit: 'cores' },
+        melting:            { planned: remainingHeats,  completed: 0, pending: 0, variance: 0, unit: 'heats' },
+        moulding:           { planned: remainingMoulds, completed: 0, pending: 0, variance: 0, unit: 'moulds' },
+        pouring:            { planned: remainingMoulds, completed: 0, pending: 0, variance: 0, unit: 'moulds' },
         knockout:           { planned: 0, completed: 0, pending: 0, variance: 0, unit: 'pieces' },
         shotBlasting:       { planned: 0, completed: 0, pending: 0, variance: 0, unit: 'pieces' },
         grinding:           { planned: 0, completed: 0, pending: 0, variance: 0, unit: 'pieces' },
@@ -117,6 +139,76 @@ export function ScheduleDrawer({
     
     setDaySchedules([...daySchedules, newSchedule])
     setSelectedOrder('')
+  }
+
+  const handleSwapOrder = (index: number, newOrderId: string) => {
+    const newOrder = orders.find(o => (o.id || o._id) === newOrderId)
+    if (!newOrder) return
+
+    const newSchedules = [...daySchedules]
+    const oldSchedule = newSchedules[index]
+    
+    if (!oldSchedule.isNew) {
+      oldSchedule.status = 'Rescheduled'
+      oldSchedule.remarks = 'Sent to pending (swapped)'
+      Object.keys(oldSchedule.stages).forEach(k => {
+         if (oldSchedule.stages[k]) {
+           oldSchedule.stages[k].planned = 0
+         }
+      })
+    } else {
+      newSchedules.splice(index, 1)
+    }
+
+    const { reqMoulds, reqCores, reqHeats } = calculateOrderRequirements(newOrder.cart)
+    let alreadyPlannedMoulds = 0
+    let alreadyPlannedCores = 0
+    let alreadyPlannedHeats = 0
+
+    schedules.forEach((s: any) => {
+      if (s.orderId === newOrderId || s.orderId?._id === newOrderId) {
+        alreadyPlannedMoulds += (s.stages?.moulding?.planned || 0)
+        alreadyPlannedCores += (s.stages?.core?.planned || 0)
+        alreadyPlannedHeats += (s.stages?.melting?.planned || 0)
+      }
+    })
+
+    const remainingMoulds = Math.max(0, reqMoulds - alreadyPlannedMoulds)
+    const remainingCores = Math.max(0, reqCores - alreadyPlannedCores)
+    const remainingHeats = Math.max(0, reqHeats - alreadyPlannedHeats)
+
+    const newSchedule = {
+      isNew: true,
+      orderId: newOrder.id || newOrder._id,
+      date,
+      shift: 'Morning',
+      priority: 'High',
+      remarks: 'Urgent replacement',
+      status: 'Planned',
+      customerOrderNo: newOrder.customerOrderNo,
+      customer: newOrder.customer,
+      cart: newOrder.cart,
+      stages: {
+        core:               { planned: remainingCores,  completed: 0, pending: 0, variance: 0, unit: 'cores' },
+        melting:            { planned: remainingHeats,  completed: 0, pending: 0, variance: 0, unit: 'heats' },
+        moulding:           { planned: remainingMoulds, completed: 0, pending: 0, variance: 0, unit: 'moulds' },
+        pouring:            { planned: remainingMoulds, completed: 0, pending: 0, variance: 0, unit: 'moulds' },
+        knockout:           { planned: 0, completed: 0, pending: 0, variance: 0, unit: 'pieces' },
+        shotBlasting:       { planned: 0, completed: 0, pending: 0, variance: 0, unit: 'pieces' },
+        grinding:           { planned: 0, completed: 0, pending: 0, variance: 0, unit: 'pieces' },
+        inspection:         { planned: 0, completed: 0, pending: 0, variance: 0, unit: 'pieces' },
+        readyForDispatch:   { planned: 0, completed: 0, pending: 0, variance: 0, unit: 'pieces' },
+      }
+    }
+    
+    // If we kept the old schedule in array, push new one. If we spliced it, insert at same index.
+    if (!oldSchedule.isNew) {
+      newSchedules.push(newSchedule)
+    } else {
+      newSchedules.splice(index, 0, newSchedule)
+    }
+    
+    setDaySchedules(newSchedules)
   }
 
   const updateStagePlanned = (index: number, stageKey: string, value: string) => {
@@ -305,40 +397,65 @@ export function ScheduleDrawer({
                   <p className="text-[#94A3B8]">No orders scheduled for this day yet.</p>
                 </div>
               ) : (
-                daySchedules.map((s, idx) => (
-                  <div key={idx} className="bg-[#FFFFFF] border border-[#E0E7FF] rounded-xl p-5 space-y-4 relative group">
-                     {s.isNew && <Badge className="absolute -top-2 -right-2 bg-blue-500 text-white border-none">New Entry</Badge>}
-                         <div className="flex justify-between items-start mb-4">
-                            <div>
-                               <h4 className="text-lg font-bold text-[#172554]">{s.customerOrderNo}</h4>
-                               <p className="text-[#64748B] text-sm">{s.customer}</p>
-                            </div>
-                            {s.remarks?.includes('Carried forward') && (
-                              <Badge variant="outline" className="bg-red-500/10 text-red-400 border-red-500/20 text-xs">
-                                Pending Balance / {s.remarks}
-                              </Badge>
-                            )}
-                         </div>
-                     
-                     <div className="grid grid-cols-3 gap-4">
-                        {['core', 'moulding', 'melting'].map(stageKey => (
-                           <div key={stageKey} className="space-y-2 bg-[#F4F6FB] p-3 rounded-lg border border-[#E0E7FF]">
-                              <Label className="text-[#64748B] text-[11px] uppercase font-bold tracking-wider">{stageKey}</Label>
-                              <div className="flex items-center gap-2">
-                                 <Input 
-                                    type="number" 
-                                    value={s.stages[stageKey].planned || ''}
-                                    onChange={(e) => updateStagePlanned(idx, stageKey, e.target.value)}
-                                    className="h-8 w-16 text-sm font-mono font-medium text-center bg-[#172554]/10 border-transparent text-[#172554] rounded-md focus:border-[#4F46E5] focus:bg-[#FFFFFF] transition-colors px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
-                                    placeholder="0"
-                                 />
-                                 <span className="text-[#94A3B8] text-xs w-10">{s.stages[stageKey].unit}</span>
+                daySchedules.map((s, idx) => {
+                  const { reqCores, reqHeats, reqMoulds } = calculateOrderRequirements(s.cart);
+                  
+                  return (
+                    <div key={idx} className="bg-[#FFFFFF] border border-[#E0E7FF] rounded-xl p-5 space-y-4 relative group">
+                       {s.isNew && <Badge className="absolute -top-2 -right-2 bg-blue-500 text-white border-none">New Entry</Badge>}
+                           <div className="flex justify-between items-start mb-4">
+                              <div>
+                                 <h4 className="text-lg font-bold text-[#172554]">{s.customerOrderNo}</h4>
+                                 <p className="text-[#64748B] text-sm">{s.customer}</p>
+                              </div>
+                              <div className="flex gap-2 items-center">
+                                {s.status !== 'Rescheduled' && (
+                                  <Select onValueChange={(newOrderId) => handleSwapOrder(idx, newOrderId)}>
+                                    <SelectTrigger className="bg-[#FFFFFF] border-[#E0E7FF] text-[#172554] h-8 text-xs w-[140px]">
+                                      <SelectValue placeholder="Swap Order..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {validOrders.map((o: any) => (
+                                        <SelectItem key={String(o.id || o._id)} value={String(o.id || o._id)}>{o.customerOrderNo}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                )}
+                                {s.remarks && (
+                                  <Badge variant="outline" className={cn("text-xs", s.status === 'Rescheduled' ? "bg-orange-500/10 text-orange-600 border-orange-500/20" : "bg-red-500/10 text-red-400 border-red-500/20")}>
+                                    {s.remarks}
+                                  </Badge>
+                                )}
                               </div>
                            </div>
-                        ))}
-                     </div>
-                  </div>
-                ))
+                       
+                       <div className="grid grid-cols-3 gap-4">
+                          {['core', 'moulding', 'melting'].map(stageKey => {
+                             const reqMap: any = { core: reqCores, moulding: reqMoulds, melting: reqHeats };
+                             return (
+                               <div key={stageKey} className="space-y-2 bg-[#F4F6FB] p-3 rounded-lg border border-[#E0E7FF]">
+                                  <div className="flex justify-between items-center">
+                                    <Label className="text-[#64748B] text-[11px] uppercase font-bold tracking-wider">{stageKey}</Label>
+                                    <span className="text-[10px] font-medium text-[#94A3B8]">Req: {reqMap[stageKey]}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                     <Input 
+                                        type="number" 
+                                        disabled={s.status === 'Rescheduled'}
+                                        value={s.stages[stageKey]?.planned || ''}
+                                        onChange={(e) => updateStagePlanned(idx, stageKey, e.target.value)}
+                                        className="h-8 w-16 text-sm font-mono font-medium text-center bg-[#172554]/10 border-transparent text-[#172554] rounded-md focus:border-[#4F46E5] focus:bg-[#FFFFFF] transition-colors px-1 disabled:opacity-50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
+                                        placeholder="0"
+                                     />
+                                     <span className="text-[#94A3B8] text-xs w-10">{s.stages[stageKey]?.unit}</span>
+                                  </div>
+                               </div>
+                             );
+                          })}
+                       </div>
+                    </div>
+                  );
+                })
               )}
             </div>
           </div>

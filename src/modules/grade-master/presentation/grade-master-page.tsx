@@ -1,16 +1,29 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, PencilSimple } from '@phosphor-icons/react'
+import { Plus, PencilSimple, Trash } from '@phosphor-icons/react'
 import { Button } from '@/shared/ui/button'
 import { GradeModal } from '@/modules/grade-master/presentation/grade-modal'
 import type { Grade } from '@/modules/grade-master/domain/grade.types'
+import { ConfirmDeleteDialog } from '@/shared/ui/confirm-delete-dialog'
 
 export default function GradeMasterPage() {
   const [grades, setGrades] = useState<Grade[]>([])
   const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingGrade, setEditingGrade] = useState<Grade | null>(null)
+  const [gradeToDelete, setGradeToDelete] = useState<Grade | null>(null)
+
+  const handleDeleteGrade = async (id: string) => {
+    try {
+      const res = await fetch(`/api/grades/${id}`, { method: 'DELETE' })
+      if (res.ok) {
+        await fetchGrades()
+      }
+    } catch (err) {
+      console.error('Failed to delete grade:', err)
+    }
+  }
 
   const fetchGrades = useCallback(async () => {
     try {
@@ -120,15 +133,26 @@ export default function GradeMasterPage() {
                     <td className="px-6 py-4 text-[#64748B] font-mono text-sm">{grade.p}</td>
                     <td className="px-6 py-4 text-[#64748B] font-mono text-sm">{grade.s}</td>
                     <td className="px-6 py-4 text-right">
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => openEditModal(grade)}
-                        className="text-[#64748B] hover:text-[#172554] hover:bg-[#E0E7FF] h-8 px-2"
-                      >
-                        <PencilSimple className="w-4 h-4 mr-1.5" />
-                        Edit
-                      </Button>
+                      <div className="flex justify-end gap-1.5">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => openEditModal(grade)}
+                          className="text-[#64748B] hover:text-[#172554] hover:bg-[#E0E7FF] h-8 px-2"
+                        >
+                          <PencilSimple className="w-4 h-4 mr-1.5" />
+                          Edit
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => setGradeToDelete(grade)}
+                          className="text-[#64748B] hover:text-red-500 hover:bg-red-50 h-8 px-2"
+                        >
+                          <Trash className="w-4 h-4 mr-1.5" />
+                          Delete
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -143,6 +167,14 @@ export default function GradeMasterPage() {
         onClose={() => setIsModalOpen(false)}
         onSave={handleSaveGrade}
         grade={editingGrade}
+      />
+      <ConfirmDeleteDialog
+        open={!!gradeToDelete}
+        onOpenChange={(open) => !open && setGradeToDelete(null)}
+        onConfirm={() => gradeToDelete && gradeToDelete.id && handleDeleteGrade(gradeToDelete.id)}
+        title="Delete Grade?"
+        description="Are you sure you want to delete this grade? Chemical compositions mapped to items in this grade may be affected."
+        itemName={gradeToDelete?.code || gradeToDelete?.name}
       />
     </div>
   )

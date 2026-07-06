@@ -7,7 +7,7 @@ import {
 import { cn } from '@/shared/lib/utils'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
-import { Download, FilePdf, Printer } from '@phosphor-icons/react'
+import { Download, FilePdf, Printer, PencilSimple, Trash } from '@phosphor-icons/react'
 import { statusColors, type Order } from '@/modules/orders/domain/order.types'
 import { useRole } from '@/shared/context/role-context'
 import {
@@ -18,29 +18,39 @@ import {
   SelectValue,
 } from '@/shared/ui/select'
 import { Input } from '@/shared/ui/input'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 export function ViewOrderModal({
-  order,
+  order: initialOrder,
   onClose,
+  onEdit,
+  onDelete,
 }: {
   order: Order | null
   onClose: () => void
+  onEdit?: () => void
+  onDelete?: () => void
 }) {
   const { role } = useRole()
   const [updating, setUpdating] = useState(false)
+  const [order, setOrder] = useState<Order | null>(null)
+
+  useEffect(() => {
+    setOrder(initialOrder)
+  }, [initialOrder])
   
   if (!order) return null
 
   const handleStatusChange = async (newStatus: string) => {
     setUpdating(true)
     try {
+      const updatedOrder = { ...order, status: newStatus }
       await fetch(`/api/orders/${order.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...order, status: newStatus }),
+        body: JSON.stringify(updatedOrder),
       })
-      order.status = newStatus 
+      setOrder(updatedOrder)
     } finally {
       setUpdating(false)
     }
@@ -50,22 +60,20 @@ export function ViewOrderModal({
     const item = order.cart.find(i => i.id === itemId)
     if (!item) return
     
-    item.deliveryQuantity = newQty
-    
+    const updatedCart = order.cart.map(i => i.id === itemId ? { ...i, deliveryQuantity: newQty } : i)
     // Auto-complete order if all items are fully delivered
-    const allDelivered = order.cart.every(i => i.deliveryQuantity >= i.quantity)
+    const allDelivered = updatedCart.every(i => i.deliveryQuantity >= i.quantity)
     const newStatus = allDelivered ? 'Completed' : order.status
     
+    const updatedOrder = { ...order, cart: updatedCart, status: newStatus }
     setUpdating(true)
     try {
       await fetch(`/api/orders/${order.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...order, status: newStatus }),
+        body: JSON.stringify(updatedOrder),
       })
-      if (newStatus !== order.status) {
-        order.status = newStatus
-      }
+      setOrder(updatedOrder)
     } finally {
       setUpdating(false)
     }
@@ -75,26 +83,36 @@ export function ViewOrderModal({
     const item = order.cart.find(i => i.id === itemId)
     if (!item) return
 
-    if (field === 'quantity') item.quantity = value
-    if (field === 'unitCost') item.unitCost = value
+    const updatedCart = order.cart.map(i => {
+      if (i.id !== itemId) return i
+      return { ...i, [field]: value }
+    })
 
     // Recalculate totals
     let newSubtotal = 0
-    order.cart.forEach(i => {
+    updatedCart.forEach(i => {
       const cost = i.unitCost ?? (i.weight * i.ratePerKg) ?? 0
       newSubtotal += cost * i.quantity
     })
-    order.subtotal = newSubtotal
-    order.gstAmount = newSubtotal * (order.gstPercent / 100)
-    order.grandTotal = newSubtotal + order.gstAmount
+    const newGstAmount = newSubtotal * (order.gstPercent / 100)
+    const newGrandTotal = newSubtotal + newGstAmount
+
+    const updatedOrder = {
+      ...order,
+      cart: updatedCart,
+      subtotal: newSubtotal,
+      gstAmount: newGstAmount,
+      grandTotal: newGrandTotal
+    }
 
     setUpdating(true)
     try {
       await fetch(`/api/orders/${order.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(order),
+        body: JSON.stringify(updatedOrder),
       })
+      setOrder(updatedOrder)
     } finally {
       setUpdating(false)
     }
@@ -144,6 +162,26 @@ export function ViewOrderModal({
             <Button variant="outline" size="sm" className="bg-[#FFFFFF] border-[#E0E7FF] text-[#64748B] hover:text-[#172554] hover:bg-[#EEF2FF]">
               <Download weight="duotone" className="mr-2 h-4 w-4" /> Export
             </Button>
+            {role === 'Admin' && onEdit && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={onEdit}
+                className="bg-[#FFFFFF] border-[#C7D2FE] text-[#4F46E5] hover:bg-[#EEF2FF]"
+              >
+                <PencilSimple weight="duotone" className="mr-2 h-4 w-4" /> Edit
+              </Button>
+            )}
+            {role === 'Admin' && onDelete && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={onDelete}
+                className="bg-[#FFFFFF] border-red-200 text-red-500 hover:bg-red-50"
+              >
+                <Trash weight="duotone" className="mr-2 h-4 w-4" /> Delete
+              </Button>
+            )}
           </div>
         </DialogHeader>
 
@@ -204,7 +242,14 @@ export function ViewOrderModal({
                                   type="number" 
                                   min="1"
                                   className="h-8 w-20 px-2 ml-auto text-right bg-[#F4F6FB] border-[#E0E7FF] text-[#172554] focus:border-[#4F46E5]" 
-                                  defaultValue={item.quantity}
+                                  value={item.quantity || ''}
+                                  onChange={(e) => {
+                                    const val = Number(e.target.value) || 0
+                                    setOrder({
+                                      ...order,
+                                      cart: order.cart.map(c => c.id === item.id ? { ...c, quantity: val } : c)
+                                    })
+                                  }}
                                   onBlur={(e) => handleItemFieldChange(item.id, 'quantity', Number(e.target.value))}
                                 />
                               ) : (
@@ -217,7 +262,14 @@ export function ViewOrderModal({
                                   type="number" 
                                   min="0"
                                   className="h-8 w-20 px-2 ml-auto text-right bg-[#F4F6FB] border-[#E0E7FF] text-[#172554] focus:border-[#4F46E5]" 
-                                  defaultValue={item.deliveryQuantity || 0}
+                                  value={item.deliveryQuantity ?? ''}
+                                  onChange={(e) => {
+                                    const val = Number(e.target.value) || 0
+                                    setOrder({
+                                      ...order,
+                                      cart: order.cart.map(c => c.id === item.id ? { ...c, deliveryQuantity: val } : c)
+                                    })
+                                  }}
                                   onBlur={(e) => handleDeliveryQtyChange(item.id, Number(e.target.value))}
                                 />
                               ) : (
@@ -234,7 +286,14 @@ export function ViewOrderModal({
                                       type="number" 
                                       min="0"
                                       className="h-8 w-24 px-2 text-right bg-[#F4F6FB] border-[#E0E7FF] text-[#172554] focus:border-[#4F46E5]" 
-                                      defaultValue={safeUnitCost}
+                                      value={item.unitCost ?? ''}
+                                      onChange={(e) => {
+                                        const val = Number(e.target.value) || 0
+                                        setOrder({
+                                          ...order,
+                                          cart: order.cart.map(c => c.id === item.id ? { ...c, unitCost: val } : c)
+                                        })
+                                      }}
                                       onBlur={(e) => handleItemFieldChange(item.id, 'unitCost', Number(e.target.value))}
                                     />
                                   </div>

@@ -201,11 +201,17 @@ export function ProductMappingModal({
                 <span className="text-[#94A3B8] text-sm">Name:</span>
                 <span className="ml-2 text-[#172554]">Pump Housing B</span>
               </div>
-              <div>
+              <div className="flex items-center gap-2">
                 <span className="text-[#94A3B8] text-sm">Core Boxes:</span>
-                <span className="ml-2 text-[#172554] font-medium">
-                  {coreBoxes && coreBoxes.length > 0 ? coreBoxes.map(cb => cb.code || 'Unnamed').join(', ') : 'None'}
-                </span>
+                <div className="flex flex-wrap gap-1">
+                  {coreBoxes && coreBoxes.length > 0 ? coreBoxes.map(cb => (
+                    <span key={cb.id || cb.code} className="px-2 py-0.5 bg-[#EEF2FF] text-[#4F46E5] text-xs font-semibold rounded-md border border-[#C7D2FE]">
+                      {cb.code || 'Unnamed'}
+                    </span>
+                  )) : (
+                    <span className="text-[#172554] text-sm font-medium">None</span>
+                  )}
+                </div>
               </div>
             </div>
           </div>

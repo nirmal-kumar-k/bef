@@ -289,17 +289,6 @@ export function NewPatternModal({
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">Avg Moulds per Hour</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  placeholder="e.g. 12"
-                  value={avgMouldsPerHour}
-                  onChange={(e) => setAvgMouldsPerHour(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="bg-[#FFFFFF] border-[#E0E7FF] text-[#172554]"
-                />
-              </div>
             </div>
 
             {/* Pattern Images */}
@@ -413,6 +402,20 @@ export function NewPatternModal({
                 <Button size="sm" variant="ghost" onClick={() => setSharedCoreBoxes([...sharedCoreBoxes, { id: Date.now().toString(), code: '', owner: 'Foundry', images: [] }])} disabled={coreBoxPresent === 'No'} className="text-[#4F46E5] hover:bg-[#4F46E5]/10 hover:text-[#4F46E5]">
                   <Plus className="w-4 h-4 mr-1" /> Add Core Box
                 </Button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 pb-2">
+                <div className="space-y-2">
+                  <Label className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">Avg Moulds per Hour</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    placeholder="e.g. 12"
+                    value={avgMouldsPerHour}
+                    onChange={(e) => setAvgMouldsPerHour(e.target.value === '' ? '' : Number(e.target.value))}
+                    className="bg-[#FFFFFF] border-[#E0E7FF] text-[#172554]"
+                  />
+                </div>
               </div>
 
               <div className={cn("transition-opacity duration-300", coreBoxPresent === 'No' && "opacity-50 pointer-events-none")}>

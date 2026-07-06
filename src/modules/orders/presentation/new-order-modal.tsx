@@ -135,6 +135,12 @@ export function NewOrderModal({
     setCart(newCart)
   }
 
+  const handleUpdateCartItemQty = (index: number, val: string) => {
+    const newCart = [...cart]
+    newCart[index] = { ...newCart[index], quantity: Number(val) || 0 }
+    setCart(newCart)
+  }
+
   const handleCreateOrder = async () => {
     if (!customerOrderNo.trim() || cart.length === 0) return
     const customerLabel = customers.find(c => c.value === selectedCustomer)?.label || ''
@@ -464,7 +470,15 @@ export function NewOrderModal({
                             <td className="px-4 py-3">
                               <p className="font-medium text-[#172554] truncate max-w-[220px]">{item.productName}</p>
                             </td>
-                            <td className="px-4 py-3 text-center font-medium text-[#172554]">{item.quantity.toLocaleString()}</td>
+                            <td className="px-4 py-3 text-center">
+                              <Input 
+                                type="number" 
+                                min="1"
+                                className="h-7 w-20 mx-auto text-sm font-mono font-medium text-center bg-[#172554]/10 border-transparent text-[#172554] rounded-md focus:border-[#4F46E5] focus:bg-[#FFFFFF] transition-colors px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
+                                value={item.quantity || ''}
+                                onChange={(e) => handleUpdateCartItemQty(index, e.target.value)}
+                              />
+                            </td>
                             {initialData && (
                               <td className="px-4 py-3 text-center">
                                 <Input 

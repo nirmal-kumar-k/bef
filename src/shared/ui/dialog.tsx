@@ -54,7 +54,8 @@ function DialogContent({
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-[16px] bg-[rgba(12,18,33,0.85)] backdrop-blur-[20px] p-4 text-sm text-popover-foreground border border-white/[0.08] outline-none sm:max-w-sm shadow-2xl overflow-hidden",
+          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-[16px] bg-[rgba(12,18,33,0.85)] backdrop-blur-[20px] p-4 text-sm text-popover-foreground border border-white/[0.08] outline-none shadow-2xl overflow-hidden",
+          (typeof className !== "string" || !className.includes("max-w-")) && "sm:max-w-sm",
           className
         )}
         {...props}

@@ -12,6 +12,8 @@ export interface IEquipment extends Document {
   // Knockout specific
   avgPiecesPerHour?: number
   
+  restrictedCoreBoxes?: string[]
+  
   isActive: boolean
   createdAt: Date
   updatedAt: Date
@@ -29,6 +31,7 @@ const EquipmentSchema = new Schema<IEquipment>(
     firstHeatDurationMins: { type: Number, default: 150 },
     regularHeatDurationMins: { type: Number, default: 150 },
     avgPiecesPerHour: { type: Number },
+    restrictedCoreBoxes: { type: [String], default: [] },
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }

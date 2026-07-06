@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Plus } from '@phosphor-icons/react'
+import { Plus, PencilSimple, Trash } from '@phosphor-icons/react'
 import { Button } from '@/shared/ui/button'
 import { Badge } from '@/shared/ui/badge'
 import { cn } from '@/shared/lib/utils'
 import { NewOrderModal } from '@/modules/orders/presentation/new-order-modal'
 import { ViewOrderModal } from '@/modules/orders/presentation/view-order-modal'
+import { ConfirmDeleteDialog } from '@/shared/ui/confirm-delete-dialog'
 import { categories, statusColors, statusAccentColors, type Order } from '@/modules/orders/domain/order.types'
 import { useRole } from '@/shared/context/role-context'
 
@@ -16,8 +17,21 @@ export default function OrdersPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [viewOrderId, setViewOrderId] = useState<string | null>(null)
   const [editOrderId, setEditOrderId] = useState<string | null>(null)
+  const [orderToDelete, setOrderToDelete] = useState<Order | null>(null)
   const [activeCategory, setActiveCategory] = useState('All')
   const { role } = useRole()
+
+  const handleDeleteOrder = async (id: string) => {
+    try {
+      const res = await fetch(`/api/orders/${id}`, { method: 'DELETE' })
+      if (res.ok) {
+        await fetchOrders()
+        setViewOrderId(null)
+      }
+    } catch (err) {
+      console.error('Failed to delete order:', err)
+    }
+  }
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -123,15 +137,9 @@ export default function OrdersPage() {
             filteredOrders.map((order) => (
               <div 
                 key={order.id} 
-                onClick={() => {
-                  if (role === 'Admin') {
-                    setEditOrderId(order.id)
-                  } else {
-                    setViewOrderId(order.id)
-                  }
-                }}
+                onClick={() => setViewOrderId(order.id)}
                 className={cn(
-                  "flex items-center bg-[#FFFFFF] border p-5 rounded-[14px] hover:bg-black/[0.03] transition-all duration-150 cursor-pointer",
+                  "flex items-center bg-[#FFFFFF] border p-5 rounded-[14px] hover:bg-black/[0.03] transition-all duration-150 cursor-pointer group",
                   statusAccentColors[order.status] || 'border-black/[0.04]'
                 )}
               >
@@ -171,10 +179,36 @@ export default function OrdersPage() {
                   </div>
                 </div>
 
-                <div className="ml-auto pl-4">
+                <div className="ml-auto pl-4 flex items-center gap-3">
                   <Badge variant="outline" className={cn('text-[13px] px-3 py-1', statusColors[order.status])}>
                     {order.status.toUpperCase()}
                   </Badge>
+                  {role === 'Admin' && (
+                    <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setEditOrderId(order.id)
+                        }}
+                        className="h-8 w-8 text-[#64748B] hover:text-[#4F46E5] hover:bg-[#EEF2FF]"
+                      >
+                        <PencilSimple className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setOrderToDelete(order)
+                        }}
+                        className="h-8 w-8 text-[#64748B] hover:text-red-500 hover:bg-red-50"
+                      >
+                        <Trash className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
             ))
@@ -190,7 +224,23 @@ export default function OrdersPage() {
           onSave={handleSaveOrder}
           initialData={editingOrder}
         />
-        <ViewOrderModal order={viewingOrder} onClose={() => setViewOrderId(null)} />
+        <ViewOrderModal 
+          order={viewingOrder} 
+          onClose={() => setViewOrderId(null)} 
+          onEdit={viewingOrder ? () => {
+            setViewOrderId(null)
+            setEditOrderId(viewingOrder.id)
+          } : undefined}
+          onDelete={viewingOrder ? () => setOrderToDelete(viewingOrder) : undefined}
+        />
+        <ConfirmDeleteDialog
+          open={!!orderToDelete}
+          onOpenChange={(open) => !open && setOrderToDelete(null)}
+          onConfirm={() => orderToDelete && handleDeleteOrder(orderToDelete.id)}
+          title="Delete Sales Order"
+          description="Are you sure you want to delete this sales order? All mapped scheduling backlog and production items for this order may be affected."
+          itemName={orderToDelete?.customerOrderNo}
+        />
     </div>
   )
 }

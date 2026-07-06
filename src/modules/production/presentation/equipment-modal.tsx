@@ -26,6 +26,7 @@ export function EquipmentModal({ isOpen, onClose, initialData }: EquipmentModalP
     firstHeatDurationMins: 150,
     regularHeatDurationMins: 150,
     avgPiecesPerHour: undefined,
+    restrictedCoreBoxes: [],
     isActive: true
   })
   
@@ -43,6 +44,7 @@ export function EquipmentModal({ isOpen, onClose, initialData }: EquipmentModalP
           firstHeatDurationMins: 150,
           regularHeatDurationMins: 150,
           avgPiecesPerHour: undefined,
+          restrictedCoreBoxes: [],
           isActive: true
         })
       }
@@ -63,8 +65,11 @@ export function EquipmentModal({ isOpen, onClose, initialData }: EquipmentModalP
         payload.firstHeatDurationMins = undefined
         payload.regularHeatDurationMins = undefined
       }
-      if (payload.type !== 'Knockout') {
+      if (!['Knockout', 'Core Machine', 'Moulding Machine'].includes(payload.type || '')) {
         payload.avgPiecesPerHour = undefined
+      }
+      if (payload.type !== 'Core Machine') {
+        payload.restrictedCoreBoxes = undefined
       }
       
       const res = await fetch(url, {
@@ -127,19 +132,17 @@ export function EquipmentModal({ isOpen, onClose, initialData }: EquipmentModalP
             />
           </div>
 
-          {isFurnace && (
-            <div className="grid gap-2">
-              <Label htmlFor="weight" className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">Weight Capacity (kg)</Label>
-              <Input
-                id="weight"
-                type="number"
-                value={formData.weightCapacity || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, weightCapacity: e.target.value ? Number(e.target.value) : undefined }))}
-                placeholder="e.g. 500"
-                className="bg-[#F4F6FB] border-[#E0E7FF] focus:border-[#4F46E5] text-[#172554] font-mono"
-              />
-            </div>
-          )}
+          <div className="grid gap-2">
+            <Label htmlFor="weight" className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">Weight Capacity (kg)</Label>
+            <Input
+              id="weight"
+              type="number"
+              value={formData.weightCapacity || ''}
+              onChange={(e) => setFormData(prev => ({ ...prev, weightCapacity: e.target.value ? Number(e.target.value) : undefined }))}
+              placeholder="e.g. 500"
+              className="bg-[#F4F6FB] border-[#E0E7FF] focus:border-[#4F46E5] text-[#172554] font-mono"
+            />
+          </div>
 
           {isFurnace && (
             <div className="grid grid-cols-2 gap-4 bg-[#EEF2FF]/30 p-4 rounded-lg border border-[#E0E7FF]/50">
@@ -166,12 +169,10 @@ export function EquipmentModal({ isOpen, onClose, initialData }: EquipmentModalP
             </div>
           )}
 
-          {['Knockout', 'Core Machine', 'Moulding Machine'].includes(formData.type || '') && (
+          {formData.type === 'Knockout' && (
             <div className="grid gap-2">
               <Label htmlFor="avgPieces" className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">
-                {formData.type === 'Core Machine' ? 'Avg Cores Per Hour' : 
-                 formData.type === 'Moulding Machine' ? 'Avg Moulds Per Hour' : 
-                 'Avg Pieces Per Hour'}
+                Avg Pieces Per Hour
               </Label>
               <Input
                 id="avgPieces"
@@ -183,7 +184,6 @@ export function EquipmentModal({ isOpen, onClose, initialData }: EquipmentModalP
               />
             </div>
           )}
-
         </div>
 
         <DialogFooter className="mt-2">

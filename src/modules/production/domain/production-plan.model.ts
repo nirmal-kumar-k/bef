@@ -30,6 +30,7 @@ export interface IProductionPlan extends Document {
   allocations?: any[]
   isPending?: boolean
   isConfirmed?: boolean
+  possibleQuantity?: number
   plannedCharge?: {
     pigIron?: number
     scrap?: number
@@ -74,6 +75,7 @@ const ProductionPlanSchema = new Schema<IProductionPlan>(
     allocations: { type: Array, default: [] },
     isPending: { type: Boolean, default: false },
     isConfirmed: { type: Boolean, default: false },
+    possibleQuantity: { type: Number, default: 0 },
     plannedCharge: {
       pigIron: Number,
       scrap: Number,

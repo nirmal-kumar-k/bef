@@ -92,8 +92,14 @@ export function ViewPatternModal({
 
   // Weights & Images
   const [goodCastingWeight, setGoodCastingWeight] = useState<number | ''>('')
-  const [totalBoxWeight, setTotalBoxWeight] = useState<number | ''>('')
+  const [runnerRiserWeight, setRunnerRiserWeight] = useState<number | ''>('')
   const [patternImages, setPatternImages] = useState<string[]>([])
+
+  const totalBoxWeight = useMemo(() => {
+    const good = typeof goodCastingWeight === 'number' ? goodCastingWeight : 0
+    const runner = typeof runnerRiserWeight === 'number' ? runnerRiserWeight : 0
+    return good > 0 || runner > 0 ? good + runner : ''
+  }, [goodCastingWeight, runnerRiserWeight])
 
   const yieldPercentage = useMemo(() => {
     if (typeof goodCastingWeight === 'number' && typeof totalBoxWeight === 'number' && totalBoxWeight > 0) {
@@ -115,7 +121,7 @@ export function ViewPatternModal({
       setCategory(pattern.category || 'Machine Moulding')
       setRemarks(pattern.remarks || '')
       setGoodCastingWeight(pattern.goodWeight ?? '')
-      setTotalBoxWeight(pattern.totalWeight ?? '')
+      setRunnerRiserWeight(pattern.runnerRiserWeight ?? '')
       setPatternImages(pattern.patternImages || [])
       setTopPresent(pattern.topMatchplate ? 'Yes' : 'No')
       setTopOwner(pattern.topOwner || 'Foundry')
@@ -155,6 +161,7 @@ export function ViewPatternModal({
       customer: customerLabel,
       category,
       goodWeight: typeof goodCastingWeight === 'number' ? goodCastingWeight : 0,
+      runnerRiserWeight: typeof runnerRiserWeight === 'number' ? runnerRiserWeight : 0,
       totalWeight: typeof totalBoxWeight === 'number' ? totalBoxWeight : 0,
       topMatchplate: topPresent === 'Yes',
       topOwner,
@@ -204,7 +211,7 @@ export function ViewPatternModal({
             <div className="space-y-2">
               <Label className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">Customer</Label>
               <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
-                <PopoverTrigger className="flex h-12 w-full items-center justify-between rounded-lg border border-[#E0E7FF] bg-[#FFFFFF] px-4 text-sm hover:bg-[#EEF2FF] hover:text-white">
+                <PopoverTrigger className="flex h-12 w-full items-center justify-between rounded-lg border border-[#E0E7FF] bg-[#FFFFFF] px-4 text-sm text-[#172554] hover:bg-[#EEF2FF] transition-colors">
                   {selectedCustomer ? customers.find(c => c.value === selectedCustomer)?.label : <span className="text-[#94A3B8]">Select customer...</span>}
                   <CaretUpDown weight="duotone" className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </PopoverTrigger>
@@ -437,8 +444,14 @@ export function ViewPatternModal({
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
+                <Label className="text-[#172554]">Runner/Riser Wt (kg)</Label>
+                <Input type="number" min="0" value={runnerRiserWeight} onChange={(e) => setRunnerRiserWeight(e.target.value === '' ? '' : Number(e.target.value))} placeholder="0.0" className="bg-[#FFFFFF] border-[#E0E7FF] text-[#172554]" />
+              </div>
+              <div className="space-y-2">
                 <Label className="text-[#172554]">Total Box Wt (kg)</Label>
-                <Input type="number" min={0} value={totalBoxWeight} onChange={(e) => setTotalBoxWeight(e.target.value === '' ? '' : Number(e.target.value))} placeholder="0.0" className="bg-[#FFFFFF] border-[#E0E7FF] text-[#172554]" />
+                <div className="h-10 px-3 flex items-center bg-[#F4F6FB] border border-[#E0E7FF] rounded-md text-[#172554] font-medium opacity-70">
+                  {totalBoxWeight || '0.0'}
+                </div>
               </div>
             </div>
             <div className="space-y-2 pt-2">

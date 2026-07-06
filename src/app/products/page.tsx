@@ -7,8 +7,9 @@ import { NewProductModal } from '@/modules/products/presentation/new-product-mod
 import { ViewProductModal } from '@/modules/products/presentation/view-product-modal'
 import type { Product } from '@/modules/products/domain/product.types'
 import { useRole } from '@/shared/context/role-context'
-import { ShieldWarning, Funnel, Check, CaretUpDown, X, MagnifyingGlass } from '@phosphor-icons/react'
+import { ShieldWarning, Funnel, Check, CaretUpDown, X, MagnifyingGlass, Trash, PencilSimple } from '@phosphor-icons/react'
 import { cn } from '@/shared/lib/utils'
+import { ConfirmDeleteDialog } from '@/shared/ui/confirm-delete-dialog'
 import {
   Popover,
   PopoverContent,
@@ -30,10 +31,23 @@ export default function ProductsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isViewModalOpen, setIsViewModalOpen] = useState(false)
   const [viewingProduct, setViewingProduct] = useState<Product | null>(null)
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null)
   const [selectedCustomerFilter, setSelectedCustomerFilter] = useState('')
   const [customerOpen, setCustomerOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const { role } = useRole()
+
+  const handleDeleteProduct = async (id: string) => {
+    try {
+      const res = await fetch(`/api/products/${id}`, { method: 'DELETE' })
+      if (res.ok) {
+        await fetchProducts()
+        setIsViewModalOpen(false)
+      }
+    } catch (err) {
+      console.error('Failed to delete product:', err)
+    }
+  }
 
   // Fetched data from API
   const [customers, setCustomers] = useState<{ value: string; label: string }[]>([])
@@ -221,6 +235,7 @@ export default function ProductsPage() {
                   <th className="px-6 py-4 font-medium">Customer</th>
                   <th className="px-6 py-4 text-right font-medium">Weight</th>
                   <th className="px-6 py-4 text-right font-medium">Cavity Count</th>
+                  <th className="px-6 py-4 text-right font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E0E7FF]">
@@ -238,6 +253,31 @@ export default function ProductsPage() {
                     <td className="px-6 py-4 text-[#64748B] group-hover:text-[#0F172A] transition-colors">{product.customer}</td>
                     <td className="px-6 py-4 text-right text-[#0F172A]">{product.weight}</td>
                     <td className="px-6 py-4 text-right font-mono text-[#94A3B8] group-hover:text-[#64748B] transition-colors">{product.cavities}</td>
+                    <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                      {role === 'Admin' && (
+                        <div className="flex justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setViewingProduct(product)
+                              setIsViewModalOpen(true)
+                            }}
+                            className="h-8 w-8 text-[#64748B] hover:text-[#4F46E5] hover:bg-[#EEF2FF]"
+                          >
+                            <PencilSimple className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setProductToDelete(product)}
+                            className="h-8 w-8 text-[#64748B] hover:text-red-500 hover:bg-red-50"
+                          >
+                            <Trash className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -257,6 +297,15 @@ export default function ProductsPage() {
         isOpen={isViewModalOpen}
         onClose={() => setIsViewModalOpen(false)}
         onSave={handleUpdateProduct}
+        onDelete={role === 'Admin' ? handleDeleteProduct : undefined}
+      />
+      <ConfirmDeleteDialog
+        open={!!productToDelete}
+        onOpenChange={(open) => !open && setProductToDelete(null)}
+        onConfirm={() => productToDelete && handleDeleteProduct(productToDelete.id)}
+        title="Delete Product?"
+        description="Are you sure you want to delete this product? All mapped orders and schedules will be affected."
+        itemName={productToDelete?.code || productToDelete?.name}
       />
     </div>
   )

@@ -88,10 +88,10 @@ export default function ProductionSchedulePage() {
 
   // Aggregate schedules by date for the calendar cells
   const schedulesByDate = useMemo(() => {
-    const map = new Map<string, { core: number, melting: number, moulding: number, coreDone: number, meltingDone: number, mouldingDone: number, hasPending: boolean }>()
+    const map = new Map<string, { core: number, melting: number, moulding: number, coreDone: number, meltingDone: number, mouldingDone: number, coreReq: number, meltingReq: number, mouldingReq: number, hasPending: boolean }>()
     schedules.forEach(s => {
       if (!map.has(s.date)) {
-        map.set(s.date, { core: 0, melting: 0, moulding: 0, coreDone: 0, meltingDone: 0, mouldingDone: 0, hasPending: false })
+        map.set(s.date, { core: 0, melting: 0, moulding: 0, coreDone: 0, meltingDone: 0, mouldingDone: 0, coreReq: 0, meltingReq: 0, mouldingReq: 0, hasPending: false })
       }
       const counts = map.get(s.date)!
       counts.core += s.stages?.core?.planned || 0
@@ -102,12 +102,40 @@ export default function ProductionSchedulePage() {
       counts.meltingDone += s.stages?.melting?.completed || 0
       counts.mouldingDone += s.stages?.moulding?.completed || 0
 
+      // Calculate requirements from the order's cart
+      let totalMoulds = 0
+      let totalCores = 0
+      let totalHeats = 0
+      
+      s.cart?.forEach((item: any) => {
+         const product = products.find((p: any) => p.name === item.productName || p.code === item.product)
+         const pattern = patterns.find((p: any) => p.mappedProducts?.some((mp: any) => mp.name === product?.name))
+         
+         const cavities = product?.cavities || 1
+         const itemPlannedQty = item.quantity || 0
+         const calcMoulds = Math.ceil(itemPlannedQty / cavities)
+         
+         const mappedProduct = pattern?.mappedProducts?.find((mp: any) => mp.name === product?.name)
+         const coreBoxesCount = mappedProduct?.coreBoxesCount || 0
+         
+         const boxWeight = pattern?.totalWeight || 0
+         const furnaceCapacity = 150 
+         
+         totalMoulds += calcMoulds
+         totalCores += (calcMoulds * coreBoxesCount)
+         totalHeats += Math.ceil((calcMoulds * boxWeight) / furnaceCapacity)
+      })
+
+      counts.coreReq += totalCores
+      counts.meltingReq += totalHeats
+      counts.mouldingReq += totalMoulds
+
       if (s.remarks?.includes('Carried forward')) {
          counts.hasPending = true
       }
     })
     return map
-  }, [schedules])
+  }, [schedules, products, patterns])
 
   // Calendar logic
   const getDays = () => {
@@ -229,7 +257,7 @@ export default function ProductionSchedulePage() {
                           <div className="w-1.5 h-1.5 rounded-full bg-yellow-400" />
                           <span className="text-[10.5px] font-medium text-[#64748B]">Core</span>
                         </div>
-                        <span className="text-[10.5px] font-bold text-[#0F172A]">{counts.coreDone} <span className="text-[#94A3B8] font-normal mx-0.5">/</span> {counts.core}</span>
+                        <span className="text-[10.5px] font-bold text-[#0F172A]">{counts.core} <span className="text-[#94A3B8] font-normal mx-0.5">/</span> {counts.coreReq}</span>
                       </div>
                     ) : null}
                     {counts?.melting ? (
@@ -239,7 +267,7 @@ export default function ProductionSchedulePage() {
                           <span className={cn("text-[10.5px] font-medium", isMeltingOverload ? "text-red-600" : "text-[#64748B]")}>Melting</span>
                         </div>
                         <span className={cn("text-[10.5px] font-bold", isMeltingOverload ? "text-red-600" : "text-[#0F172A]")}>
-                          {counts.meltingDone} <span className={cn("font-normal mx-0.5", isMeltingOverload ? "text-red-400" : "text-[#94A3B8]")}>/</span> {counts.melting}
+                          {counts.melting} <span className={cn("font-normal mx-0.5", isMeltingOverload ? "text-red-400" : "text-[#94A3B8]")}>/</span> {counts.meltingReq}
                         </span>
                       </div>
                     ) : null}
@@ -250,7 +278,7 @@ export default function ProductionSchedulePage() {
                           <span className={cn("text-[10.5px] font-medium", isMouldingOverload ? "text-red-600" : "text-[#64748B]")}>Moulding</span>
                         </div>
                         <span className={cn("text-[10.5px] font-bold", isMouldingOverload ? "text-red-600" : "text-[#0F172A]")}>
-                          {counts.mouldingDone} <span className={cn("font-normal mx-0.5", isMouldingOverload ? "text-red-400" : "text-[#94A3B8]")}>/</span> {counts.moulding}
+                          {counts.moulding} <span className={cn("font-normal mx-0.5", isMouldingOverload ? "text-red-400" : "text-[#94A3B8]")}>/</span> {counts.mouldingReq}
                         </span>
                       </div>
                     ) : null}
