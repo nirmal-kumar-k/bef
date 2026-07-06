@@ -261,6 +261,21 @@ export function CorePlanningModal({
     })
   }
 
+  const handleHourlyActualChange = (rowId: string, timeSlot: string, value: string) => {
+    const num = value === '' ? undefined : parseInt(value, 10)
+    setPlannedRows(prev => prev.map(r => {
+      if (r.id !== rowId) return r
+      const newActuals = { ...r.hourlyActuals, [timeSlot]: num || 0 }
+      const newTotal = Object.values(newActuals).reduce((a, b) => a + b, 0)
+      return { ...r, hourlyActuals: newActuals, actualQuantity: newTotal }
+    }))
+  }
+
+  const handleActualChange = (rowId: string, value: string) => {
+    const num = value === '' ? undefined : parseInt(value, 10)
+    setPlannedRows(prev => prev.map(r => r.id === rowId ? { ...r, actualQuantity: num } : r))
+  }
+
   const handleHourlyChange = (rowId: string, timeSlot: string, value: string) => {
     const num = value === '' ? undefined : parseInt(value, 10)
     setPlannedRows(prev => prev.map(r => {
@@ -400,6 +415,7 @@ export function CorePlanningModal({
 
             {/* Active Machine Content */}
             {activeMachineId && (
+              <>
               <div className="bg-white rounded-xl border border-[#E0E7FF] shadow-lg overflow-hidden">
                 <div className="p-5 border-b border-[#E0E7FF] flex items-center justify-between bg-gradient-to-r from-[#F8FAFC] to-white">
                   <h3 className="font-bold text-[#172554] text-lg flex items-center gap-2">
@@ -466,6 +482,9 @@ export function CorePlanningModal({
                               {slot.time}
                             </th>
                           ))}
+                          <th className="px-6 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">Actual Qty</th>
+                          <th className="px-6 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">Actual Qty</th>
+                          <th className="px-6 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">Actual Qty</th>
                           <th className="px-6 py-4 text-center border-l border-[#E0E7FF]">Actions</th>
                         </tr>
                       </thead>
@@ -528,6 +547,17 @@ export function CorePlanningModal({
                                           isConflict && "text-red-600 font-bold border-red-200 bg-red-100"
                                         )}
                                       />
+                                      <Input
+                                        type="number"
+                                        min="0"
+                                        value={row.hourlyActuals[slot.time] === undefined ? '' : row.hourlyActuals[slot.time]}
+                                        onChange={e => handleHourlyActualChange(row.id, slot.time, e.target.value)}
+                                        placeholder="Act"
+                                        className={cn(
+                                          "w-14 h-7 mt-1 text-center font-mono text-xs px-1 bg-[#F4F6FB] border-[#4285F4]/30 focus:border-[#4285F4] text-[#4285F4] transition-all shadow-inner placeholder:text-[#94A3B8]",
+                                          (row.hourlyActuals[slot.time] || 0) > 0 && "font-bold"
+                                        )}
+                                      />
                                       {viewLabourers && (
                                         <div className="flex items-center justify-center gap-1 opacity-60 hover:opacity-100 transition-opacity">
                                           <button onClick={() => handleWorkerChange(row.id, slot.time, -1)} className="w-4 h-4 flex items-center justify-center bg-[#E2E8F0] rounded text-[#475569] hover:bg-[#CBD5E1] text-xs font-bold leading-none">-</button>
@@ -539,6 +569,45 @@ export function CorePlanningModal({
                                   </td>
                                  )
                               })}
+                              <td className="px-4 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  value={row.actualQuantity === undefined ? '' : row.actualQuantity}
+                                  onChange={e => handleActualChange(row.id, e.target.value)}
+                                  placeholder="Total"
+                                  className={cn(
+                                    "w-20 h-10 mx-auto bg-[#FFFFFF] border-[#4285F4]/50 font-mono text-center text-[#4285F4] font-bold text-lg focus-visible:ring-1 focus-visible:ring-[#4285F4]",
+                                    row.actualQuantity === undefined && "border-red-400"
+                                  )}
+                                />
+                              </td>
+                              <td className="px-4 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  value={row.actualQuantity === undefined ? '' : row.actualQuantity}
+                                  onChange={e => handleActualChange(row.id, e.target.value)}
+                                  placeholder="Total"
+                                  className={cn(
+                                    "w-20 h-10 mx-auto bg-[#FFFFFF] border-[#4285F4]/50 font-mono text-center text-[#4285F4] font-bold text-lg focus-visible:ring-1 focus-visible:ring-[#4285F4]",
+                                    row.actualQuantity === undefined && "border-red-400"
+                                  )}
+                                />
+                              </td>
+                              <td className="px-4 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  value={row.actualQuantity === undefined ? '' : row.actualQuantity}
+                                  onChange={e => handleActualChange(row.id, e.target.value)}
+                                  placeholder="Total"
+                                  className={cn(
+                                    "w-20 h-10 mx-auto bg-[#FFFFFF] border-[#4285F4]/50 font-mono text-center text-[#4285F4] font-bold text-lg focus-visible:ring-1 focus-visible:ring-[#4285F4]",
+                                    row.actualQuantity === undefined && "border-red-400"
+                                  )}
+                                />
+                              </td>
                               <td className="px-6 py-4 text-center border-l border-[#E0E7FF]">
                                 <Button variant="ghost" size="icon" onClick={() => removeRow(row.id)} className="text-[#94A3B8] hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all">
                                   <Trash className="w-5 h-5" />
@@ -552,6 +621,67 @@ export function CorePlanningModal({
                   </div>
                 )}
               </div>
+              
+              <div className="border border-[#E0E7FF] rounded-xl overflow-hidden mt-8">
+                <div className="w-full flex items-center justify-between bg-[#EEF2FF] p-4 text-[#172554]">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-sm">End of Day - Actual Entry ({equipments.find(e => e.id === activeMachineId)?.name})</h3>
+                    <span className="text-xs text-[#64748B]">Enter produced quantities</span>
+                  </div>
+                </div>
+                <div className="p-4 bg-[#F4F6FB] space-y-3">
+                  {activeRows.map(row => {
+                    const planned = parseInt(row.targetQty, 10) || 0
+                    const act = row.actualQuantity
+                    const hasAct = act !== undefined
+                    const variance = hasAct ? act - planned : 0
+                    
+                    return (
+                      <div key={row.id} className="flex items-center gap-4 p-3 bg-[#FFFFFF] border border-[#E0E7FF] rounded-lg">
+                        <div className="w-48 flex flex-col">
+                          <h4 className="text-[#172554] font-mono font-bold text-sm">{row.coreBoxCode}</h4>
+                          <span className="text-[10px] text-[#64748B] truncate">{row.orderNo} | {row.productName}</span>
+                        </div>
+                        <div className="w-24">
+                          <span className="text-[10px] text-[#64748B] block uppercase font-bold mb-1">Planned</span>
+                          <span className="font-mono text-[#172554]">{planned}</span>
+                        </div>
+                        <div className="w-32">
+                          <span className="text-[10px] text-[#4285F4] block uppercase font-bold mb-1">Actual</span>
+                          <Input
+                            type="number"
+                            min="0"
+                            value={act === undefined ? '' : act}
+                            onChange={e => handleActualChange(row.id, e.target.value)}
+                            className={cn(
+                              "h-8 bg-[#F4F6FB] text-[#172554] font-mono px-2 text-sm w-full",
+                              act === undefined ? "border-red-500/50 focus:border-red-500" : "border-[#E0E7FF]"
+                            )}
+                            placeholder="Required"
+                          />
+                        </div>
+                        <div className="w-24 text-right ml-auto">
+                          <span className="text-[10px] text-[#64748B] block uppercase font-bold mb-1">Variance</span>
+                          {hasAct ? (
+                            <span className={cn(
+                              "font-mono font-bold text-lg",
+                              variance > 0 ? "text-green-500" : variance < 0 ? "text-red-500" : "text-[#64748B]"
+                            )}>
+                              {variance > 0 ? '+' : ''}{variance}
+                            </span>
+                          ) : (
+                            <span className="text-[#94A3B8]">-</span>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                  {activeRows.length === 0 && (
+                     <div className="text-center text-[#94A3B8] py-4 text-sm">No items scheduled yet.</div>
+                  )}
+                </div>
+              </div>
+              </>
             )}
           </div>
 

@@ -33,6 +33,7 @@ interface Heat {
   heatNumber: number
   startTime: string
   endTime: string
+  actualMeltWeight?: number
 }
 
 interface Pour {
@@ -133,7 +134,8 @@ export function MeltPlanningModal({
             furnaceId: eqId,
             heatNumber: hNum,
             startTime: p.startTime || '08:00 AM',
-            endTime: p.endTime || '09:30 AM'
+            endTime: p.endTime || '09:30 AM',
+            actualMeltWeight: p.actualMeltWeight
           }
         }
 
@@ -222,6 +224,7 @@ export function MeltPlanningModal({
         heatNumber: h?.heatNumber || 1,
         startTime: h?.startTime,
         endTime: h?.endTime,
+        actualMeltWeight: h?.actualMeltWeight,
         isConfirmed: p.isConfirmed
       }
     })
@@ -254,6 +257,11 @@ export function MeltPlanningModal({
 
       return [...otherHeats, ...furnaceHeats]
     })
+  }
+
+  const handleActualMeltChange = (heatId: string, value: string) => {
+    const val = value === '' ? undefined : Number(value)
+    setHeats(prev => prev.map(h => h.id === heatId ? { ...h, actualMeltWeight: val } : h))
   }
 
   const addPour = (heatId: string, backlogItem: BacklogItem, mouldsToPour: number) => {
@@ -388,14 +396,29 @@ export function MeltPlanningModal({
                             </div>
                           </div>
                           
-                          <div className="flex flex-col items-end">
-                            <span className="text-[10px] font-bold uppercase text-[#94A3B8]">Total Weight</span>
-                            <span className={cn(
-                              "font-mono font-bold text-sm",
-                              isOverCapacity ? "text-red-600" : "text-[#10B981]"
-                            )}>
-                              {totalWeight.toFixed(1)} / {maxCapacity} kg
-                            </span>
+                          <div className="flex items-center gap-6">
+                            <div className="flex flex-col items-end">
+                              <span className="text-[10px] font-bold uppercase text-[#94A3B8]">Total Weight</span>
+                              <span className={cn(
+                                "font-mono font-bold text-sm",
+                                isOverCapacity ? "text-red-600" : "text-[#10B981]"
+                              )}>
+                                {totalWeight.toFixed(1)} / {maxCapacity} kg
+                              </span>
+                            </div>
+                            <div className="flex flex-col items-end border-l border-[#E0E7FF] pl-4">
+                              <span className="text-[10px] font-bold uppercase text-[#4285F4]">Actual Melt</span>
+                              <div className="flex items-center gap-1">
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  value={heat.actualMeltWeight === undefined ? '' : heat.actualMeltWeight}
+                                  onChange={e => handleActualMeltChange(heat.id, e.target.value)}
+                                  className="w-20 h-6 text-xs font-mono text-center px-1 bg-[#FFFFFF] border-[#C7D2FE] focus-visible:ring-1 focus-visible:ring-[#4285F4]"
+                                  placeholder="kg"
+                                />
+                              </div>
+                            </div>
                           </div>
                         </div>
 

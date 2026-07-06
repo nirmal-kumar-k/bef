@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/infrastructure/db'
 import ProductionPlan from '@/modules/production/domain/production-plan.model'
 import Product from '@/modules/products/domain/product.model'
-import Order from '@/modules/sales/domain/order.model'
+import Order from '@/modules/orders/domain/order.model'
 
 export async function POST(request: NextRequest) {
   try {

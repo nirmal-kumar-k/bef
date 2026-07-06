@@ -210,9 +210,14 @@ export default function ProductionPlanningPage() {
     <div className="space-y-6 overflow-hidden">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-[#172554] font-heading tracking-tight">Production Planning</h1>
-          <p className="text-[#64748B] mt-1 text-sm">Schedule capacity and track requirements dynamically</p>
+        <div className="flex items-center gap-4">
+          <div className="inline-flex items-center gap-3 px-5 py-3 bg-[#EEF2FF] text-[#4F46E5] rounded-2xl font-bold shadow-sm border border-[#E0E7FF]/50">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M8 6H21M8 12H21M8 18H21M3 6H3.01M3 12H3.01M3 18H3.01" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            <h1 className="text-2xl font-bold tracking-tight">Production Planning</h1>
+          </div>
+          <p className="text-[#64748B] text-sm mt-1 sm:mt-0">Schedule capacity and track requirements dynamically</p>
         </div>
       </div>
 
@@ -276,16 +281,16 @@ export default function ProductionPlanningPage() {
 
           {/* TAB CONTENT */}
           <div className="space-y-6">
-            <div className="flex border-b border-[#E0E7FF] overflow-x-auto">
+            <div className="inline-flex bg-[#F8FAFC] p-1.5 rounded-full overflow-x-auto shadow-inner border border-[#E2E8F0]">
               {['Summary', 'Core', 'Mould', 'Melt', 'Pour', 'Knockout', 'Actuals'].map(tab => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab as any)}
                   className={cn(
-                    "px-6 py-2.5 text-sm font-semibold transition-all duration-200 border-b-2 whitespace-nowrap",
+                    "px-8 py-2.5 text-sm font-bold transition-all duration-300 rounded-full whitespace-nowrap",
                     activeTab === tab 
-                      ? "bg-[#EEF2FF] text-[#172554] border-[#4F46E5]" 
-                      : "text-[#64748B] hover:text-[#172554] hover:bg-[#FFFFFF] border-transparent"
+                      ? "bg-[#4F46E5] text-white shadow-md shadow-[#4F46E5]/20" 
+                      : "text-[#64748B] hover:text-[#4F46E5] hover:bg-[#EEF2FF]/50"
                   )}
                 >
                   {tab === 'Summary' ? 'Summary' : tab === 'Actuals' ? 'Actuals' : `${tab} Planning`}
@@ -297,7 +302,7 @@ export default function ProductionPlanningPage() {
               {activeTab === 'Summary' && (
                 <div className="space-y-6 bg-white p-6 rounded-2xl border border-[#E0E7FF] shadow-lg">
                   <div>
-                    <h3 className="text-[#172554] font-bold text-lg font-heading">Production Split-up Summary</h3>
+                    <h3 className="text-[#4F46E5] font-bold text-lg font-heading">Production Split-up Summary</h3>
                     <p className="text-[#64748B] text-xs mt-1">Overview of all active orders, pattern requirements, sand weights, and casting weights.</p>
                   </div>
                   <div className="border border-[#E0E7FF] rounded-xl overflow-x-auto shadow-sm">

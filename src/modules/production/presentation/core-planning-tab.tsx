@@ -87,18 +87,18 @@ export function CorePlanningTab({ coreBacklog, patterns, openOrders, dailyPlans,
   return (
     <div className="space-y-6">
       <div className="flex justify-end">
-        <div className="flex items-center gap-3 bg-[#FFFFFF] px-4 py-2 border border-[#E0E7FF] rounded-xl">
-          <Label htmlFor="view-mode" className={cn("text-sm font-semibold cursor-pointer", viewMode === 'table' ? 'text-[#4F46E5]' : 'text-[#94A3B8]')} onClick={() => setViewMode('table')}>Table</Label>
+        <div className="flex items-center gap-3 bg-[#FFFFFF] px-4 py-1.5 border border-[#E0E7FF] rounded-xl shadow-sm">
+          <Label htmlFor="view-mode" className={cn("text-sm font-semibold cursor-pointer transition-colors duration-200", viewMode === 'table' ? 'text-[#172554]' : 'text-[#94A3B8]')} onClick={() => setViewMode('table')}>Table</Label>
           <div 
-            className="w-12 h-6 bg-[#F4F6FB] rounded-full relative cursor-pointer border border-[#E0E7FF]"
+            className="w-12 h-6 bg-[#F4F6FB] rounded-full relative cursor-pointer border border-[#E0E7FF] shadow-inner transition-colors duration-200 hover:bg-[#EEF2FF]"
             onClick={() => setViewMode(v => v === 'table' ? 'calendar' : 'table')}
           >
             <div className={cn(
-              "w-4 h-4 bg-[#4F46E5] rounded-full absolute top-0.5 transition-all duration-300",
-              viewMode === 'calendar' ? "left-[26px]" : "left-1"
+              "w-4 h-4 bg-[#4F46E5] rounded-full absolute top-[3px] transition-all duration-300 shadow-sm",
+              viewMode === 'calendar' ? "left-[27px]" : "left-[3px]"
             )} />
           </div>
-          <Label htmlFor="view-mode" className={cn("text-sm font-semibold cursor-pointer", viewMode === 'calendar' ? 'text-[#4F46E5]' : 'text-[#94A3B8]')} onClick={() => setViewMode('calendar')}>Calendar</Label>
+          <Label htmlFor="view-mode" className={cn("text-sm font-semibold cursor-pointer transition-colors duration-200", viewMode === 'calendar' ? 'text-[#172554]' : 'text-[#94A3B8]')} onClick={() => setViewMode('calendar')}>Calendar</Label>
         </div>
       </div>
 
