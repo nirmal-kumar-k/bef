@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
-import dbConnect from '@/infrastructure/db'
-import { EquipmentModel } from '@/modules/production/domain/equipment.model'
+import { eq } from 'drizzle-orm'
+import { db } from '@/infrastructure/database/client'
+import { equipment } from '@/infrastructure/database/schema'
 
 export async function PUT(
   req: Request,
@@ -8,32 +9,21 @@ export async function PUT(
 ) {
   try {
     const data = await req.json()
-    await dbConnect()
     const { id } = await params
-    
+
     // Remove id fields before update
     const { id: _idField, _id: _mongoId, ...updateData } = data
-    
-    const equipment = await EquipmentModel.findByIdAndUpdate(
-      id,
-      { $set: updateData },
-      { new: true, runValidators: true }
-    )
-    
-    if (!equipment) {
+
+    const [row] = await db.update(equipment).set(updateData).where(eq(equipment.id, id)).returning()
+
+    if (!row) {
       return NextResponse.json(
         { error: 'Equipment not found' },
         { status: 404 }
       )
     }
-    
-    const transformed = {
-      ...equipment.toObject(),
-      id: equipment._id.toString(),
-      _id: undefined
-    }
-    
-    return NextResponse.json(transformed)
+
+    return NextResponse.json(row)
   } catch (error) {
     console.error('Failed to update equipment:', error)
     return NextResponse.json(
@@ -48,17 +38,16 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await dbConnect()
     const { id } = await params
-    const equipment = await EquipmentModel.findByIdAndDelete(id)
-    
-    if (!equipment) {
+    const [row] = await db.delete(equipment).where(eq(equipment.id, id)).returning()
+
+    if (!row) {
       return NextResponse.json(
         { error: 'Equipment not found' },
         { status: 404 }
       )
     }
-    
+
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Failed to delete equipment:', error)

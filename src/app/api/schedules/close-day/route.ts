@@ -1,33 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
-import dbConnect from '@/infrastructure/db'
-import Schedule from '@/modules/production/domain/schedule.model'
+import { eq } from 'drizzle-orm'
+import { db } from '@/infrastructure/database/client'
+import { schedules as schedulesTable } from '@/infrastructure/database/schema'
+import { replaceStages } from '../_stage-helpers'
 
 export async function POST(request: NextRequest) {
   try {
-    await dbConnect()
     const { date, schedules } = await request.json()
-    
+
     if (!date || !schedules || !Array.isArray(schedules)) {
       return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
     }
 
-    // 1. Mark existing schedules as Completed
-    const bulkOps = schedules.map((s: any) => ({
-      updateOne: {
-        filter: { _id: s.id },
-        update: { 
-          $set: { 
-            status: 'Completed',
-            stages: s.stages 
-          } 
-        }
+    await db.transaction(async (tx) => {
+      // 1. Mark existing schedules as Completed
+      for (const s of schedules) {
+        await tx.update(schedulesTable).set({ status: 'Completed' }).where(eq(schedulesTable.id, s.id))
+        await replaceStages(tx, s.id, s.stages)
       }
-    }))
-    
-    if (bulkOps.length > 0) {
-      await Schedule.bulkWrite(bulkOps)
-    }
-    
+    })
+
     // 2. Generate Carry Forward Schedules
     const tomorrow = new Date(date)
     tomorrow.setDate(tomorrow.getDate() + 1)
@@ -37,7 +29,7 @@ export async function POST(request: NextRequest) {
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
     })
     
-    const newSchedules = []
+    const newSchedules: any[] = []
     
     for (const s of schedules) {
       let hasCarryForward = false
@@ -95,7 +87,13 @@ export async function POST(request: NextRequest) {
     }
     
     if (newSchedules.length > 0) {
-      await Schedule.insertMany(newSchedules)
+      await db.transaction(async (tx) => {
+        for (const ns of newSchedules) {
+          const { stages, ...scheduleData } = ns
+          const [schedule] = await tx.insert(schedulesTable).values(scheduleData).returning()
+          await replaceStages(tx, schedule.id, stages)
+        }
+      })
     }
 
     return NextResponse.json({ success: true, carriedForward: newSchedules.length })

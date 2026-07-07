@@ -1,20 +1,12 @@
 import { NextResponse } from 'next/server'
-import dbConnect from '@/infrastructure/db'
-import { EquipmentModel } from '@/modules/production/domain/equipment.model'
+import { asc } from 'drizzle-orm'
+import { db } from '@/infrastructure/database/client'
+import { equipment } from '@/infrastructure/database/schema'
 
 export async function GET() {
   try {
-    await dbConnect()
-    const equipment = await EquipmentModel.find().sort({ type: 1, name: 1 })
-    
-    // Transform to standard object with string _id
-    const transformed = equipment.map(e => ({
-      ...e.toObject(),
-      id: e._id.toString(),
-      _id: undefined
-    }))
-    
-    return NextResponse.json(transformed)
+    const rows = await db.select().from(equipment).orderBy(asc(equipment.type), asc(equipment.name))
+    return NextResponse.json(rows)
   } catch (error) {
     console.error('Failed to fetch equipment:', error)
     return NextResponse.json(
@@ -27,18 +19,8 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const data = await req.json()
-    await dbConnect()
-    
-    const equipment = new EquipmentModel(data)
-    await equipment.save()
-    
-    const transformed = {
-      ...equipment.toObject(),
-      id: equipment._id.toString(),
-      _id: undefined
-    }
-    
-    return NextResponse.json(transformed)
+    const [row] = await db.insert(equipment).values(data).returning()
+    return NextResponse.json(row)
   } catch (error) {
     console.error('Failed to create equipment:', error)
     return NextResponse.json(

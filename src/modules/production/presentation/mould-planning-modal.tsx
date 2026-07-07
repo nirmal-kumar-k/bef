@@ -481,6 +481,14 @@ export function MouldPlanningModal({
                           <th className="px-6 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">Actual Qty</th>
                           <th className="px-6 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">Actual Qty</th>
                           <th className="px-6 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">Actual Qty</th>
+                          <th className="px-6 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">Actual Qty</th>
+                          <th className="px-6 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">Actual Qty</th>
+                          <th className="px-6 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">Actual Qty</th>
+                          <th className="px-6 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">Actual Qty</th>
+                          <th className="px-6 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">Actual Qty</th>
+                          <th className="px-6 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">Actual Qty</th>
+                          <th className="px-6 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">Actual Qty</th>
+                          <th className="px-6 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">Actual Qty</th>
                           <th className="px-6 py-4 text-center border-l border-[#E0E7FF]">Actions</th>
                         </tr>
                       </thead>
@@ -564,6 +572,110 @@ export function MouldPlanningModal({
                                   </td>
                                  )
                               })}
+                              <td className="px-4 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  value={row.actualQuantity === undefined ? '' : row.actualQuantity}
+                                  onChange={e => handleActualChange(row.id, e.target.value)}
+                                  placeholder="Total"
+                                  className={cn(
+                                    "w-20 h-10 mx-auto bg-[#FFFFFF] border-[#4285F4]/50 font-mono text-center text-[#4285F4] font-bold text-lg focus-visible:ring-1 focus-visible:ring-[#4285F4]",
+                                    row.actualQuantity === undefined && "border-red-400"
+                                  )}
+                                />
+                              </td>
+                              <td className="px-4 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  value={row.actualQuantity === undefined ? '' : row.actualQuantity}
+                                  onChange={e => handleActualChange(row.id, e.target.value)}
+                                  placeholder="Total"
+                                  className={cn(
+                                    "w-20 h-10 mx-auto bg-[#FFFFFF] border-[#4285F4]/50 font-mono text-center text-[#4285F4] font-bold text-lg focus-visible:ring-1 focus-visible:ring-[#4285F4]",
+                                    row.actualQuantity === undefined && "border-red-400"
+                                  )}
+                                />
+                              </td>
+                              <td className="px-4 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  value={row.actualQuantity === undefined ? '' : row.actualQuantity}
+                                  onChange={e => handleActualChange(row.id, e.target.value)}
+                                  placeholder="Total"
+                                  className={cn(
+                                    "w-20 h-10 mx-auto bg-[#FFFFFF] border-[#4285F4]/50 font-mono text-center text-[#4285F4] font-bold text-lg focus-visible:ring-1 focus-visible:ring-[#4285F4]",
+                                    row.actualQuantity === undefined && "border-red-400"
+                                  )}
+                                />
+                              </td>
+                              <td className="px-4 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  value={row.actualQuantity === undefined ? '' : row.actualQuantity}
+                                  onChange={e => handleActualChange(row.id, e.target.value)}
+                                  placeholder="Total"
+                                  className={cn(
+                                    "w-20 h-10 mx-auto bg-[#FFFFFF] border-[#4285F4]/50 font-mono text-center text-[#4285F4] font-bold text-lg focus-visible:ring-1 focus-visible:ring-[#4285F4]",
+                                    row.actualQuantity === undefined && "border-red-400"
+                                  )}
+                                />
+                              </td>
+                              <td className="px-4 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  value={row.actualQuantity === undefined ? '' : row.actualQuantity}
+                                  onChange={e => handleActualChange(row.id, e.target.value)}
+                                  placeholder="Total"
+                                  className={cn(
+                                    "w-20 h-10 mx-auto bg-[#FFFFFF] border-[#4285F4]/50 font-mono text-center text-[#4285F4] font-bold text-lg focus-visible:ring-1 focus-visible:ring-[#4285F4]",
+                                    row.actualQuantity === undefined && "border-red-400"
+                                  )}
+                                />
+                              </td>
+                              <td className="px-4 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  value={row.actualQuantity === undefined ? '' : row.actualQuantity}
+                                  onChange={e => handleActualChange(row.id, e.target.value)}
+                                  placeholder="Total"
+                                  className={cn(
+                                    "w-20 h-10 mx-auto bg-[#FFFFFF] border-[#4285F4]/50 font-mono text-center text-[#4285F4] font-bold text-lg focus-visible:ring-1 focus-visible:ring-[#4285F4]",
+                                    row.actualQuantity === undefined && "border-red-400"
+                                  )}
+                                />
+                              </td>
+                              <td className="px-4 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  value={row.actualQuantity === undefined ? '' : row.actualQuantity}
+                                  onChange={e => handleActualChange(row.id, e.target.value)}
+                                  placeholder="Total"
+                                  className={cn(
+                                    "w-20 h-10 mx-auto bg-[#FFFFFF] border-[#4285F4]/50 font-mono text-center text-[#4285F4] font-bold text-lg focus-visible:ring-1 focus-visible:ring-[#4285F4]",
+                                    row.actualQuantity === undefined && "border-red-400"
+                                  )}
+                                />
+                              </td>
+                              <td className="px-4 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  value={row.actualQuantity === undefined ? '' : row.actualQuantity}
+                                  onChange={e => handleActualChange(row.id, e.target.value)}
+                                  placeholder="Total"
+                                  className={cn(
+                                    "w-20 h-10 mx-auto bg-[#FFFFFF] border-[#4285F4]/50 font-mono text-center text-[#4285F4] font-bold text-lg focus-visible:ring-1 focus-visible:ring-[#4285F4]",
+                                    row.actualQuantity === undefined && "border-red-400"
+                                  )}
+                                />
+                              </td>
                               <td className="px-4 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">
                                 <Input
                                   type="number"

@@ -60,11 +60,12 @@ export function CorePlanningModal({
   // Master Data
   const [shifts, setShifts] = useState<Shift[]>([])
   const [equipments, setEquipments] = useState<any[]>([])
-  
+
   // Selection
   const [selectedShiftId, setSelectedShiftId] = useState<string>('')
   const [activeMachineId, setActiveMachineId] = useState<string>('')
-  
+  const [machineSelectorOpen, setMachineSelectorOpen] = useState(false)
+
   // Rows
   const [plannedRows, setPlannedRows] = useState<PlannedRow[]>([])
 
@@ -93,9 +94,6 @@ export function CorePlanningModal({
           .then(data => {
             const coreEquips = data.filter((e: any) => e.type === 'Core Machine' && e.isActive)
             setEquipments(coreEquips)
-            if (coreEquips.length > 0 && !activeMachineId) {
-              setActiveMachineId(coreEquips[0].id)
-            }
           })
           .catch(console.error)
       }
@@ -103,8 +101,8 @@ export function CorePlanningModal({
   }, [isOpen])
 
   const selectedShift = shifts.find(s => s.id === selectedShiftId) || shifts[0]
-  const TIME_SLOTS: TimeSlot[] = selectedShift 
-    ? generateTimeSlots(selectedShift.startTime, selectedShift.endTime, selectedShift.breaks || []) 
+  const TIME_SLOTS: TimeSlot[] = selectedShift
+    ? generateTimeSlots(selectedShift.startTime, selectedShift.endTime, selectedShift.breaks || [])
     : []
 
   // Initialize plans
@@ -139,7 +137,7 @@ export function CorePlanningModal({
     let beginningOfDay = 0
     let dayProduction = 0
     let endOfDay = 0
-    
+
     // Group backlog items
     const groupedBacklog = new Map<string, BacklogItem>()
     backlogData.forEach(b => {
@@ -153,18 +151,18 @@ export function CorePlanningModal({
         groupedBacklog.set(key, { ...b })
       }
     })
-    
+
     Array.from(groupedBacklog.values()).forEach(b => {
       beginningOfDay += Math.max(0, b.totalRequired - b.totalScheduled)
     })
-    
+
     plannedRows.forEach(r => {
       const target = parseInt(r.targetQty, 10) || 0
       dayProduction += target
     })
-    
+
     endOfDay = Math.max(0, beginningOfDay - dayProduction)
-    
+
     return { beginningOfDay, dayProduction, endOfDay }
   }, [backlogData, plannedRows])
 
@@ -172,7 +170,7 @@ export function CorePlanningModal({
     const plansToSave = plannedRows.map(r => {
       const totalScheduled = parseInt(r.targetQty, 10) || 0
       const maxWorkers = Math.max(1, ...Object.values(r.hourlyWorkers))
-      
+
       const eq = equipments.find(e => e.id === r.machineId)
       const avgProd = eq?.avgPiecesPerHour || 10
       const shiftHours = TIME_SLOTS.reduce((s, sl) => s + sl.hours, 0)
@@ -207,7 +205,7 @@ export function CorePlanningModal({
         possibleQuantity: possibleQty
       }
     })
-    
+
     onSaveDayPlan(date, plansToSave)
     onClose()
   }
@@ -222,33 +220,33 @@ export function CorePlanningModal({
     setPlannedRows(prev => {
       const row = prev.find(r => r.id === rowId)
       if (!row) return prev
-      
+
       const target = parseInt(row.targetQty, 10)
       if (isNaN(target) || target <= 0) return prev
-      
+
       const pattern = patterns.find(p => p.code === row.patternRef)
       const eq = equipments.find(e => e.id === row.machineId)
-      
+
       const scb = pattern?.sharedCoreBoxes?.find((s: any) => s.code === row.coreBoxCode)
       const avgProd = Number(scb?.avgCoreProduction) || Number(pattern?.avgMouldsPerHour) || eq?.avgPiecesPerHour || 10
-      
+
       const newRow = { ...row, hourlyTargets: {}, hourlyWorkers: {} }
-      
+
       // We no longer strictly block slots, but we try to avoid slots where other rows have >0
       const otherRows = prev.filter(or => or.id !== rowId && or.machineId === row.machineId)
       const availableSlots = TIME_SLOTS.filter(slot => {
         return !otherRows.some(or => (or.hourlyTargets[slot.time] || 0) > 0)
       })
-      
+
       const slotsToUse = availableSlots.length > 0 ? availableSlots : TIME_SLOTS
       const basePerSlot = Math.floor(target / slotsToUse.length)
       let remainder = target - (basePerSlot * slotsToUse.length)
-      
+
       TIME_SLOTS.forEach(slot => {
         if (slotsToUse.some(s => s.time === slot.time)) {
           const qty = basePerSlot + (remainder > 0 ? 1 : 0)
           if (remainder > 0) remainder--
-          
+
           newRow.hourlyTargets[slot.time] = qty
           newRow.hourlyWorkers[slot.time] = qty > 0 ? Math.max(1, Math.ceil(qty / (avgProd * slot.hours))) : 0
         } else {
@@ -256,19 +254,9 @@ export function CorePlanningModal({
           newRow.hourlyWorkers[slot.time] = 0
         }
       })
-      
+
       return prev.map(r => r.id === rowId ? newRow : r)
     })
-  }
-
-  const handleHourlyActualChange = (rowId: string, timeSlot: string, value: string) => {
-    const num = value === '' ? undefined : parseInt(value, 10)
-    setPlannedRows(prev => prev.map(r => {
-      if (r.id !== rowId) return r
-      const newActuals = { ...r.hourlyActuals, [timeSlot]: num || 0 }
-      const newTotal = Object.values(newActuals).reduce((a, b) => a + b, 0)
-      return { ...r, hourlyActuals: newActuals, actualQuantity: newTotal }
-    }))
   }
 
   const handleActualChange = (rowId: string, value: string) => {
@@ -285,7 +273,7 @@ export function CorePlanningModal({
       return { ...r, hourlyTargets: newTargets, targetQty: String(newTotal) }
     }))
   }
-  
+
   const handleWorkerChange = (rowId: string, timeSlot: string, delta: number) => {
     setPlannedRows(prev => prev.map(r => {
       if (r.id !== rowId) return r
@@ -301,7 +289,7 @@ export function CorePlanningModal({
     const b = backlogData.find(b => b.orderNo === orderNo && b.coreBoxCode === coreBoxCode)
     if (!b) return
     const order = openOrders.find(o => o.customerOrderNo === orderNo)
-    
+
     setPlannedRows(prev => [...prev, {
       id: Math.random().toString(),
       orderId: order?.id || '',
@@ -325,8 +313,9 @@ export function CorePlanningModal({
 
   const dateObj = new Date(date || new Date())
   const dateString = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
-  
+
   const activeRows = plannedRows.filter(r => r.machineId === activeMachineId)
+  const activeMachine = equipments.find(e => e.id === activeMachineId)
 
   // Combobox options for backlog items needing scheduling
   const backlogOptions = useMemo(() => {
@@ -337,17 +326,31 @@ export function CorePlanningModal({
     return Array.from(options.values())
   }, [backlogData])
 
+  // Per-row derived metrics, shared between the column header and the blocking check below
+  const rowMeta = useMemo(() => {
+    const shiftHours = TIME_SLOTS.reduce((acc, sl) => acc + sl.hours, 0)
+    return activeRows.map(row => {
+      const pattern = patterns.find(p => p.code === row.patternRef)
+      const eq = equipments.find(e => e.id === row.machineId)
+      const scb = pattern?.sharedCoreBoxes?.find((s: any) => s.code === row.coreBoxCode)
+      const avgProd = Number(scb?.avgCoreProduction) || Number(pattern?.avgMouldsPerHour) || eq?.avgPiecesPerHour || 10
+      const possibleQty = Math.round(avgProd * shiftHours)
+      return { row, possibleQty }
+    })
+  }, [activeRows, patterns, equipments, TIME_SLOTS])
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="w-[98vw] sm:max-w-[98vw] min-h-[60vh] max-h-[95vh] bg-[#F4F6FB] border-[#E0E7FF] text-foreground p-0 shadow-2xl flex flex-col">
-        <div className="flex flex-col w-full h-full">
-          <DialogHeader className="p-6 pb-4 border-b border-[#E0E7FF] shrink-0 bg-white">
-            <div className="flex items-center justify-between">
-              <div>
+      <DialogContent className="w-[98vw] sm:max-w-[98vw] min-h-[60vh] max-h-[95vh] bg-[#F4F6FB] border-[#E0E7FF] text-foreground p-0 shadow-2xl flex flex-col overflow-hidden">
+        <div className="flex flex-col w-full h-full max-h-[95vh]">
+          <DialogHeader className="p-8 pb-6 border-b border-[#E0E7FF] shrink-0 bg-white">
+            <div className="flex items-start justify-between gap-6">
+              <div className="space-y-4">
                 <DialogTitle className="text-2xl font-heading text-[#172554]">
                   {dateString} - Core Planning
                 </DialogTitle>
-                <div className="flex items-center gap-3 mt-3">
+
+                <div className="flex items-center gap-3">
                   <span className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">Select Shift:</span>
                   {shifts.length > 0 && (
                     <Select value={selectedShiftId} onValueChange={setSelectedShiftId}>
@@ -364,74 +367,102 @@ export function CorePlanningModal({
                     </Select>
                   )}
                 </div>
+
+                <div className="flex items-center gap-3">
+                  <span className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">Select Machine:</span>
+                  <Popover open={machineSelectorOpen} onOpenChange={setMachineSelectorOpen}>
+                    <PopoverTrigger
+                      render={
+                        <Button
+                          role="combobox"
+                          aria-expanded={machineSelectorOpen}
+                          variant="outline"
+                          className="h-9 px-4 justify-between text-sm font-semibold rounded-lg border border-[#E0E7FF] bg-[#FFFFFF] text-[#172554] shadow-sm hover:bg-[#F8FAFC] min-w-[200px]"
+                        />
+                      }
+                    >
+                      <span className="flex items-center gap-2">
+                        <CubeTransparent className="w-4 h-4 text-[#4F46E5]" />
+                        {activeMachine ? activeMachine.name : 'Select Machine'}
+                      </span>
+                      <CaretDown className="ml-2 h-4 w-4 shrink-0 opacity-70" />
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[240px] p-0 bg-white border-[#E0E7FF] shadow-xl rounded-xl">
+                      <Command>
+                        <CommandList className="max-h-[240px] overflow-y-auto">
+                          <CommandEmpty className="py-6 text-center text-sm text-[#94A3B8]">No machines found.</CommandEmpty>
+                          <CommandGroup heading="Core Machines">
+                            {equipments.map(eq => (
+                              <CommandItem
+                                key={eq.id}
+                                value={eq.name}
+                                onSelect={() => { setActiveMachineId(eq.id); setMachineSelectorOpen(false) }}
+                                className="cursor-pointer py-2.5 px-3 hover:bg-[#F4F6FB] flex items-center justify-between"
+                              >
+                                <span className="font-medium text-[#172554]">{eq.name}</span>
+                                {activeMachineId === eq.id && <Check className="w-4 h-4 text-[#4F46E5]" weight="bold" />}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
               </div>
-              
-              <div className="flex gap-6 bg-[#FFFFFF] p-4 rounded-xl border border-[#E0E7FF] shadow-sm">
-                <div className="text-center px-4">
+
+              <div className="flex gap-4 bg-[#FFFFFF] p-3 rounded-xl border border-[#E0E7FF] shadow-sm">
+                <div className="text-center px-3">
                   <p className="text-[10px] text-[#94A3B8] font-bold uppercase tracking-wider mb-1">Beginning of Day</p>
-                  <p className="text-2xl font-mono font-bold text-[#172554]">{topMetrics.beginningOfDay}</p>
+                  <p className="text-xl font-mono font-bold text-[#172554]">{topMetrics.beginningOfDay}</p>
                 </div>
                 <div className="w-px bg-[#E0E7FF]"></div>
-                <div className="text-center px-4">
+                <div className="text-center px-3">
                   <p className="text-[10px] text-[#94A3B8] font-bold uppercase tracking-wider mb-1">Day Production</p>
-                  <p className="text-2xl font-mono font-bold text-[#4285F4]">{topMetrics.dayProduction}</p>
+                  <p className="text-xl font-mono font-bold text-[#4285F4]">{topMetrics.dayProduction}</p>
                 </div>
                 <div className="w-px bg-[#E0E7FF]"></div>
-                <div className="text-center px-4">
+                <div className="text-center px-3">
                   <p className="text-[10px] text-[#94A3B8] font-bold uppercase tracking-wider mb-1">End of Day</p>
-                  <p className="text-2xl font-mono font-bold text-[#10B981]">{topMetrics.endOfDay}</p>
+                  <p className="text-xl font-mono font-bold text-[#10B981]">{topMetrics.endOfDay}</p>
                 </div>
               </div>
             </div>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto min-h-0 p-6 space-y-6">
-            {/* Machine Tabs */}
-            <div className="flex items-center justify-between border-b border-[#E0E7FF] pb-2">
-              <div className="flex gap-2 overflow-x-auto pb-1">
-                {equipments.map(eq => (
-                  <Button
-                    key={eq.id}
-                    variant={activeMachineId === eq.id ? "default" : "outline"}
-                    className={cn(
-                      "h-11 px-8 text-sm font-bold transition-all rounded-t-xl rounded-b-none border-b-0",
-                      activeMachineId === eq.id 
-                        ? "bg-[#4F46E5] text-white shadow-[0_-4px_10px_-2px_rgba(79,70,229,0.2)]" 
-                        : "bg-[#FFFFFF] border-[#E0E7FF] text-[#64748B] hover:bg-[#EEF2FF] hover:text-[#172554]"
-                    )}
-                    onClick={() => setActiveMachineId(eq.id)}
-                  >
-                    <CubeTransparent weight={activeMachineId === eq.id ? "fill" : "regular"} className="w-5 h-5 mr-2" />
-                    {eq.name}
-                  </Button>
-                ))}
+          <div className="flex-1 overflow-y-auto min-h-0 p-8 space-y-8">
+            {!activeMachineId ? (
+              <div className="bg-white rounded-xl border border-[#E0E7FF] shadow-lg p-16 flex flex-col items-center justify-center text-[#94A3B8]">
+                <CubeTransparent className="w-12 h-12 mb-4 opacity-20" />
+                <p className="text-lg font-medium text-[#64748B]">No machine selected</p>
+                <p className="text-sm">Choose a machine above to view and edit its schedule.</p>
               </div>
-              
-              <div className="flex items-center gap-3 pr-4 bg-white px-4 py-2 rounded-full border border-[#E0E7FF] shadow-sm">
-                 <Label htmlFor="viewLab" className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Labourers</Label>
-                 <Switch id="viewLab" checked={viewLabourers} onCheckedChange={setViewLabourers} className="data-[state=checked]:bg-[#4F46E5]" />
-              </div>
-            </div>
-
-            {/* Active Machine Content */}
-            {activeMachineId && (
+            ) : (
               <>
               <div className="bg-white rounded-xl border border-[#E0E7FF] shadow-lg overflow-hidden">
-                <div className="p-5 border-b border-[#E0E7FF] flex items-center justify-between bg-gradient-to-r from-[#F8FAFC] to-white">
-                  <h3 className="font-bold text-[#172554] text-lg flex items-center gap-2">
-                    Schedule for {equipments.find(e => e.id === activeMachineId)?.name}
-                  </h3>
-                  
+                <div className="p-6 border-b border-[#E0E7FF] flex items-center justify-between bg-gradient-to-r from-[#F8FAFC] to-white gap-4">
+                  <div className="flex items-center gap-3">
+                    <h3 className="font-bold text-[#172554] text-lg">
+                      Schedule for {activeMachine?.name}
+                    </h3>
+                    <div className="flex items-center gap-2 pl-4 ml-2 border-l border-[#E0E7FF]">
+                      <Label htmlFor="viewLab" className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Labourers</Label>
+                      <Switch id="viewLab" checked={viewLabourers} onCheckedChange={setViewLabourers} className="data-[state=checked]:bg-[#4F46E5]" />
+                    </div>
+                  </div>
+
                   <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        role="combobox"
-                        aria-expanded={comboboxOpen}
-                        className="w-[320px] justify-between h-10 bg-[#4F46E5] text-white hover:bg-[#4F46E5]/90 font-semibold shadow-md"
-                      >
-                        + Add Core Box to Schedule
-                        <CaretDown className="ml-2 h-4 w-4 shrink-0 opacity-70" />
-                      </Button>
+                    <PopoverTrigger
+                      render={
+                        <Button
+                          role="combobox"
+                          aria-expanded={comboboxOpen}
+                          className="w-[320px] justify-between h-10 bg-[#4F46E5] text-white hover:bg-[#4F46E5]/90 font-semibold shadow-md"
+                        />
+                      }
+                    >
+                      + Add Core Box to Schedule
+                      <CaretDown className="ml-2 h-4 w-4 shrink-0 opacity-70" />
                     </PopoverTrigger>
                     <PopoverContent className="w-[320px] p-0 bg-white border-[#E0E7FF] shadow-xl rounded-xl">
                       <Command>
@@ -475,66 +506,71 @@ export function CorePlanningModal({
                     <table className="w-full text-sm text-left whitespace-nowrap">
                       <thead className="bg-[#F8FAFC] border-b border-[#E0E7FF] text-[#64748B] uppercase tracking-wider font-bold text-[11px]">
                         <tr>
-                          <th className="px-6 py-4 sticky left-0 bg-[#F8FAFC] z-10 shadow-[1px_0_0_#E0E7FF]">Core Box Details</th>
-                          <th className="px-6 py-4 text-center border-x border-[#E0E7FF]">Target Qty</th>
+                          <th className="px-5 py-3 sticky left-0 bg-[#F8FAFC] z-10 shadow-[1px_0_0_#E0E7FF] min-w-[190px]">Core Box Details</th>
+                          <th className="px-3 py-3 text-center border-x border-[#E0E7FF] min-w-[110px]">Target Qty</th>
                           {TIME_SLOTS.map(slot => (
-                            <th key={slot.time} className="px-4 py-4 text-center border-r border-[#E0E7FF] min-w-[70px]">
+                            <th key={slot.time} className="px-2 py-3 text-center border-r border-[#E0E7FF] min-w-[56px]">
                               {slot.time}
                             </th>
                           ))}
-                          <th className="px-6 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">Actual Qty</th>
-                          <th className="px-6 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">Actual Qty</th>
-                          <th className="px-6 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">Actual Qty</th>
-                          <th className="px-6 py-4 text-center border-l border-[#E0E7FF]">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[#E0E7FF]">
-                        {activeRows.map(row => {
-                          const pattern = patterns.find(p => p.code === row.patternRef)
-                          const eq = equipments.find(e => e.id === row.machineId)
-                          const scb = pattern?.sharedCoreBoxes?.find((s: any) => s.code === row.coreBoxCode)
-                          const avgProd = Number(scb?.avgCoreProduction) || Number(pattern?.avgMouldsPerHour) || eq?.avgPiecesPerHour || 10
-                          const shiftHours = TIME_SLOTS.reduce((acc, sl) => acc + sl.hours, 0)
-                          const possibleQty = Math.round(avgProd * shiftHours)
-
-                          return (
-                            <tr key={row.id} className="hover:bg-[#F4F6FB] transition-colors group">
-                              <td className="px-6 py-4 sticky left-0 bg-inherit z-10 shadow-[1px_0_0_#E0E7FF]">
-                                <div className="flex flex-col gap-1">
-                                  <span className="font-bold text-[#172554] text-base">{row.coreBoxCode}</span>
-                                  <span className="text-xs text-[#94A3B8]">{row.orderNo} | {row.productName}</span>
-                                  <span className="text-[10px] text-[#10B981] font-semibold tracking-wide">POSSIBLE QTY: {possibleQty}</span>
-                                </div>
-                              </td>
-                              <td className="px-4 py-4 text-center border-x border-[#E0E7FF] bg-[#EEF2FF]/20">
-                                <div className="flex items-center justify-center gap-2">
-                                  <Input
-                                    type="number"
-                                    min="0"
-                                    value={row.targetQty}
-                                    onChange={e => handleTargetQtyInput(row.id, e.target.value)}
-                                    placeholder="0"
-                                    className="w-20 h-10 mx-auto bg-[#FFFFFF] border-[#C7D2FE] font-mono text-center text-[#4F46E5] font-bold text-lg focus-visible:ring-1 focus-visible:ring-[#4F46E5]"
-                                  />
-                                  <Button 
-                                    onClick={() => autoFillRow(row.id)} 
-                                    size="icon"
-                                    variant="outline"
-                                    title="Auto-fill time slots"
-                                    className="h-10 w-10 text-[#4F46E5] border-[#C7D2FE] hover:bg-[#EEF2FF] hover:border-[#4F46E5]"
+                        {rowMeta.map(({ row, possibleQty }) => (
+                          <tr key={row.id} className="hover:bg-[#F4F6FB] transition-colors group">
+                            <td className="px-5 py-3 sticky left-0 bg-inherit shadow-[1px_0_0_#E0E7FF]">
+                              <div className="flex flex-col gap-0.5">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-bold text-[#172554] text-sm">{row.coreBoxCode}</span>
+                                  <button
+                                    onClick={() => removeRow(row.id)}
+                                    title="Remove from schedule"
+                                    className="text-[#94A3B8] hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all"
                                   >
-                                    <MagicWand weight="fill" className="w-5 h-5" />
-                                  </Button>
+                                    <Trash className="w-3.5 h-3.5" />
+                                  </button>
                                 </div>
-                              </td>
-                              {TIME_SLOTS.map(slot => {
-                                 // Check conflict across multiple rows on this machine
-                                 const otherActiveRowsInSlot = activeRows.filter(or => or.id !== row.id && (or.hourlyTargets[slot.time] || 0) > 0)
-                                 const isConflict = otherActiveRowsInSlot.length > 0 && (row.hourlyTargets[slot.time] || 0) > 0
-                                 
-                                 return (
-                                  <td key={slot.time} className={cn("px-2 py-3 text-center border-r border-[#E0E7FF]", isConflict && "bg-red-50")}>
-                                    <div className="flex flex-col gap-1.5 items-center justify-center">
+                                <span className="text-[10px] text-[#94A3B8]">{row.orderNo} | {row.productName}</span>
+                                <span className="text-[10px] text-[#10B981] font-semibold">POSSIBLE QTY: {possibleQty}</span>
+                              </div>
+                            </td>
+                            <td className="px-2 py-3 text-center border-x border-[#E0E7FF] bg-[#EEF2FF]/20">
+                              <div className="flex items-center justify-center gap-1">
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  value={row.targetQty}
+                                  onChange={e => handleTargetQtyInput(row.id, e.target.value)}
+                                  placeholder="0"
+                                  className="w-14 h-8 bg-[#FFFFFF] border-[#C7D2FE] font-mono text-center text-[#4F46E5] font-bold text-sm focus-visible:ring-1 focus-visible:ring-[#4F46E5]"
+                                />
+                                <Button
+                                  onClick={() => autoFillRow(row.id)}
+                                  size="icon"
+                                  variant="outline"
+                                  title="Auto-fill time slots"
+                                  className="h-8 w-8 shrink-0 text-[#4F46E5] border-[#C7D2FE] hover:bg-[#EEF2FF] hover:border-[#4F46E5]"
+                                >
+                                  <MagicWand weight="fill" className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </td>
+                            {TIME_SLOTS.map(slot => {
+                              const otherRowsInSlot = activeRows.filter(or => or.id !== row.id && (or.hourlyTargets[slot.time] || 0) > 0)
+                              const ownValue = row.hourlyTargets[slot.time] || 0
+                              const isBlocked = otherRowsInSlot.length > 0 && ownValue === 0
+
+                              return (
+                                <td key={slot.time} className="px-1.5 py-2 text-center border-r border-[#E0E7FF]">
+                                  {isBlocked ? (
+                                    <div
+                                      title="Slot occupied by another core box on this machine"
+                                      className="w-12 h-8 mx-auto rounded-md bg-[#F1F5F9] border border-[#E2E8F0] flex items-center justify-center text-[#CBD5E1] text-xs font-mono cursor-not-allowed select-none"
+                                    >
+                                      —
+                                    </div>
+                                  ) : (
+                                    <div className="flex flex-col gap-1 items-center justify-center">
                                       <Input
                                         type="number"
                                         min="0"
@@ -542,20 +578,8 @@ export function CorePlanningModal({
                                         onChange={e => handleHourlyChange(row.id, slot.time, e.target.value)}
                                         placeholder="-"
                                         className={cn(
-                                          "w-14 h-8 text-center font-mono text-sm px-1 bg-transparent border-transparent hover:border-[#E0E7FF] focus:border-[#4285F4] focus:bg-white transition-all shadow-none",
-                                          (row.hourlyTargets[slot.time] || 0) > 0 && "font-bold text-[#172554] bg-[#F4F6FB] border-[#E0E7FF]",
-                                          isConflict && "text-red-600 font-bold border-red-200 bg-red-100"
-                                        )}
-                                      />
-                                      <Input
-                                        type="number"
-                                        min="0"
-                                        value={row.hourlyActuals[slot.time] === undefined ? '' : row.hourlyActuals[slot.time]}
-                                        onChange={e => handleHourlyActualChange(row.id, slot.time, e.target.value)}
-                                        placeholder="Act"
-                                        className={cn(
-                                          "w-14 h-7 mt-1 text-center font-mono text-xs px-1 bg-[#F4F6FB] border-[#4285F4]/30 focus:border-[#4285F4] text-[#4285F4] transition-all shadow-inner placeholder:text-[#94A3B8]",
-                                          (row.hourlyActuals[slot.time] || 0) > 0 && "font-bold"
+                                          "w-12 h-8 text-center font-mono text-xs px-1 bg-transparent border-transparent hover:border-[#E0E7FF] focus:border-[#4285F4] focus:bg-white transition-all shadow-none",
+                                          ownValue > 0 && "font-bold text-[#172554] bg-[#F4F6FB] border-[#E0E7FF]"
                                         )}
                                       />
                                       {viewLabourers && (
@@ -566,66 +590,22 @@ export function CorePlanningModal({
                                         </div>
                                       )}
                                     </div>
-                                  </td>
-                                 )
-                              })}
-                              <td className="px-4 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  value={row.actualQuantity === undefined ? '' : row.actualQuantity}
-                                  onChange={e => handleActualChange(row.id, e.target.value)}
-                                  placeholder="Total"
-                                  className={cn(
-                                    "w-20 h-10 mx-auto bg-[#FFFFFF] border-[#4285F4]/50 font-mono text-center text-[#4285F4] font-bold text-lg focus-visible:ring-1 focus-visible:ring-[#4285F4]",
-                                    row.actualQuantity === undefined && "border-red-400"
                                   )}
-                                />
-                              </td>
-                              <td className="px-4 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  value={row.actualQuantity === undefined ? '' : row.actualQuantity}
-                                  onChange={e => handleActualChange(row.id, e.target.value)}
-                                  placeholder="Total"
-                                  className={cn(
-                                    "w-20 h-10 mx-auto bg-[#FFFFFF] border-[#4285F4]/50 font-mono text-center text-[#4285F4] font-bold text-lg focus-visible:ring-1 focus-visible:ring-[#4285F4]",
-                                    row.actualQuantity === undefined && "border-red-400"
-                                  )}
-                                />
-                              </td>
-                              <td className="px-4 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  value={row.actualQuantity === undefined ? '' : row.actualQuantity}
-                                  onChange={e => handleActualChange(row.id, e.target.value)}
-                                  placeholder="Total"
-                                  className={cn(
-                                    "w-20 h-10 mx-auto bg-[#FFFFFF] border-[#4285F4]/50 font-mono text-center text-[#4285F4] font-bold text-lg focus-visible:ring-1 focus-visible:ring-[#4285F4]",
-                                    row.actualQuantity === undefined && "border-red-400"
-                                  )}
-                                />
-                              </td>
-                              <td className="px-6 py-4 text-center border-l border-[#E0E7FF]">
-                                <Button variant="ghost" size="icon" onClick={() => removeRow(row.id)} className="text-[#94A3B8] hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all">
-                                  <Trash className="w-5 h-5" />
-                                </Button>
-                              </td>
-                            </tr>
-                          )
-                        })}
+                                </td>
+                              )
+                            })}
+                          </tr>
+                        ))}
                       </tbody>
                     </table>
                   </div>
                 )}
               </div>
-              
+
               <div className="border border-[#E0E7FF] rounded-xl overflow-hidden mt-8">
                 <div className="w-full flex items-center justify-between bg-[#EEF2FF] p-4 text-[#172554]">
                   <div className="flex items-center gap-2">
-                    <h3 className="font-bold text-sm">End of Day - Actual Entry ({equipments.find(e => e.id === activeMachineId)?.name})</h3>
+                    <h3 className="font-bold text-sm">End of Day - Actual Entry ({activeMachine?.name})</h3>
                     <span className="text-xs text-[#64748B]">Enter produced quantities</span>
                   </div>
                 </div>
@@ -635,7 +615,7 @@ export function CorePlanningModal({
                     const act = row.actualQuantity
                     const hasAct = act !== undefined
                     const variance = hasAct ? act - planned : 0
-                    
+
                     return (
                       <div key={row.id} className="flex items-center gap-4 p-3 bg-[#FFFFFF] border border-[#E0E7FF] rounded-lg">
                         <div className="w-48 flex flex-col">
@@ -685,7 +665,7 @@ export function CorePlanningModal({
             )}
           </div>
 
-          <DialogFooter className="m-0 p-5 border-t border-[#E0E7FF] bg-[#FFFFFF] shrink-0 sm:justify-end rounded-b-2xl">
+          <DialogFooter className="m-0 p-6 border-t border-[#E0E7FF] bg-[#FFFFFF] shrink-0 sm:justify-end rounded-b-2xl">
             <Button variant="ghost" onClick={onClose} className="text-[#64748B] hover:text-[#172554] hover:bg-[#F8FAFC]">Cancel</Button>
             <Button onClick={handleSave} className="bg-[#4F46E5] text-white hover:bg-[#4F46E5]/90 shadow-[0_4px_10px_-2px_rgba(79,70,229,0.3)] h-10 px-8 text-sm">Save Day Plan</Button>
           </DialogFooter>

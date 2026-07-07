@@ -50,7 +50,7 @@ export function PourPlanningTab({ patterns, openOrders, dailyPlans, onSaveDayPla
         moulds,
         coreBoxRef,
         cavities,
-        uid: heat.itemId || heat.heatNo
+        uid: heat.id || heat._id || heat.itemId || heat.heatNo
       }
     })
   }, [dailyPlans, openOrders, patterns])

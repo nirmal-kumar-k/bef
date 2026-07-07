@@ -3,8 +3,9 @@
 import { cookies } from 'next/headers'
 import bcrypt from 'bcryptjs'
 import { SignJWT } from 'jose'
-import connectToDatabase from '@/shared/lib/mongodb'
-import { User } from '@/modules/users/domain/user.model'
+import { eq, count } from 'drizzle-orm'
+import { db } from '@/infrastructure/database/client'
+import { users } from '@/infrastructure/database/schema'
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || 'fallback_secret_for_development_only'
@@ -19,26 +20,24 @@ export async function loginUser(formData: FormData) {
   }
 
   try {
-    await connectToDatabase()
+    const [user] = await db.select().from(users).where(eq(users.email, email))
 
-    const user = await User.findOne({ email }).lean()
-    
     // For development: If no user exists at all in the DB, create an admin user
     // This allows the very first login to work automatically.
-    const userCount = await User.countDocuments()
+    const [{ value: userCount }] = await db.select({ value: count() }).from(users)
     if (userCount === 0) {
       console.log('No users found in database. Creating default admin user.')
       const hashedPassword = await bcrypt.hash('admin123', 10)
-      const newUser = await User.create({
+      const [newUser] = await db.insert(users).values({
         name: 'Admin User',
         email: 'admin@bef.com',
         passwordHash: hashedPassword,
         role: 'admin'
-      })
-      
+      }).returning()
+
       // If this was the attempt, verify it
       if (email === 'admin@bef.com' && password === 'admin123') {
-        const token = await new SignJWT({ id: newUser._id.toString(), role: newUser.role })
+        const token = await new SignJWT({ id: newUser.id, role: newUser.role })
           .setProtectedHeader({ alg: 'HS256' })
           .setIssuedAt()
           .setExpirationTime('7d')
@@ -66,7 +65,7 @@ export async function loginUser(formData: FormData) {
       return { error: 'Invalid credentials' }
     }
 
-    const token = await new SignJWT({ id: user._id.toString(), role: user.role })
+    const token = await new SignJWT({ id: user.id, role: user.role })
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
       .setExpirationTime('7d')

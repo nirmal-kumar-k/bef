@@ -18,10 +18,10 @@ function updateImportsInFile(filePath) {
         { from: /@\/components\/patterns/g, to: '@/domains/patterns/components' },
         { from: /@\/components\/products/g, to: '@/domains/products/components' },
         { from: /@\/lib/g, to: '@/shared/lib' },
-        
+
         // Handle specific relative paths (e.g. from layout.tsx)
         { from: /from\s+['"]\.\/app-layout['"]/g, to: 'from "@/shared/layouts/app-layout"' },
-        
+
         // Handle deep relative imports like ../../components/ui/button
         { from: /['"](\.\.\/)+components\/ui/g, to: '"@/shared/ui' },
         { from: /['"](\.\.\/)+components\/orders/g, to: '"@/domains/orders/components' },

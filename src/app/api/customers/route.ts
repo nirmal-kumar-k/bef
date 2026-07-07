@@ -1,18 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
-import dbConnect from '@/infrastructure/db'
-import Customer from '@/modules/customers/domain/customer.model'
+import { asc } from 'drizzle-orm'
+import { db } from '@/infrastructure/database/client'
+import { customers } from '@/infrastructure/database/schema'
 
 export async function GET(request: NextRequest) {
   try {
-    await dbConnect()
     const { searchParams } = new URL(request.url)
     const detailed = searchParams.get('detailed') === 'true'
 
-    const customers = await Customer.find({}).sort({ label: 1 }).lean()
-    
+    const rows = await db.select().from(customers).orderBy(asc(customers.label))
+
     if (detailed) {
-      const mapped = customers.map(c => ({
-        id: c._id?.toString(),
+      const mapped = rows.map(c => ({
+        id: c.id,
         value: c.value,
         label: c.label,
         email: c.email || '',
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(mapped)
     }
 
-    const mapped = customers.map((c) => ({ value: c.value, label: c.label, id: c._id?.toString() }))
+    const mapped = rows.map((c) => ({ value: c.value, label: c.label, id: c.id }))
     return NextResponse.json(mapped)
   } catch (error) {
     console.error('GET /api/customers error:', error)
@@ -34,11 +34,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    await dbConnect()
     const body = await request.json()
-    const customer = await Customer.create(body)
-    const obj = customer.toObject()
-    return NextResponse.json({ value: obj.value, label: obj.label, id: obj._id?.toString() }, { status: 201 })
+    const [row] = await db.insert(customers).values(body).returning()
+    return NextResponse.json({ value: row.value, label: row.label, id: row.id }, { status: 201 })
   } catch (error) {
     console.error('POST /api/customers error:', error)
     return NextResponse.json({ error: 'Failed to create customer' }, { status: 500 })

@@ -209,15 +209,10 @@ export default function ProductionPlanningPage() {
   return (
     <div className="space-y-6 overflow-hidden">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex items-center gap-4">
-          <div className="inline-flex items-center gap-3 px-5 py-3 bg-[#EEF2FF] text-[#4F46E5] rounded-2xl font-bold shadow-sm border border-[#E0E7FF]/50">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M8 6H21M8 12H21M8 18H21M3 6H3.01M3 12H3.01M3 18H3.01" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            <h1 className="text-2xl font-bold tracking-tight">Production Planning</h1>
-          </div>
-          <p className="text-[#64748B] text-sm mt-1 sm:mt-0">Schedule capacity and track requirements dynamically</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-4xl font-bold text-foreground font-heading mb-2">Production Planning</h1>
+          <p className="text-[#64748B]">Schedule capacity and track requirements dynamically</p>
         </div>
       </div>
 
