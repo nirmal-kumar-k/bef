@@ -9,7 +9,8 @@ interface Ember {
   speed: number
   drift: number
   driftPhase: number
-  opacity: number
+  flickerPhase: number
+  baseOpacity: number
   color: string
 }
 
@@ -18,12 +19,13 @@ const EMBER_COLORS = ['#FF6B35', '#FF8C5A', '#E63946']
 function createEmber(width: number, height: number, spawnAnywhere: boolean): Ember {
   return {
     x: Math.random() * width,
-    y: spawnAnywhere ? Math.random() * height : height + Math.random() * 40,
-    radius: Math.random() * 1.6 + 0.6,
-    speed: Math.random() * 0.35 + 0.15,
-    drift: Math.random() * 0.6 + 0.2,
+    y: spawnAnywhere ? Math.random() * height : height + Math.random() * 60,
+    radius: Math.random() * 1.5 + 0.3,
+    speed: Math.random() * 1.2 + 0.3,
+    drift: Math.random() * 2.5 + 0.5,
     driftPhase: Math.random() * Math.PI * 2,
-    opacity: Math.random() * 0.5 + 0.3,
+    flickerPhase: Math.random() * Math.PI * 2,
+    baseOpacity: Math.random() * 0.8 + 0.2,
     color: EMBER_COLORS[Math.floor(Math.random() * EMBER_COLORS.length)],
   }
 }
@@ -43,48 +45,91 @@ export function EmberParticles() {
     let height = 0
     let embers: Ember[] = []
     let frameId = 0
+    let time = 0
+    const mouse = { x: -1000, y: -1000, active: false }
 
-    const resize = () => {
+    const applySize = (w: number, h: number) => {
       const dpr = window.devicePixelRatio || 1
-      width = canvas.clientWidth
-      height = canvas.clientHeight
-      canvas.width = width * dpr
-      canvas.height = height * dpr
+      width = w
+      height = h
+      canvas.width = Math.max(1, Math.round(w * dpr))
+      canvas.height = Math.max(1, Math.round(h * dpr))
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-      const count = Math.min(60, Math.round((width * height) / 18000))
-      embers = Array.from({ length: count }, () => createEmber(width, height, true))
+      const count = Math.min(350, Math.max(100, Math.round((w * h) / 3000)))
+      embers = Array.from({ length: count }, () => createEmber(w, h, true))
     }
 
     const drawFrame = () => {
       ctx.clearRect(0, 0, width, height)
       for (const e of embers) {
-        const grad = ctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, e.radius * 4)
+        const flicker = 0.65 + Math.sin(time * 0.05 + e.flickerPhase) * 0.35
+        const opacity = e.baseOpacity * flicker
+        const glowRadius = e.radius * 5
+        const grad = ctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, glowRadius)
         grad.addColorStop(0, e.color)
         grad.addColorStop(1, 'transparent')
-        ctx.globalAlpha = e.opacity
+        ctx.globalAlpha = Math.max(0, Math.min(1, opacity))
         ctx.fillStyle = grad
         ctx.beginPath()
-        ctx.arc(e.x, e.y, e.radius * 4, 0, Math.PI * 2)
+        ctx.arc(e.x, e.y, glowRadius, 0, Math.PI * 2)
         ctx.fill()
       }
       ctx.globalAlpha = 1
     }
 
     const tick = () => {
+      time += 1
       for (const e of embers) {
+        // Curve path
         e.y -= e.speed
-        e.driftPhase += 0.02
-        e.x += Math.sin(e.driftPhase) * e.drift * 0.05
-        if (e.y < -10) {
+        e.driftPhase += 0.008
+        e.x += Math.sin(e.driftPhase) * e.drift * 0.2 + (Math.cos(e.driftPhase * 0.5) * 0.1)
+
+        if (mouse.active) {
+          const dx = e.x - mouse.x
+          const dy = e.y - mouse.y
+          const dist = Math.sqrt(dx * dx + dy * dy)
+          const repelRadius = 180
+          if (dist < repelRadius && dist > 0.01) {
+            const force = (1 - dist / repelRadius) * 2.5
+            e.x += (dx / dist) * force
+            e.y += (dy / dist) * force
+          }
+        }
+
+        if (e.y < -20) {
           Object.assign(e, createEmber(width, height, false))
         }
+        if (e.x < -20) e.x = width + 20
+        if (e.x > width + 20) e.x = -20
       }
       drawFrame()
       frameId = requestAnimationFrame(tick)
     }
 
-    resize()
-    window.addEventListener('resize', resize)
+    const container = canvas.parentElement
+    const resizeObserver = new ResizeObserver((entries) => {
+      const entry = entries[0]
+      if (!entry) return
+      const { width: w, height: h } = entry.contentRect
+      if (w > 0 && h > 0) applySize(w, h)
+    })
+    if (container) resizeObserver.observe(container)
+    // Fallback in case ResizeObserver hasn't fired yet
+    applySize(canvas.clientWidth || window.innerWidth, canvas.clientHeight || window.innerHeight)
+
+    const onMouseMove = (e: MouseEvent) => {
+      const rect = canvas.getBoundingClientRect()
+      mouse.x = e.clientX - rect.left
+      mouse.y = e.clientY - rect.top
+      mouse.active = true
+    }
+    const onMouseLeave = () => {
+      mouse.active = false
+    }
+
+    window.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('mouseleave', onMouseLeave)
 
     if (reduceMotion) {
       drawFrame()
@@ -93,7 +138,9 @@ export function EmberParticles() {
     }
 
     return () => {
-      window.removeEventListener('resize', resize)
+      resizeObserver.disconnect()
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('mouseleave', onMouseLeave)
       cancelAnimationFrame(frameId)
     }
   }, [])
