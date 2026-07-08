@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/infrastructure/database/client'
 import { shifts, shiftBreaks } from '@/infrastructure/database/schema'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   try {
     const rows = await db.query.shifts.findMany({

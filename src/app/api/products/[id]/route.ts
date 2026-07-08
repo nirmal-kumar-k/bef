@@ -25,7 +25,24 @@ export async function PUT(
   try {
     const { id } = await params
     const body = await request.json()
-    const [product] = await db.update(products).set(body).where(eq(products.id, id)).returning()
+    
+    const updateData = {
+      code: body.code,
+      name: body.name,
+      customer: body.customer,
+      weight: body.weight,
+      cavities: body.cavities,
+      ratePerKg: body.ratePerKg != null ? String(body.ratePerKg) : null,
+      unitPrice: body.unitPrice != null ? String(body.unitPrice) : null,
+      grade: body.grade,
+      remarks: body.remarks,
+      images: body.images,
+      linkedPattern: body.linkedPattern,
+      stock: body.stock,
+      updatedAt: new Date()
+    }
+    
+    const [product] = await db.update(products).set(updateData).where(eq(products.id, id)).returning()
     if (!product) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
     // Sync grade across all products mapped to the same pattern

@@ -4,6 +4,8 @@ import { db } from '@/infrastructure/database/client'
 import { schedules, products, orders } from '@/infrastructure/database/schema'
 import { stageRowsToObject, replaceStages } from './_stage-helpers'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)

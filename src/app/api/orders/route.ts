@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/infrastructure/database/client'
 import { orders, orderItems } from '@/infrastructure/database/schema'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   try {
     const rows = await db.query.orders.findMany({

@@ -3,6 +3,8 @@ import { asc } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
 import { productionPlans } from '@/infrastructure/database/schema'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   try {
     const rows = await db.select().from(productionPlans).orderBy(asc(productionPlans.date))

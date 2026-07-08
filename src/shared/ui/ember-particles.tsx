@@ -118,11 +118,18 @@ export function EmberParticles() {
     // Fallback in case ResizeObserver hasn't fired yet
     applySize(canvas.clientWidth || window.innerWidth, canvas.clientHeight || window.innerHeight)
 
+    let idleTimeout: ReturnType<typeof setTimeout>
+
     const onMouseMove = (e: MouseEvent) => {
       const rect = canvas.getBoundingClientRect()
       mouse.x = e.clientX - rect.left
       mouse.y = e.clientY - rect.top
       mouse.active = true
+      
+      clearTimeout(idleTimeout)
+      idleTimeout = setTimeout(() => {
+        mouse.active = false
+      }, 150)
     }
     const onMouseLeave = () => {
       mouse.active = false
@@ -142,6 +149,7 @@ export function EmberParticles() {
       window.removeEventListener('mousemove', onMouseMove)
       window.removeEventListener('mouseleave', onMouseLeave)
       cancelAnimationFrame(frameId)
+      clearTimeout(idleTimeout)
     }
   }, [])
 

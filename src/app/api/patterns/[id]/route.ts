@@ -30,8 +30,29 @@ export async function PUT(
     const body = await request.json()
     const { sharedCoreBoxes, mappedProducts, ...patternData } = body
 
+    const safePatternData = {
+      code: patternData.code,
+      name: patternData.name,
+      customer: patternData.customer,
+      category: patternData.category,
+      goodWeight: patternData.goodWeight != null ? String(patternData.goodWeight) : null,
+      runnerRiserWeight: patternData.runnerRiserWeight != null ? String(patternData.runnerRiserWeight) : null,
+      totalWeight: patternData.totalWeight != null ? String(patternData.totalWeight) : null,
+      topMatchplate: patternData.topMatchplate,
+      bottomMatchplate: patternData.bottomMatchplate,
+      coreBoxes: patternData.coreBoxes,
+      topOwner: patternData.topOwner,
+      topImages: patternData.topImages,
+      bottomOwner: patternData.bottomOwner,
+      bottomImages: patternData.bottomImages,
+      avgMouldsPerHour: patternData.avgMouldsPerHour != null ? String(patternData.avgMouldsPerHour) : null,
+      patternImages: patternData.patternImages,
+      remarks: patternData.remarks,
+      updatedAt: new Date(),
+    }
+
     const result = await db.transaction(async (tx) => {
-      const [pattern] = await tx.update(patterns).set(patternData).where(eq(patterns.id, id)).returning()
+      const [pattern] = await tx.update(patterns).set(safePatternData).where(eq(patterns.id, id)).returning()
       if (!pattern) return null
 
       await tx.delete(patternCoreBoxes).where(eq(patternCoreBoxes.patternId, id))
@@ -45,7 +66,7 @@ export async function PUT(
               owner: cb.owner,
               images: cb.images,
               typeOfCore: cb.typeOfCore,
-              coreWeight: cb.coreWeight,
+              coreWeight: cb.coreWeight != null ? String(cb.coreWeight) : null,
               avgCoreProduction: cb.avgCoreProduction,
             }))
           ).returning()
