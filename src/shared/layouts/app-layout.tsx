@@ -15,17 +15,7 @@ interface AppLayoutProps {
 }
 
 export function AppLayout({ children, user }: AppLayoutProps) {
-  const [isLoading, setIsLoading] = useState(true)
   const pathname = usePathname()
-
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 2500)
-    return () => clearTimeout(timer)
-  }, [])
-
-  if (isLoading) {
-    return <IngotLoader />
-  }
 
   if (pathname === '/login') {
     return (
