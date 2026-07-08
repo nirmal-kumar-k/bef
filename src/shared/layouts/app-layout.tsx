@@ -2,7 +2,7 @@
 
 import { Sidebar } from '@/shared/layouts/sidebar'
 import { TopBar } from '@/shared/layouts/topbar'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { PageTransition } from '@/shared/layouts/page-transition'
@@ -15,7 +15,27 @@ interface AppLayoutProps {
 }
 
 export function AppLayout({ children, user }: AppLayoutProps) {
+  const [isLoading, setIsLoading] = useState(true)
   const pathname = usePathname()
+  const prevPathRef = useRef(pathname)
+
+  useEffect(() => {
+    if (isLoading) {
+      const timer = setTimeout(() => setIsLoading(false), 2500)
+      return () => clearTimeout(timer)
+    }
+  }, [isLoading])
+
+  useEffect(() => {
+    if (prevPathRef.current === '/login' && pathname !== '/login') {
+      setIsLoading(true)
+    }
+    prevPathRef.current = pathname
+  }, [pathname])
+
+  if (isLoading) {
+    return <IngotLoader />
+  }
 
   if (pathname === '/login') {
     return (
