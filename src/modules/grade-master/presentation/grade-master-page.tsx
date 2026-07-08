@@ -76,7 +76,7 @@ export default function GradeMasterPage() {
   }
 
   return (
-    <div className="p-8 max-w-[1200px] mx-auto w-full flex flex-col gap-8 h-full">
+    <div className="p-8 max-w-[1200px] mx-auto w-full flex flex-col gap-8 h-full animate-in fade-in duration-300 ease-out">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold font-heading text-[#172554]">Grade Master</h1>

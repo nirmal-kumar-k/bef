@@ -43,7 +43,7 @@ export default function CustomersPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in duration-300 ease-out">
       <div className="flex items-center justify-between">
         <div className="space-y-1">
           <h1 className="text-3xl font-heading font-extrabold text-[#172554] tracking-tight">Customer Directory</h1>

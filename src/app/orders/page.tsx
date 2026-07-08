@@ -82,7 +82,7 @@ export default function OrdersPage() {
   const editingOrder = orders.find(o => o.id === editOrderId) || null
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in fade-in duration-300 ease-out">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-4xl font-bold text-foreground font-heading mb-2">Sales Orders</h1>
