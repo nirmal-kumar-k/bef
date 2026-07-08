@@ -11,7 +11,11 @@ export async function PATCH(
   try {
     const { id } = await params
     const body = await request.json()
-    const { stages, ...updateData } = body
+    const { stages, id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...rest } = body
+    const updateData: Record<string, any> = {}
+    for (const [key, value] of Object.entries(rest)) {
+      if (value !== undefined) updateData[key] = value
+    }
 
     const result = await db.transaction(async (tx) => {
       const [updated] = Object.keys(updateData).length

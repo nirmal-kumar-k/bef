@@ -28,7 +28,11 @@ export async function PUT(
   try {
     const { id } = await params
     const body = await request.json()
-    const { sharedCoreBoxes, mappedProducts, ...patternData } = body
+    // Callers (e.g. the edit modal) often spread the full fetched record back
+    // as a starting point - strip system-managed fields so they can't leak
+    // stale/wrong-typed values (id, createdAt/updatedAt as JSON strings) into
+    // the update.
+    const { sharedCoreBoxes, mappedProducts, id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...patternData } = body
 
     // Partial update: only include fields the client actually sent, so a PUT
     // that only touches e.g. mappedProducts can't null out unrelated columns.

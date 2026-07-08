@@ -28,7 +28,11 @@ export async function PUT(
   try {
     const { id } = await params
     const body = await request.json()
-    const { cart, ...orderData } = body
+    const { cart, id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...rest } = body
+    const orderData: Record<string, any> = {}
+    for (const [key, value] of Object.entries(rest)) {
+      if (value !== undefined) orderData[key] = value
+    }
 
     const result = await db.transaction(async (tx) => {
       const [order] = await tx.update(orders).set(orderData).where(eq(orders.id, id)).returning()
