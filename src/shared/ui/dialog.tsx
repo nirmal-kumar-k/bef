@@ -55,7 +55,7 @@ function DialogContent({
         data-slot="dialog-content"
         className={cn(
           "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-[16px] bg-[rgba(12,18,33,0.85)] backdrop-blur-[20px] p-4 text-sm text-popover-foreground border border-white/[0.08] outline-none shadow-2xl overflow-hidden",
-          "data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 data-closed:slide-out-to-left-1/2 data-closed:slide-out-to-top-[48%] data-open:slide-in-from-left-1/2 data-open:slide-in-from-top-[48%] duration-200 ease-out",
+          "data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-[0.99] data-open:zoom-in-[0.99] data-closed:slide-out-to-left-1/2 data-closed:slide-out-to-top-[48%] data-open:slide-in-from-left-1/2 data-open:slide-in-from-top-[48%] duration-300 ease-out",
           (typeof className !== "string" || !className.includes("max-w-")) && "sm:max-w-sm",
           className
         )}
