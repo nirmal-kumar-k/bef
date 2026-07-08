@@ -82,8 +82,8 @@ export default function ProductionPlanningPage() {
         })
 
         // MELT
-        const castingWeight = pattern?.goodWeight || pattern?.totalWeight || 0
-        const metalRequired = finalMoulds * castingWeight
+        const boxWeight = pattern?.totalWeight || 0
+        const metalRequired = finalMoulds * boxWeight
         const meltScheduled = plans.filter(p => p.stage === 'Melt' && p.itemId === uniqueId).reduce((sum, p) => sum + p.quantityScheduled, 0)
         meltBacklog.push({
           itemId: uniqueId, orderNo: order.customerOrderNo, patternRef: pattern?.code || '-', productName: item.productName,
@@ -329,7 +329,7 @@ export default function ProductionPlanningPage() {
                             
                             // Melting Weight
                             const pat = patterns.find(p => p.code === item.patternRef)
-                            const totalWeight = pat?.totalWeight || ((pat?.goodWeight || 0) + (pat?.runnerRiserWeight || 0))
+                            const totalWeight = pat?.totalWeight || 0
                             const mouldsReq = mouldItem?.totalRequired || 0
                             const meltWeightStr = totalWeight > 0 
                               ? `Unit: ${totalWeight} kg (Total: ${(totalWeight * mouldsReq).toFixed(1)} kg)` 
@@ -510,7 +510,7 @@ export default function ProductionPlanningPage() {
                             }
                           } else if (splitUpStage === 'Mould') {
                             const pat = patterns.find(p => p.code === item.patternRef)
-                            const w = pat?.totalWeight || ((pat?.goodWeight || 0) + (pat?.runnerRiserWeight || 0))
+                            const w = pat?.totalWeight || 0
                             if (w > 0) {
                               weightText = `Unit: ${w} kg (Total: ${(w * item.totalRequired).toFixed(1)} kg)`
                             }
