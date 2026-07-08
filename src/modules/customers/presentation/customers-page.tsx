@@ -34,11 +34,16 @@ export default function CustomersPage() {
   }, [])
 
   if (loading) {
-    return <IngotLoader />
+    return (
+      <div className="max-w-7xl mx-auto py-12 flex flex-col items-center justify-center">
+        <div className="w-8 h-8 border-2 border-[#E0E7FF] border-t-[#4F46E5] rounded-full animate-spin mb-4" />
+        <p className="text-[#64748B] text-sm">Loading customers...</p>
+      </div>
+    )
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in zoom-in-95 duration-500">
+    <div className="max-w-7xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div className="space-y-1">
           <h1 className="text-3xl font-heading font-extrabold text-[#172554] tracking-tight">Customer Directory</h1>

@@ -787,7 +787,7 @@ export function MeltPlanningTable({ defaultMetalQty, defaultGrade }: { defaultMe
            </div>
 
            {(spTarget.c !== null || spTarget.si !== null || spTarget.mn !== null) && (
-              <div className="space-y-6 animate-in fade-in zoom-in-95 duration-200">
+              <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="bg-[#F4F6FB] border border-[#E0E7FF] p-4 rounded-xl text-center">
                     <p className="text-[10px] uppercase text-[#64748B] mb-1">Carburizer (kg)</p>

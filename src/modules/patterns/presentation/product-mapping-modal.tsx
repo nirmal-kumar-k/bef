@@ -273,7 +273,7 @@ export function ProductMappingModal({
 
                 {/* Row 2: Core Box multi-select + per-box quantity */}
                 {line.selectedProductId && (
-                  <div className="space-y-2 pt-3 mt-4 border-t border-[#E0E7FF] animate-in fade-in slide-in-from-top-2 duration-300">
+                  <div className="space-y-2 pt-3 mt-4 border-t border-[#E0E7FF]">
                     <div className="flex items-center justify-between">
                       <Label className="text-[#172554] text-xs font-bold uppercase tracking-wider">Required Core Boxes</Label>
                       {coreBoxes.length === 0 ? (
@@ -420,7 +420,7 @@ function CoreBoxMultiSelect({
 
             {/* Quantity Input */}
             {isSelected && (
-              <div className="w-20 animate-in fade-in zoom-in-95 duration-200">
+              <div className="w-20">
                 <Label className="text-[#64748B] text-[11px] font-semibold uppercase tracking-wider block mb-1 text-center">
                   Quantity
                 </Label>

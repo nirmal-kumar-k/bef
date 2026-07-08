@@ -442,7 +442,7 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, products, patterns,
       {/* DAILY HEAT PLANNING MODAL */}
       {selectedDateForPlanning && (
         <div className="fixed inset-0 z-[40] flex justify-center items-start pt-10 pb-10 bg-black/60 backdrop-blur-sm px-4 overflow-y-auto" onClick={() => setSelectedDateForPlanning(null)}>
-          <div className="bg-[#F4F6FB] border-t-2 border-[#4F46E5] rounded-[14px] text-[#172554] max-w-5xl w-full flex flex-col shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+          <div className="bg-[#F4F6FB] border-t-2 border-[#4F46E5] rounded-[14px] text-[#172554] max-w-5xl w-full flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center p-6 border-b border-[#E0E7FF] shrink-0 bg-[#FFFFFF] rounded-t-[14px]">
               <div>
                 <h2 className="text-2xl font-bold font-heading tracking-tight text-[#172554]">Daily Heat Plan</h2>
@@ -617,7 +617,7 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, products, patterns,
       {/* TRACKING DRAWER */}
       {selectedDate && activeTab === 'tracking' && (
         <div className="fixed inset-0 z-[40] flex justify-center items-start pt-10 pb-10 bg-black/60 backdrop-blur-sm px-4 overflow-y-auto" onClick={() => setSelectedDate(null)}>
-          <div className="bg-[#F4F6FB] border-t-2 border-[#4F46E5] rounded-[14px] text-[#172554] max-w-4xl w-full flex flex-col shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+          <div className="bg-[#F4F6FB] border-t-2 border-[#4F46E5] rounded-[14px] text-[#172554] max-w-4xl w-full flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="p-6 border-b border-[#E0E7FF] bg-[#FFFFFF] rounded-t-[14px] flex justify-between items-start shrink-0">
               <div>
                 <h2 className="text-xl font-bold text-[#172554] font-mono tracking-tight">{selectedDate}</h2>
@@ -791,7 +791,7 @@ function PouringAllocationModal({ furnace, heat, backlogs, onSave, onClose }: an
 
   return (
     <div className="fixed inset-0 z-[60] flex justify-center items-start pt-10 pb-10 bg-black/60 backdrop-blur-sm px-4 overflow-y-auto" onClick={onClose}>
-      <div className="bg-[#F4F6FB] border border-[#E0E7FF] rounded-[14px] text-[#172554] max-w-3xl w-full flex flex-col shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+      <div className="bg-[#F4F6FB] border border-[#E0E7FF] rounded-[14px] text-[#172554] max-w-3xl w-full flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-center p-5 border-b border-[#E0E7FF] bg-[#FFFFFF] rounded-t-[14px]">
           <div>
             <h3 className="text-xl font-bold font-heading">Pouring Allocation</h3>

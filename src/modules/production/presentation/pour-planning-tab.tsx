@@ -98,7 +98,7 @@ export function PourPlanningTab({ patterns, openOrders, dailyPlans, onSaveDayPla
       </div>
 
       {selectedHeat ? (
-        <div className="flex flex-col lg:flex-row gap-6 animate-in fade-in duration-300">
+        <div className="flex flex-col lg:flex-row gap-6">
           
           {/* Main Content Area (~75%) */}
           <div className="flex-[3] space-y-6 bg-[#F4F6FB] border border-[#E0E7FF] rounded-xl overflow-hidden shadow-2xl">
