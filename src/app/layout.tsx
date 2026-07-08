@@ -1,9 +1,11 @@
+import { cookies } from 'next/headers'
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import { Inter, Plus_Jakarta_Sans } from 'next/font/google'
 import { AppLayout } from "@/shared/layouts/app-layout"
 import { RoleProvider } from "@/shared/context/role-context"
 import { AppProvider } from "@/application/store/provider"
+import { verifyAuthToken } from '@/shared/lib/auth'
 import './globals.css'
 
 const inter = Inter({ variable: '--font-inter', subsets: ['latin'] })
@@ -39,17 +41,22 @@ export const viewport: Viewport = {
   ],
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const cookieStore = await cookies()
+  const token = cookieStore.get('auth_token')?.value
+  const authUser = token ? await verifyAuthToken(token) : null
+  const user = authUser ? { name: authUser.name, email: authUser.email } : null
+
   return (
     <html lang="en" suppressHydrationWarning className={`${inter.variable} ${plusJakartaSans.variable} bg-background`}>
       <body className="font-sans antialiased" suppressHydrationWarning>
         <AppProvider>
           <RoleProvider>
-            <AppLayout>
+            <AppLayout user={user}>
               {children}
             </AppLayout>
           </RoleProvider>

@@ -15,9 +15,10 @@ import {
   CalendarBlank,
   Factory,
   Fire,
-  Wrench
+  Wrench,
+  SignOut
 } from '@phosphor-icons/react'
-import { useRole } from '@/shared/context/role-context'
+import { logoutUser } from '@/modules/users/application/auth.actions'
 
 const navGroups = [
   {
@@ -50,18 +51,21 @@ const navGroups = [
   }
 ]
 
-export function Sidebar() {
+interface SidebarProps {
+  user: { name: string; email: string } | null
+}
+
+export function Sidebar({ user }: SidebarProps) {
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
-  const { role } = useRole()
 
   const isActive = (href: string) => pathname === href
 
-  // Filter navigation based on role
-  const filteredNavGroups = navGroups.map(group => ({
-    ...group,
-    items: group.items
-  })).filter(group => group.items.length > 0);
+  const filteredNavGroups = navGroups
+
+  const initials = user?.name
+    ? user.name.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase()
+    : '?'
 
   return (
     <>
@@ -151,13 +155,21 @@ export function Sidebar() {
         {/* Sidebar Foot */}
         <div className="p-[14px_16px] border-t border-[#E0E7FF] flex items-center gap-[10px] shrink-0">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#4F46E5] to-[#9B3A0C] flex items-center justify-center font-heading text-[12px] font-bold text-white shrink-0">
-            RK
+            {initials}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-[12.5px] font-medium text-[#172554] truncate">Rajan Kumar</div>
-            <div className="text-[10.5px] text-[#94A3B8]">Foundry Manager</div>
+            <div className="text-[12.5px] font-medium text-[#172554] truncate">{user?.name ?? 'Not signed in'}</div>
+            <div className="text-[10.5px] text-[#94A3B8] truncate">{user?.email ?? ''}</div>
           </div>
-          <svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-[#C7D2FE] shrink-0"><path d="M6 8l4 4 4-4"/></svg>
+          <form action={logoutUser}>
+            <button
+              type="submit"
+              title="Log out"
+              className="w-7 h-7 rounded-md flex items-center justify-center text-[#94A3B8] hover:bg-red-50 hover:text-red-600 transition-colors shrink-0"
+            >
+              <SignOut weight="bold" size={15} />
+            </button>
+          </form>
         </div>
       </aside>
     </>

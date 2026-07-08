@@ -1,14 +1,11 @@
 'use client'
 
 import { usePathname } from 'next/navigation'
-import { MagnifyingGlass, Bell } from '@phosphor-icons/react'
-import { useRole, type Role } from '@/shared/context/role-context'
-import { cn } from '@/shared/lib/utils'
+import { MagnifyingGlass } from '@phosphor-icons/react'
 
 export function TopBar() {
   const pathname = usePathname()
-  const { role, setRole } = useRole()
-  
+
   // Format pathname to Title
   let title = pathname.split('/').pop()?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Dashboard'
   if (title === 'Patterns') title = 'Patterns' // or override any specific ones
@@ -34,31 +31,6 @@ export function TopBar() {
         />
       </div>
 
-      <div className="ml-auto flex items-center gap-[6px]">
-        <div className="hidden sm:flex gap-[2px] bg-[#F8FAFC] border border-[#E0E7FF] rounded-md p-[3px]" title="Switch perspective">
-          {(['Admin', 'Supervisor'] as Role[]).map((r) => (
-            <button
-              key={r}
-              onClick={() => setRole(r)}
-              className={cn(
-                "px-[12px] py-[5px] rounded-[4px] text-[12px] font-medium transition-all",
-                role === r
-                  ? "bg-[#4F46E5]/20 text-[#4F46E5]"
-                  : "text-[#94A3B8] hover:bg-[#4F46E5]/10 hover:text-[#4F46E5]"
-              )}
-            >
-              {r}
-            </button>
-          ))}
-        </div>
-
-        <div className="relative sm:ml-2">
-          <button className="w-[34px] h-[34px] rounded-md border border-black/[0.04] bg-transparent text-[#64748B] flex items-center justify-center hover:bg-[#4F46E5]/10 hover:text-[#4F46E5] transition-all relative">
-            <Bell weight="duotone" size={18} />
-            <span className="absolute top-[5px] right-[5px] w-[7px] h-[7px] rounded-full bg-[#4F46E5] border-[1.5px] border-[#F4F6FB]"></span>
-          </button>
-        </div>
-      </div>
     </header>
   )
 }

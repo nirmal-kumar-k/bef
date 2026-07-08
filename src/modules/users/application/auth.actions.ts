@@ -1,15 +1,13 @@
 'use server'
 
 import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
 import bcrypt from 'bcryptjs'
 import { SignJWT } from 'jose'
 import { eq, count } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
 import { users } from '@/infrastructure/database/schema'
-
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'fallback_secret_for_development_only'
-)
+import { JWT_SECRET } from '@/shared/lib/auth'
 
 export async function loginUser(formData: FormData) {
   const email = formData.get('email') as string
@@ -37,7 +35,7 @@ export async function loginUser(formData: FormData) {
 
       // If this was the attempt, verify it
       if (email === 'admin@bef.com' && password === 'admin123') {
-        const token = await new SignJWT({ id: newUser.id, role: newUser.role })
+        const token = await new SignJWT({ id: newUser.id, role: newUser.role, name: newUser.name, email: newUser.email })
           .setProtectedHeader({ alg: 'HS256' })
           .setIssuedAt()
           .setExpirationTime('7d')
@@ -65,7 +63,7 @@ export async function loginUser(formData: FormData) {
       return { error: 'Invalid credentials' }
     }
 
-    const token = await new SignJWT({ id: user.id, role: user.role })
+    const token = await new SignJWT({ id: user.id, role: user.role, name: user.name, email: user.email })
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
       .setExpirationTime('7d')
@@ -90,4 +88,5 @@ export async function loginUser(formData: FormData) {
 export async function logoutUser() {
   const cookieStore = await cookies()
   cookieStore.delete('auth_token')
+  redirect('/login')
 }
