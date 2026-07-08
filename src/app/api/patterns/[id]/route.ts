@@ -30,60 +30,59 @@ export async function PUT(
     const body = await request.json()
     const { sharedCoreBoxes, mappedProducts, ...patternData } = body
 
-    const safePatternData = {
-      code: patternData.code,
-      name: patternData.name,
-      customer: patternData.customer,
-      category: patternData.category,
-      goodWeight: patternData.goodWeight != null ? String(patternData.goodWeight) : null,
-      runnerRiserWeight: patternData.runnerRiserWeight != null ? String(patternData.runnerRiserWeight) : null,
-      totalWeight: patternData.totalWeight != null ? String(patternData.totalWeight) : null,
-      topMatchplate: patternData.topMatchplate,
-      bottomMatchplate: patternData.bottomMatchplate,
-      coreBoxes: patternData.coreBoxes,
-      topOwner: patternData.topOwner,
-      topImages: patternData.topImages,
-      bottomOwner: patternData.bottomOwner,
-      bottomImages: patternData.bottomImages,
-      avgMouldsPerHour: patternData.avgMouldsPerHour != null ? String(patternData.avgMouldsPerHour) : null,
-      patternImages: patternData.patternImages,
-      remarks: patternData.remarks,
-      updatedAt: new Date(),
+    // Partial update: only include fields the client actually sent, so a PUT
+    // that only touches e.g. mappedProducts can't null out unrelated columns.
+    const NUMERIC_FIELDS = new Set(['goodWeight', 'runnerRiserWeight', 'totalWeight', 'avgMouldsPerHour'])
+    const safePatternData: Record<string, any> = { updatedAt: new Date() }
+    for (const [key, value] of Object.entries(patternData)) {
+      if (value === undefined) continue
+      safePatternData[key] = NUMERIC_FIELDS.has(key) && value != null ? String(value) : value
     }
 
     const result = await db.transaction(async (tx) => {
       const [pattern] = await tx.update(patterns).set(safePatternData).where(eq(patterns.id, id)).returning()
       if (!pattern) return null
 
-      await tx.delete(patternCoreBoxes).where(eq(patternCoreBoxes.patternId, id))
-      await tx.delete(patternProducts).where(eq(patternProducts.patternId, id))
+      // Only replace core boxes / mapped products when the client actually
+      // sent that field - otherwise leave the existing rows untouched.
+      let finalCoreBoxes
+      if (sharedCoreBoxes !== undefined) {
+        await tx.delete(patternCoreBoxes).where(eq(patternCoreBoxes.patternId, id))
+        finalCoreBoxes = sharedCoreBoxes.length
+          ? await tx.insert(patternCoreBoxes).values(
+              sharedCoreBoxes.map((cb: any) => ({
+                patternId: id,
+                code: cb.code,
+                owner: cb.owner,
+                images: cb.images,
+                typeOfCore: cb.typeOfCore,
+                coreWeight: cb.coreWeight != null ? String(cb.coreWeight) : null,
+                avgCoreProduction: cb.avgCoreProduction,
+              }))
+            ).returning()
+          : []
+      } else {
+        finalCoreBoxes = await tx.select().from(patternCoreBoxes).where(eq(patternCoreBoxes.patternId, id))
+      }
 
-      const insertedCoreBoxes = sharedCoreBoxes?.length
-        ? await tx.insert(patternCoreBoxes).values(
-            sharedCoreBoxes.map((cb: any) => ({
-              patternId: id,
-              code: cb.code,
-              owner: cb.owner,
-              images: cb.images,
-              typeOfCore: cb.typeOfCore,
-              coreWeight: cb.coreWeight != null ? String(cb.coreWeight) : null,
-              avgCoreProduction: cb.avgCoreProduction,
-            }))
-          ).returning()
-        : []
+      let finalProducts
+      if (mappedProducts !== undefined) {
+        await tx.delete(patternProducts).where(eq(patternProducts.patternId, id))
+        finalProducts = mappedProducts.length
+          ? await tx.insert(patternProducts).values(
+              mappedProducts.map((mp: any) => ({
+                patternId: id,
+                name: mp.name,
+                cavities: mp.cavities,
+                selectedCoreBoxes: mp.selectedCoreBoxes,
+              }))
+            ).returning()
+          : []
+      } else {
+        finalProducts = await tx.select().from(patternProducts).where(eq(patternProducts.patternId, id))
+      }
 
-      const insertedProducts = mappedProducts?.length
-        ? await tx.insert(patternProducts).values(
-            mappedProducts.map((mp: any) => ({
-              patternId: id,
-              name: mp.name,
-              cavities: mp.cavities,
-              selectedCoreBoxes: mp.selectedCoreBoxes,
-            }))
-          ).returning()
-        : []
-
-      return { ...pattern, sharedCoreBoxes: insertedCoreBoxes, mappedProducts: insertedProducts }
+      return { ...pattern, sharedCoreBoxes: finalCoreBoxes, mappedProducts: finalProducts }
     })
 
     if (!result) return NextResponse.json({ error: 'Not found' }, { status: 404 })
