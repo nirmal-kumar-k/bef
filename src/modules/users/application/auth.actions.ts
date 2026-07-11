@@ -1,6 +1,6 @@
 'use server'
 
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import bcrypt from 'bcryptjs'
 import { SignJWT } from 'jose'
@@ -8,6 +8,18 @@ import { eq, count } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
 import { users } from '@/infrastructure/database/schema'
 import { JWT_SECRET } from '@/shared/lib/auth'
+
+// `NODE_ENV === 'production'` isn't the same thing as "served over HTTPS" - a
+// production build sitting behind a plain-HTTP reverse proxy (e.g. Nginx with
+// no TLS yet) would mark the cookie Secure and browsers silently refuse to
+// store it, breaking login with no visible error. Nginx forwards the real
+// scheme via X-Forwarded-Proto, so trust that instead; falls back to
+// NODE_ENV when there's no proxy in front (e.g. local dev/`next start` direct).
+async function isRequestSecure() {
+  const proto = (await headers()).get('x-forwarded-proto')
+  if (proto) return proto === 'https'
+  return process.env.NODE_ENV === 'production'
+}
 
 export async function loginUser(formData: FormData) {
   const email = formData.get('email') as string
@@ -44,7 +56,7 @@ export async function loginUser(formData: FormData) {
         const cookieStore = await cookies()
         cookieStore.set('auth_token', token, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
+          secure: await isRequestSecure(),
           sameSite: 'lax',
           path: '/',
           maxAge: 7 * 24 * 60 * 60, // 7 days
@@ -72,7 +84,7 @@ export async function loginUser(formData: FormData) {
     const cookieStore = await cookies()
     cookieStore.set('auth_token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: await isRequestSecure(),
       sameSite: 'lax',
       path: '/',
       maxAge: 7 * 24 * 60 * 60, // 7 days
