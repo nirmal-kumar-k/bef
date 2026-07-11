@@ -15,7 +15,7 @@ interface CorePlanningTabProps {
 }
 
 export function CorePlanningTab({ coreBacklog, patterns, openOrders, dailyPlans, onSaveDayPlan }: CorePlanningTabProps) {
-  const [viewMode, setViewMode] = useState<'table' | 'calendar'>('table')
+  const [viewMode, setViewMode] = useState<'table' | 'calendar'>('calendar')
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
 
   

@@ -13,7 +13,7 @@ interface MouldPlanningTabProps {
 }
 
 export function MouldPlanningTab({ mouldBacklog, patterns, openOrders, dailyPlans, onSaveDayPlan }: MouldPlanningTabProps) {
-  const [viewMode, setViewMode] = useState<'table' | 'calendar'>('table')
+  const [viewMode, setViewMode] = useState<'table' | 'calendar'>('calendar')
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
 
 

@@ -16,7 +16,7 @@ interface KnockoutPlanningTabProps {
 }
 
 export function KnockoutPlanningTab({ knockoutBacklog, patterns, openOrders, dailyPlans, onSaveDayPlan }: KnockoutPlanningTabProps) {
-  const [viewMode, setViewMode] = useState<'table' | 'calendar'>('table')
+  const [viewMode, setViewMode] = useState<'table' | 'calendar'>('calendar')
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false)
 
