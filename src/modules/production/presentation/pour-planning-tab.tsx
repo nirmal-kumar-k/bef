@@ -61,7 +61,7 @@ export function PourPlanningTab({ patterns, openOrders, dailyPlans, onSaveDayPla
   useEffect(() => {
     const init: Record<string, number> = {}
     heats.forEach((h: any) => {
-      if (h.actualPouredMoulds !== undefined) {
+      if (h.actualPouredMoulds !== undefined && h.actualPouredMoulds !== null) {
         init[h.uid] = h.actualPouredMoulds
       }
     })
@@ -229,7 +229,7 @@ export function PourPlanningTab({ patterns, openOrders, dailyPlans, onSaveDayPla
                           <Input
                             type="number"
                             min="0"
-                            value={actualPoured[selectedHeat.uid] === undefined ? '' : actualPoured[selectedHeat.uid]}
+                            value={actualPoured[selectedHeat.uid] ?? ''}
                             onChange={e => setActualPoured(prev => ({ ...prev, [selectedHeat.uid]: e.target.value === '' ? undefined : Number(e.target.value) }))}
                             className="w-24 h-9 mx-auto bg-[#F4F6FB] border-[#4285F4]/30 focus:border-[#4285F4] font-mono text-[#4285F4] text-center px-2 text-sm shadow-inner placeholder:text-[#94A3B8]"
                             placeholder="Act."

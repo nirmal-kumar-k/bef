@@ -36,50 +36,67 @@ export function MeltPlanningTab({ defaultMetalQty, openOrders, products, pattern
   const days = getDays()
   const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
-  // Process melt backlog dynamically from the dailyPlans and openOrders passed
+  // Process melt backlog dynamically from the dailyPlans and openOrders passed.
+  //
+  // Melt can only draw on moulds the Mould stage has actually scheduled/completed -
+  // not the raw customer order quantity - since you physically can't melt metal for
+  // moulds that don't exist yet. Grouping mirrors the Production Planning summary
+  // page: cart lines are grouped by their mapped pattern (products cast in the same
+  // pour share one Mould/Melt schedule row) and keyed by the group's representative
+  // cart item id, matching the itemId every Mould/Melt plan row is saved under.
   const meltBacklog = useMemo(() => {
     const backlog: BacklogItem[] = []
+
     openOrders.forEach(order => {
-      order.cart?.forEach((item: any, idx: number) => {
-        const uniqueId = `${order.id || order._id}-${idx}`
-        const product = products.find(p => p.name === item.productName || p.code === item.product)
-        const pattern = patterns.find(p => p.mappedProducts?.some((mp: any) => mp.name === product?.name))
-        
-        const cavities = product?.cavities || 1
-        const plannedQty = item.quantity
-        const finalMoulds = Math.ceil(plannedQty / cavities)
-        
-        const castingWeight = pattern?.totalWeight || 0
-        const metalRequired = finalMoulds * castingWeight
-        const meltScheduled = dailyPlans.filter(p => p.stage === 'Melt' && p.itemId === uniqueId).reduce((sum, p) => sum + p.quantityScheduled, 0)
-        
-        if (metalRequired > 0) {
+      const orderId = order.id || order._id
+
+      const cartItems = ((order.cart || []) as any[]).map((item: any, idx: number) => {
+        const product = products.find((p: any) => p.name === item.productName || p.code === item.product)
+        const pattern = patterns.find((p: any) => p.mappedProducts?.some((mp: any) => mp.name === product?.name))
+        return { item, product, pattern, uniqueId: `${orderId}-${idx}` }
+      })
+
+      const groups = new Map<string, typeof cartItems>()
+      cartItems.forEach(ci => {
+        const key = ci.pattern ? `pattern:${ci.pattern.code}` : `item:${ci.uniqueId}`
+        if (!groups.has(key)) groups.set(key, [])
+        groups.get(key)!.push(ci)
+      })
+
+      groups.forEach(groupItems => {
+        const pattern = groupItems[0].pattern
+        if (!pattern) return
+        const representativeId = groupItems[0].uniqueId
+        const product = groupItems[0].product
+
+        // Prefer the physically-recorded actualQuantity (moulds really produced);
+        // fall back to the planned quantityScheduled while no actual has been entered
+        // yet, so freshly-scheduled Mould rows still surface here as "ready to melt".
+        const mouldsReady = dailyPlans
+          .filter(p => p.stage === 'Mould' && p.itemId === representativeId)
+          .reduce((sum, p) => sum + (Number(p.actualQuantity) || Number(p.quantityScheduled) || 0), 0)
+
+        const castingWeight = pattern.totalWeight || 0
+        const totalRequired = mouldsReady * castingWeight
+        const totalScheduled = dailyPlans
+          .filter(p => p.stage === 'Melt' && p.itemId === representativeId)
+          .reduce((sum, p) => sum + (Number(p.quantityScheduled) || 0), 0)
+
+        if (totalRequired > 0) {
           backlog.push({
-            itemId: uniqueId, 
-            orderNo: order.customerOrderNo, 
-            patternRef: pattern?.code || '-', 
-            productName: item.productName,
-            totalRequired: metalRequired, 
-            totalScheduled: meltScheduled, 
+            itemId: representativeId,
+            orderNo: order.customerOrderNo,
+            patternRef: pattern.code,
+            productName: product?.name || groupItems[0].item.productName,
+            totalRequired,
+            totalScheduled,
             unit: 'kg'
           })
         }
       })
     })
 
-    // Group by orderNo to consolidate the required amounts
-    const grouped = new Map<string, BacklogItem>()
-    backlog.forEach(item => {
-      const key = `${item.orderNo}|${item.patternRef}`
-      if (grouped.has(key)) {
-        const existing = grouped.get(key)!
-        existing.totalRequired += item.totalRequired
-        existing.totalScheduled += item.totalScheduled
-      } else {
-        grouped.set(key, { ...item })
-      }
-    })
-    return Array.from(grouped.values())
+    return backlog
   }, [openOrders, products, patterns, dailyPlans])
 
   return (

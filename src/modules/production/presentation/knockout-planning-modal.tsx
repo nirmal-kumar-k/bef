@@ -143,12 +143,12 @@ export function KnockoutPlanningModal({
     Object.keys(hourlyMatrix).forEach(key => {
       const [machineId, code] = key.split('_')
       const hours = hourlyMatrix[key] || {}
-      const totalScheduled = Object.values(hours).reduce((sum, val) => sum + (val || 0), 0)
+      const totalScheduled = Object.values(hours).reduce((sum: number, val) => sum + (val || 0), 0)
       
-      if (totalScheduled > 0 || (workers[key] && Object.values(workers[key]).some(w => w > 0)) || actuals[key] !== undefined) {
+      if (totalScheduled > 0 || (workers[key] && Object.values(workers[key]).some(w => (w || 0) > 0)) || actuals[key] !== undefined) {
         const backlog = orderKnockoutBacklog.find(b => b.patternRef === code)
-        const maxWorkers = workers[key] && Object.values(workers[key]).length > 0 
-          ? Math.max(...Object.values(workers[key])) 
+        const maxWorkers = workers[key] && Object.values(workers[key]).length > 0
+          ? Math.max(...Object.values(workers[key]).map(w => w || 0))
           : 1
           
         const existingPlan = dailyPlans.find(p => p.orderId === selectedOrder && p.stage === 'Knockout' && p.patternRef === code && p.equipmentId === machineId)
@@ -199,7 +199,7 @@ export function KnockoutPlanningModal({
     Object.keys(hourlyMatrix).forEach(key => {
       if (key.endsWith(`_${patternRef}`)) {
         const hours = hourlyMatrix[key] || {}
-        total += Object.values(hours).reduce((sum, val) => sum + (val || 0), 0)
+        total += Object.values(hours).reduce((sum: number, val) => sum + (val || 0), 0)
       }
     })
     return total
@@ -230,7 +230,7 @@ export function KnockoutPlanningModal({
         Object.keys(prevMatrix).forEach(k => {
           if (k.endsWith(`_${cb.patternRef}`)) {
             const hours = prevMatrix[k] || {}
-            patternTotal += Object.values(hours).reduce((sum, val) => sum + (val || 0), 0)
+            patternTotal += Object.values(hours).reduce((sum: number, val) => sum + (val || 0), 0)
           }
         })
         
@@ -273,7 +273,7 @@ export function KnockoutPlanningModal({
         Object.keys(hourlyMatrix).forEach(k => {
           if (k.endsWith(`_${cb.patternRef}`)) {
             const hours = hourlyMatrix[k] || {}
-            patternTotal += Object.values(hours).reduce((sum, val) => sum + (val || 0), 0)
+            patternTotal += Object.values(hours).reduce((sum: number, val) => sum + (val || 0), 0)
           }
         })
         
@@ -301,7 +301,7 @@ export function KnockoutPlanningModal({
   const getColTotal = (patternRef: string) => {
     const key = `${activeMachineTab}_${patternRef}`
     const hours = hourlyMatrix[key] || {}
-    const sum = Object.values(hours).reduce((sum, val) => sum + (val || 0), 0)
+    const sum = Object.values(hours).reduce((sum: number, val) => sum + (val || 0), 0)
     if (sum === 0) {
       const existingPlan = dailyPlans.find(p => p.orderId === selectedOrder && p.stage === 'Knockout' && p.patternRef === patternRef && p.equipmentId === activeMachineTab)
       return existingPlan?.quantityScheduled || 0
@@ -323,11 +323,22 @@ export function KnockoutPlanningModal({
   const handleHourlyChange = (patternRef: string, timeSlot: string, value: string) => {
     const numValue = value === '' ? undefined : parseInt(value, 10)
     const key = `${activeMachineTab}_${patternRef}`
+
+    // Cap at the pending backlog quantity, counting what's already entered for this
+    // pattern across every machine (not just this one) so the total across the whole
+    // day's plan can't exceed what's actually still needed.
+    const cb = activeKnockouts.find(k => k.patternRef === patternRef)
+    const pendingTotal = cb ? Math.max(0, cb.totalRequired - cb.totalScheduled) : Infinity
+    const currentThisCell = hourlyMatrix[key]?.[timeSlot] || 0
+    const totalAcrossMachinesExcludingThisCell = getPatternTotalAcrossMachines(patternRef) - currentThisCell
+    const maxForThisCell = Math.max(0, pendingTotal - totalAcrossMachinesExcludingThisCell)
+    const cappedValue = numValue === undefined ? undefined : Math.max(0, Math.min(numValue, maxForThisCell))
+
     setHourlyMatrix(prev => ({
       ...prev,
       [key]: {
         ...(prev[key] || {}),
-        [timeSlot]: numValue
+        [timeSlot]: cappedValue
       }
     }))
   }
@@ -345,7 +356,7 @@ export function KnockoutPlanningModal({
       }
       
       // Auto-update End of Day actuals when hourly actuals change
-      const totalAct = Object.values(updated[key]).reduce((sum, val) => sum + (val || 0), 0)
+      const totalAct = Object.values(updated[key]).reduce((sum: number, val) => sum + (val || 0), 0)
       if (totalAct > 0) {
          setActuals(a => ({ ...a, [key]: totalAct }))
       }
@@ -547,7 +558,7 @@ export function KnockoutPlanningModal({
                               <Input
                                 type="number"
                                 min="0"
-                                value={hourlyActuals[key]?.[slot.time] === undefined ? '' : hourlyActuals[key]?.[slot.time]}
+                                value={hourlyActuals[key]?.[slot.time] ?? ''}
                                 onChange={e => handleHourlyActualChange(cb.patternRef!, slot.time, e.target.value)}
                                 className="w-20 h-9 mx-auto bg-[#F4F6FB] border-[#4285F4]/30 focus:border-[#4285F4] font-mono text-[#4285F4] text-center px-2 text-sm shadow-inner placeholder:text-[#94A3B8]"
                                 placeholder="Act"
@@ -576,7 +587,7 @@ export function KnockoutPlanningModal({
                         const isOnTrack = expectedOutput >= plannedTarget && plannedTarget > 0
                         
                         const key = `${activeMachineTab}_${cb.patternRef}`
-                        const totalWorkers = Math.max(0, ...Object.values(workers[key] || {}))
+                        const totalWorkers = Math.max(0, ...Object.values(workers[key] || {}).map(w => w || 0))
 
                         return [
                           <td key={`${cb.patternRef}-total`} className="px-4 py-4 text-center font-mono font-bold text-lg text-[#4285F4] border-r border-[#E0E7FF]/20">
@@ -621,7 +632,7 @@ export function KnockoutPlanningModal({
                     const planned = getColTotal(cb.patternRef!)
                     const key = `${activeMachineTab}_${cb.patternRef}`
                     const act = actuals[key]
-                    const hasAct = act !== undefined
+                    const hasAct = act !== undefined && act !== null
                     const variance = hasAct ? act - planned : 0
                     
                     return (
@@ -638,11 +649,11 @@ export function KnockoutPlanningModal({
                           <Input
                             type="number"
                             min="0"
-                            value={act === undefined ? '' : act}
+                            value={hasAct ? act : ''}
                             onChange={e => setActuals(prev => ({ ...prev, [key]: e.target.value === '' ? undefined : Number(e.target.value) })) as any}
                             className={cn(
                               "h-8 bg-[#F4F6FB] text-[#172554] font-mono px-2 text-sm w-full",
-                              act === undefined ? "border-red-500/50 focus:border-red-500" : "border-[#E0E7FF]"
+                              !hasAct ? "border-red-500/50 focus:border-red-500" : "border-[#E0E7FF]"
                             )}
                             placeholder="Required"
                           />

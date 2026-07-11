@@ -17,6 +17,7 @@ export const productionPlans = pgTable('production_plans', {
   itemId: text('item_id').notNull(),
   stage: productionPlanStageEnum('stage').notNull(),
   coreBoxCode: text('core_box_code').default(''),
+  patternRef: text('pattern_ref'),
   quantityScheduled: integer('quantity_scheduled').notNull(),
   laborersAssigned: integer('laborers_assigned').default(1),
   workersAssigned: integer('workers_assigned'),

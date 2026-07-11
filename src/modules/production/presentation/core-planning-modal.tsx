@@ -45,6 +45,10 @@ interface PlannedRow {
   hourlyActuals: Record<string, number>
   actualQuantity?: number
   isConfirmed: boolean
+  // Quantity this row already contributed to the backlog's totalScheduled when the
+  // modal opened - needed to compute how much MORE this row can take without
+  // double-subtracting its own prior contribution from the remaining pending qty.
+  originalQty: number
 }
 
 export function CorePlanningModal({
@@ -125,7 +129,8 @@ export function CorePlanningModal({
           hourlyWorkers: p.hourlyWorkers || {},
           hourlyActuals: p.hourlyActuals || {},
           actualQuantity: p.actualQuantity,
-          isConfirmed: !!p.isConfirmed
+          isConfirmed: !!p.isConfirmed,
+          originalQty: p.quantityScheduled || 0
         }
       })
       setPlannedRows(initRows)
@@ -210,9 +215,60 @@ export function CorePlanningModal({
     onClose()
   }
 
+  // How much more this row can be scheduled for without exceeding the pending
+  // backlog quantity. backlogData.totalScheduled already includes this row's own
+  // prior saved value (if it existed before this session), so that's added back in
+  // - otherwise editing an existing row would immediately look "over budget" by its
+  // own amount.
+  const getMaxAllowedQty = (row: PlannedRow) => {
+    const backlogItem = backlogData.find(b => b.orderNo === row.orderNo && b.coreBoxCode === row.coreBoxCode)
+    if (!backlogItem) return Infinity
+    return Math.max(0, backlogItem.totalRequired - backlogItem.totalScheduled + row.originalQty)
+  }
+
   // Value change only
   const handleTargetQtyInput = (rowId: string, value: string) => {
-    setPlannedRows(prev => prev.map(r => r.id === rowId ? { ...r, targetQty: value } : r))
+    setPlannedRows(prev => prev.map(r => {
+      if (r.id !== rowId) return r
+      if (value === '') return { ...r, targetQty: value }
+      const num = parseInt(value, 10)
+      if (isNaN(num)) return { ...r, targetQty: value }
+      const capped = Math.min(num, getMaxAllowedQty(r))
+      return { ...r, targetQty: String(capped) }
+    }))
+  }
+
+  // Shared hourly distribution: spreads target qty evenly across time slots using
+  // avg-core-production for worker counts. The first slot of the shift is always
+  // left out - the machine isn't actually productive at the shift's nominal start
+  // time (warm-up/changeover), real output starts from the second slot.
+  const distributeQty = (target: number, patternRef: string, coreBoxCode: string, machineId: string) => {
+    const pattern = patterns.find(p => p.code === patternRef)
+    const eq = equipments.find(e => e.id === machineId)
+    const scb = pattern?.sharedCoreBoxes?.find((s: any) => s.code === coreBoxCode)
+    const avgProd = Number(scb?.avgCoreProduction) || Number(pattern?.avgMouldsPerHour) || eq?.avgPiecesPerHour || 10
+
+    const hourlyTargets: Record<string, number> = {}
+    const hourlyWorkers: Record<string, number> = {}
+
+    const fillableSlots = TIME_SLOTS.slice(1)
+    if (TIME_SLOTS[0]) {
+      hourlyTargets[TIME_SLOTS[0].time] = 0
+      hourlyWorkers[TIME_SLOTS[0].time] = 0
+    }
+
+    const basePerSlot = fillableSlots.length > 0 ? Math.floor(target / fillableSlots.length) : 0
+    let remainder = target - (basePerSlot * fillableSlots.length)
+
+    fillableSlots.forEach(slot => {
+      const qty = basePerSlot + (remainder > 0 ? 1 : 0)
+      if (remainder > 0) remainder--
+
+      hourlyTargets[slot.time] = qty
+      hourlyWorkers[slot.time] = qty > 0 ? Math.max(1, Math.ceil(qty / (avgProd * slot.hours))) : 0
+    })
+
+    return { hourlyTargets, hourlyWorkers }
   }
 
   // Auto-fill logic triggered on button click
@@ -224,38 +280,8 @@ export function CorePlanningModal({
       const target = parseInt(row.targetQty, 10)
       if (isNaN(target) || target <= 0) return prev
 
-      const pattern = patterns.find(p => p.code === row.patternRef)
-      const eq = equipments.find(e => e.id === row.machineId)
-
-      const scb = pattern?.sharedCoreBoxes?.find((s: any) => s.code === row.coreBoxCode)
-      const avgProd = Number(scb?.avgCoreProduction) || Number(pattern?.avgMouldsPerHour) || eq?.avgPiecesPerHour || 10
-
-      const newRow = { ...row, hourlyTargets: {}, hourlyWorkers: {} }
-
-      // We no longer strictly block slots, but we try to avoid slots where other rows have >0
-      const otherRows = prev.filter(or => or.id !== rowId && or.machineId === row.machineId)
-      const availableSlots = TIME_SLOTS.filter(slot => {
-        return !otherRows.some(or => (or.hourlyTargets[slot.time] || 0) > 0)
-      })
-
-      const slotsToUse = availableSlots.length > 0 ? availableSlots : TIME_SLOTS
-      const basePerSlot = Math.floor(target / slotsToUse.length)
-      let remainder = target - (basePerSlot * slotsToUse.length)
-
-      TIME_SLOTS.forEach(slot => {
-        if (slotsToUse.some(s => s.time === slot.time)) {
-          const qty = basePerSlot + (remainder > 0 ? 1 : 0)
-          if (remainder > 0) remainder--
-
-          newRow.hourlyTargets[slot.time] = qty
-          newRow.hourlyWorkers[slot.time] = qty > 0 ? Math.max(1, Math.ceil(qty / (avgProd * slot.hours))) : 0
-        } else {
-          newRow.hourlyTargets[slot.time] = 0
-          newRow.hourlyWorkers[slot.time] = 0
-        }
-      })
-
-      return prev.map(r => r.id === rowId ? newRow : r)
+      const { hourlyTargets, hourlyWorkers } = distributeQty(target, row.patternRef, row.coreBoxCode, row.machineId)
+      return prev.map(r => r.id === rowId ? { ...r, hourlyTargets, hourlyWorkers } : r)
     })
   }
 
@@ -268,8 +294,11 @@ export function CorePlanningModal({
     const num = value === '' ? undefined : parseInt(value, 10)
     setPlannedRows(prev => prev.map(r => {
       if (r.id !== rowId) return r
-      const newTargets = { ...r.hourlyTargets, [timeSlot]: num || 0 }
-      const newTotal = Object.values(newTargets).reduce((a, b) => a + b, 0)
+      const otherSlotsTotal = Object.entries(r.hourlyTargets).reduce((a, [slot, v]) => slot === timeSlot ? a : a + (v || 0), 0)
+      const maxAllowed = getMaxAllowedQty(r)
+      const cappedValue = Math.max(0, Math.min(num || 0, maxAllowed - otherSlotsTotal))
+      const newTargets = { ...r.hourlyTargets, [timeSlot]: cappedValue }
+      const newTotal = otherSlotsTotal + cappedValue
       return { ...r, hourlyTargets: newTargets, targetQty: String(newTotal) }
     }))
   }
@@ -290,19 +319,26 @@ export function CorePlanningModal({
     if (!b) return
     const order = openOrders.find(o => o.customerOrderNo === orderNo)
 
+    const remaining = Math.max(0, b.totalRequired - b.totalScheduled)
+    const patternRef = b.patternRef || ''
+    const { hourlyTargets, hourlyWorkers } = remaining > 0
+      ? distributeQty(remaining, patternRef, coreBoxCode, activeMachineId)
+      : { hourlyTargets: {}, hourlyWorkers: {} }
+
     setPlannedRows(prev => [...prev, {
       id: Math.random().toString(),
       orderId: order?.id || '',
       orderNo: orderNo,
       productName: order?.productName || '',
-      patternRef: b.patternRef || '',
+      patternRef,
       coreBoxCode: coreBoxCode,
       machineId: activeMachineId,
-      targetQty: '',
-      hourlyTargets: {},
-      hourlyWorkers: {},
+      targetQty: remaining > 0 ? String(remaining) : '',
+      hourlyTargets,
+      hourlyWorkers,
       hourlyActuals: {},
-      isConfirmed: false
+      isConfirmed: false,
+      originalQty: 0
     }])
     setComboboxOpen(false)
   }
@@ -317,14 +353,26 @@ export function CorePlanningModal({
   const activeRows = plannedRows.filter(r => r.machineId === activeMachineId)
   const activeMachine = equipments.find(e => e.id === activeMachineId)
 
-  // Combobox options for backlog items needing scheduling
+  // Combobox options for backlog items needing scheduling - restricted to core boxes
+  // mapped to the active machine in Equipment Master. A machine with no core boxes
+  // mapped yet offers nothing, rather than silently allowing anything.
+  const mappedCoreBoxes: string[] = activeMachine?.restrictedCoreBoxes || []
   const backlogOptions = useMemo(() => {
+    if (mappedCoreBoxes.length === 0) return []
+    // Exclude core boxes that already have a row on this machine this session -
+    // adding the same one twice would double-book it and, on save, create a second
+    // DB row instead of updating the first (since neither carries the other's id),
+    // silently doubling what counts as "already scheduled" from then on.
+    const alreadyOnMachine = new Set(activeRows.map(r => `${r.orderNo}|${r.coreBoxCode}`))
     const options = new Map<string, BacklogItem>()
-    backlogData.filter(b => b.totalRequired > b.totalScheduled).forEach(b => {
-      options.set(`${b.orderNo}|${b.coreBoxCode}`, b)
-    })
+    backlogData
+      .filter(b => b.totalRequired > b.totalScheduled && !!b.coreBoxCode && mappedCoreBoxes.includes(b.coreBoxCode))
+      .forEach(b => {
+        const key = `${b.orderNo}|${b.coreBoxCode}`
+        if (!alreadyOnMachine.has(key)) options.set(key, b)
+      })
     return Array.from(options.values())
-  }, [backlogData])
+  }, [backlogData, mappedCoreBoxes, activeRows])
 
   // Per-row derived metrics, shared between the column header and the blocking check below
   const rowMeta = useMemo(() => {
@@ -468,7 +516,11 @@ export function CorePlanningModal({
                       <Command>
                         <CommandInput placeholder="Search Order or Core Box..." className="border-none focus:ring-0 text-sm h-11" />
                         <CommandList className="max-h-[300px] overflow-y-auto">
-                          <CommandEmpty className="py-6 text-center text-sm text-[#94A3B8]">No pending core boxes found.</CommandEmpty>
+                          <CommandEmpty className="py-6 text-center text-sm text-[#94A3B8] px-4">
+                            {mappedCoreBoxes.length === 0
+                              ? 'No core boxes are mapped to this machine yet. Map them in Equipment Master first.'
+                              : 'No pending core boxes found.'}
+                          </CommandEmpty>
                           <CommandGroup heading="Pending Backlog">
                             {backlogOptions.map((b) => (
                               <CommandItem
@@ -502,15 +554,16 @@ export function CorePlanningModal({
                     <p className="text-sm">Click the button above to add a core box to this machine's schedule.</p>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left whitespace-nowrap">
+                  <div className="w-full">
+                    <table className="w-full table-fixed text-sm text-left">
                       <thead className="bg-[#F8FAFC] border-b border-[#E0E7FF] text-[#64748B] uppercase tracking-wider font-bold text-[11px]">
                         <tr>
-                          <th className="px-5 py-3 sticky left-0 bg-[#F8FAFC] z-10 shadow-[1px_0_0_#E0E7FF] min-w-[190px]">Core Box Details</th>
-                          <th className="px-3 py-3 text-center border-x border-[#E0E7FF] min-w-[110px]">Target Qty</th>
+                          <th className="px-3 py-3 w-[150px]">Core Box Details</th>
+                          <th className="px-1.5 py-3 text-center border-x border-[#E0E7FF] w-[68px]">Target Qty</th>
                           {TIME_SLOTS.map(slot => (
-                            <th key={slot.time} className="px-2 py-3 text-center border-r border-[#E0E7FF] min-w-[56px]">
-                              {slot.time}
+                            <th key={slot.time} className="px-1 py-3 text-center border-r border-[#E0E7FF] leading-tight">
+                              <div>{slot.time}</div>
+                              <div className="text-[9px] font-normal normal-case text-[#94A3B8]">to {slot.endTime}</div>
                             </th>
                           ))}
                         </tr>
@@ -518,79 +571,70 @@ export function CorePlanningModal({
                       <tbody className="divide-y divide-[#E0E7FF]">
                         {rowMeta.map(({ row, possibleQty }) => (
                           <tr key={row.id} className="hover:bg-[#F4F6FB] transition-colors group">
-                            <td className="px-5 py-3 sticky left-0 bg-inherit shadow-[1px_0_0_#E0E7FF]">
+                            <td className="px-3 py-3">
                               <div className="flex flex-col gap-0.5">
                                 <div className="flex items-center gap-1.5">
-                                  <span className="font-bold text-[#172554] text-sm">{row.coreBoxCode}</span>
+                                  <span className="font-bold text-[#172554] text-sm truncate">{row.coreBoxCode}</span>
                                   <button
                                     onClick={() => removeRow(row.id)}
                                     title="Remove from schedule"
-                                    className="text-[#94A3B8] hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all"
+                                    className="text-[#94A3B8] hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all shrink-0"
                                   >
                                     <Trash className="w-3.5 h-3.5" />
                                   </button>
                                 </div>
-                                <span className="text-[10px] text-[#94A3B8]">{row.orderNo} | {row.productName}</span>
-                                <span className="text-[10px] text-[#10B981] font-semibold">POSSIBLE QTY: {possibleQty}</span>
+                                <span className="text-[10px] text-[#94A3B8] truncate">{row.orderNo} | {row.productName}</span>
+                                <span className="text-[10px] text-[#10B981] font-semibold">QTY: {possibleQty}</span>
                               </div>
                             </td>
-                            <td className="px-2 py-3 text-center border-x border-[#E0E7FF] bg-[#EEF2FF]/20">
-                              <div className="flex items-center justify-center gap-1">
+                            <td className="px-1.5 py-3 text-center border-x border-[#E0E7FF] bg-[#EEF2FF]">
+                              <div className="flex flex-col items-center justify-center gap-1">
                                 <Input
                                   type="number"
                                   min="0"
+                                  max={getMaxAllowedQty(row) === Infinity ? undefined : getMaxAllowedQty(row)}
                                   value={row.targetQty}
                                   onChange={e => handleTargetQtyInput(row.id, e.target.value)}
                                   placeholder="0"
-                                  className="w-14 h-8 bg-[#FFFFFF] border-[#C7D2FE] font-mono text-center text-[#4F46E5] font-bold text-sm focus-visible:ring-1 focus-visible:ring-[#4F46E5]"
+                                  title={getMaxAllowedQty(row) === Infinity ? undefined : `Max ${getMaxAllowedQty(row)} pending`}
+                                  className="w-14 h-7 bg-[#FFFFFF] border-[#C7D2FE] font-mono text-center text-[#4F46E5] font-bold text-sm focus-visible:ring-1 focus-visible:ring-[#4F46E5] px-1"
                                 />
                                 <Button
                                   onClick={() => autoFillRow(row.id)}
                                   size="icon"
                                   variant="outline"
                                   title="Auto-fill time slots"
-                                  className="h-8 w-8 shrink-0 text-[#4F46E5] border-[#C7D2FE] hover:bg-[#EEF2FF] hover:border-[#4F46E5]"
+                                  className="h-6 w-14 shrink-0 text-[#4F46E5] border-[#C7D2FE] hover:bg-[#EEF2FF] hover:border-[#4F46E5]"
                                 >
-                                  <MagicWand weight="fill" className="w-4 h-4" />
+                                  <MagicWand weight="fill" className="w-3.5 h-3.5" />
                                 </Button>
                               </div>
                             </td>
                             {TIME_SLOTS.map(slot => {
-                              const otherRowsInSlot = activeRows.filter(or => or.id !== row.id && (or.hourlyTargets[slot.time] || 0) > 0)
                               const ownValue = row.hourlyTargets[slot.time] || 0
-                              const isBlocked = otherRowsInSlot.length > 0 && ownValue === 0
 
                               return (
-                                <td key={slot.time} className="px-1.5 py-2 text-center border-r border-[#E0E7FF]">
-                                  {isBlocked ? (
-                                    <div
-                                      title="Slot occupied by another core box on this machine"
-                                      className="w-12 h-8 mx-auto rounded-md bg-[#F1F5F9] border border-[#E2E8F0] flex items-center justify-center text-[#CBD5E1] text-xs font-mono cursor-not-allowed select-none"
-                                    >
-                                      —
-                                    </div>
-                                  ) : (
-                                    <div className="flex flex-col gap-1 items-center justify-center">
-                                      <Input
-                                        type="number"
-                                        min="0"
-                                        value={row.hourlyTargets[slot.time] || ''}
-                                        onChange={e => handleHourlyChange(row.id, slot.time, e.target.value)}
-                                        placeholder="-"
-                                        className={cn(
-                                          "w-12 h-8 text-center font-mono text-xs px-1 bg-transparent border-transparent hover:border-[#E0E7FF] focus:border-[#4285F4] focus:bg-white transition-all shadow-none",
-                                          ownValue > 0 && "font-bold text-[#172554] bg-[#F4F6FB] border-[#E0E7FF]"
-                                        )}
-                                      />
-                                      {viewLabourers && (
-                                        <div className="flex items-center justify-center gap-1 opacity-60 hover:opacity-100 transition-opacity">
-                                          <button onClick={() => handleWorkerChange(row.id, slot.time, -1)} className="w-4 h-4 flex items-center justify-center bg-[#E2E8F0] rounded text-[#475569] hover:bg-[#CBD5E1] text-xs font-bold leading-none">-</button>
-                                          <span className="text-[10px] w-3 text-center font-mono font-medium">{row.hourlyWorkers[slot.time] || 0}</span>
-                                          <button onClick={() => handleWorkerChange(row.id, slot.time, 1)} className="w-4 h-4 flex items-center justify-center bg-[#E2E8F0] rounded text-[#475569] hover:bg-[#CBD5E1] text-xs font-bold leading-none">+</button>
-                                        </div>
+                                <td key={slot.time} className="px-1 py-2 text-center border-r border-[#E0E7FF]">
+                                  <div className="flex flex-col gap-1 items-center justify-center">
+                                    <Input
+                                      type="number"
+                                      min="0"
+                                      value={row.hourlyTargets[slot.time] || ''}
+                                      onChange={e => handleHourlyChange(row.id, slot.time, e.target.value)}
+                                      placeholder="-"
+                                      className={cn(
+                                        "w-full max-w-[52px] mx-auto h-8 text-center font-mono text-xs px-1 bg-transparent border-transparent hover:border-[#E0E7FF] focus:border-[#4285F4] focus:bg-white transition-all shadow-none",
+                                        ownValue > 0 && "font-bold text-[#172554] bg-[#F4F6FB] border-[#E0E7FF]"
                                       )}
-                                    </div>
-                                  )}
+                                    />
+                                    {viewLabourers && (
+                                      <div className="flex items-center justify-center gap-1 opacity-60 hover:opacity-100 transition-opacity">
+                                        <button onClick={() => handleWorkerChange(row.id, slot.time, -1)} className="w-4 h-4 flex items-center justify-center bg-[#E2E8F0] rounded text-[#475569] hover:bg-[#CBD5E1] text-xs font-bold leading-none">-</button>
+                                        <span className="text-[10px] w-3 text-center font-mono font-medium">{row.hourlyWorkers[slot.time] || 0}</span>
+                                        <button onClick={() => handleWorkerChange(row.id, slot.time, 1)} className="w-4 h-4 flex items-center justify-center bg-[#E2E8F0] rounded text-[#475569] hover:bg-[#CBD5E1] text-xs font-bold leading-none">+</button>
+                                      </div>
+                                    )}
+                                  </div>
                                 </td>
                               )
                             })}
@@ -613,7 +657,7 @@ export function CorePlanningModal({
                   {activeRows.map(row => {
                     const planned = parseInt(row.targetQty, 10) || 0
                     const act = row.actualQuantity
-                    const hasAct = act !== undefined
+                    const hasAct = act !== undefined && act !== null
                     const variance = hasAct ? act - planned : 0
 
                     return (
@@ -631,11 +675,11 @@ export function CorePlanningModal({
                           <Input
                             type="number"
                             min="0"
-                            value={act === undefined ? '' : act}
+                            value={hasAct ? act : ''}
                             onChange={e => handleActualChange(row.id, e.target.value)}
                             className={cn(
                               "h-8 bg-[#F4F6FB] text-[#172554] font-mono px-2 text-sm w-full",
-                              act === undefined ? "border-red-500/50 focus:border-red-500" : "border-[#E0E7FF]"
+                              !hasAct ? "border-red-500/50 focus:border-red-500" : "border-[#E0E7FF]"
                             )}
                             placeholder="Required"
                           />

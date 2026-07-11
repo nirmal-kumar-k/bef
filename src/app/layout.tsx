@@ -4,7 +4,6 @@ import type { Metadata, Viewport } from 'next'
 import { Inter, Plus_Jakarta_Sans } from 'next/font/google'
 import { AppLayout } from "@/shared/layouts/app-layout"
 import { RoleProvider } from "@/shared/context/role-context"
-import { AppProvider } from "@/application/store/provider"
 import { verifyAuthToken } from '@/shared/lib/auth'
 import './globals.css'
 
@@ -54,13 +53,11 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className={`${inter.variable} ${plusJakartaSans.variable} bg-background`}>
       <body className="font-sans antialiased" suppressHydrationWarning>
-        <AppProvider>
-          <RoleProvider>
-            <AppLayout user={user}>
-              {children}
-            </AppLayout>
-          </RoleProvider>
-        </AppProvider>
+        <RoleProvider>
+          <AppLayout user={user}>
+            {children}
+          </AppLayout>
+        </RoleProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

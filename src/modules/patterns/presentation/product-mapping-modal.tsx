@@ -49,6 +49,7 @@ export function ProductMappingModal({
   onClose,
   patternId,
   onSave,
+  isSaving,
   initialMappedProducts,
   coreBoxes = [],
 }: {
@@ -56,6 +57,7 @@ export function ProductMappingModal({
   onClose: () => void
   patternId: string | null
   onSave?: (mappedProducts: any[]) => void
+  isSaving?: boolean
   initialMappedProducts?: any[]
   coreBoxes?: { id: string; code: string; owner: string; typeOfCore?: string; coreWeight?: number; avgCoreProduction?: string }[]
 }) {
@@ -311,8 +313,8 @@ export function ProductMappingModal({
           <Button variant="ghost" onClick={onClose} className="text-[#64748B] hover:text-[#172554] hover:bg-[#EEF2FF]">
             Cancel
           </Button>
-          <Button className="bg-[#4F46E5] hover:bg-[#4F46E5] text-white" onClick={handleSave}>
-            Save Mapping
+          <Button className="bg-[#4F46E5] hover:bg-[#4F46E5] text-white disabled:opacity-50" onClick={handleSave} disabled={isSaving}>
+            {isSaving ? 'Saving...' : 'Save Mapping'}
           </Button>
         </DialogFooter>
       </DialogContent>

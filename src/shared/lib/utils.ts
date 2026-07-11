@@ -54,7 +54,17 @@ export function parseTimeToMinutes(timeStr: string): number {
 
 export interface TimeSlot {
   time: string
+  endTime: string
   hours: number
+}
+
+function formatMinutesToTime(mins: number): string {
+  let h = Math.floor((mins % (24 * 60)) / 60)
+  const m = mins % 60
+  const ampm = h >= 12 ? 'PM' : 'AM'
+  h = h % 12
+  h = h ? h : 12 // the hour '0' should be '12'
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')} ${ampm}`
 }
 
 export function generateTimeSlots(startTime: string, endTime: string, breaks: {startTime: string, endTime: string}[] = []): TimeSlot[] {
@@ -85,36 +95,27 @@ export function generateTimeSlots(startTime: string, endTime: string, breaks: {s
       continue
     }
   
-    let h = Math.floor((currentMins % (24 * 60)) / 60)
-    let m = currentMins % 60
-    const ampm = h >= 12 ? 'PM' : 'AM'
-    h = h % 12
-    h = h ? h : 12 // the hour '0' should be '12'
-    
-    const hStr = h.toString().padStart(2, '0')
-    const mStr = m.toString().padStart(2, '0')
-    
-    const slotStr = `${hStr}:${mStr} ${ampm}`
-    
+    const slotStr = formatMinutesToTime(currentMins)
+
     let nextHourMins = currentMins + 60
-    
+
     // Check if a break starts before the next hour mark
     const nextBreak = normalizedBreaks.find(b => b.bs > currentMins && b.bs < nextHourMins)
     if (nextBreak) {
       nextHourMins = nextBreak.bs
     }
-    
+
     if (nextHourMins > endMins) {
       nextHourMins = endMins
     }
-    
+
     const durationMins = nextHourMins - currentMins
     const durationHours = durationMins / 60
-    
+
     if (durationHours > 0) {
-      slots.push({ time: slotStr, hours: durationHours })
+      slots.push({ time: slotStr, endTime: formatMinutesToTime(nextHourMins), hours: durationHours })
     }
-    
+
     currentMins = nextHourMins
   }
   return slots

@@ -10,7 +10,23 @@ import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
+import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/shared/ui/command'
+import { Check, Plus } from '@phosphor-icons/react'
+import { cn } from '@/shared/lib/utils'
 import { Equipment } from './equipment-master-page'
+
+interface CoreBoxOption {
+  code: string
+  patternCode: string
+}
 
 interface EquipmentModalProps {
   isOpen: boolean
@@ -31,6 +47,8 @@ export function EquipmentModal({ isOpen, onClose, initialData }: EquipmentModalP
   })
   
   const [isSaving, setIsSaving] = useState(false)
+  const [coreBoxOptions, setCoreBoxOptions] = useState<CoreBoxOption[]>([])
+  const [coreBoxPickerOpen, setCoreBoxPickerOpen] = useState(false)
 
   useEffect(() => {
     if (isOpen) {
@@ -50,6 +68,30 @@ export function EquipmentModal({ isOpen, onClose, initialData }: EquipmentModalP
       }
     }
   }, [isOpen, initialData])
+
+  useEffect(() => {
+    if (!isOpen) return
+    fetch('/api/patterns')
+      .then(r => r.json())
+      .then((patterns: any[]) => {
+        const options: CoreBoxOption[] = []
+        patterns.forEach(p => {
+          p.sharedCoreBoxes?.forEach((cb: any) => {
+            if (cb.code) options.push({ code: cb.code, patternCode: p.code })
+          })
+        })
+        setCoreBoxOptions(options)
+      })
+      .catch(() => {})
+  }, [isOpen])
+
+  const toggleCoreBox = (code: string) => {
+    setFormData(prev => {
+      const current = prev.restrictedCoreBoxes || []
+      const next = current.includes(code) ? current.filter(c => c !== code) : [...current, code]
+      return { ...prev, restrictedCoreBoxes: next }
+    })
+  }
 
   const handleSave = async () => {
     if (!formData.name || !formData.type) return
@@ -113,9 +155,9 @@ export function EquipmentModal({ isOpen, onClose, initialData }: EquipmentModalP
                 <SelectValue placeholder="Select Type" />
               </SelectTrigger>
               <SelectContent className="bg-[#FFFFFF] border-[#E0E7FF]">
-                <SelectItem value="Furnace" className="text-[#172554] focus:bg-[#EEF2FF]">Furnace</SelectItem>
-                <SelectItem value="Moulding Machine" className="text-[#172554] focus:bg-[#EEF2FF]">Moulding Machine</SelectItem>
                 <SelectItem value="Core Machine" className="text-[#172554] focus:bg-[#EEF2FF]">Core Machine</SelectItem>
+                <SelectItem value="Moulding Machine" className="text-[#172554] focus:bg-[#EEF2FF]">Moulding Machine</SelectItem>
+                <SelectItem value="Furnace" className="text-[#172554] focus:bg-[#EEF2FF]">Furnace</SelectItem>
                 <SelectItem value="Knockout" className="text-[#172554] focus:bg-[#EEF2FF]">Knockout</SelectItem>
               </SelectContent>
             </Select>
@@ -182,6 +224,73 @@ export function EquipmentModal({ isOpen, onClose, initialData }: EquipmentModalP
                 placeholder="e.g. 100"
                 className="bg-[#F4F6FB] border-[#E0E7FF] focus:border-[#4F46E5] text-[#172554] font-mono"
               />
+            </div>
+          )}
+
+          {formData.type === 'Core Machine' && (
+            <div className="grid gap-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">
+                  Mapped Core Boxes
+                </Label>
+                <Popover open={coreBoxPickerOpen} onOpenChange={setCoreBoxPickerOpen}>
+                  <PopoverTrigger className="flex items-center gap-1 text-xs font-semibold text-[#4F46E5] hover:text-[#4F46E5]/80 transition-colors">
+                    <Plus weight="bold" className="h-3.5 w-3.5" />
+                    Add Core Box
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[480px] p-0 bg-[#FFFFFF] border-[#E0E7FF]" align="end">
+                    <Command className="bg-transparent">
+                      <CommandInput placeholder="Search core boxes..." className="text-[#172554]" />
+                      <CommandList className="max-h-[360px]">
+                        <CommandEmpty className="p-4 text-center text-sm text-[#64748B]">No core boxes found.</CommandEmpty>
+                        <CommandGroup>
+                          {coreBoxOptions.map(opt => {
+                            const selected = formData.restrictedCoreBoxes?.includes(opt.code) || false
+                            return (
+                              <CommandItem
+                                key={opt.code}
+                                value={opt.code}
+                                keywords={[opt.patternCode]}
+                                onSelect={() => toggleCoreBox(opt.code)}
+                                className="text-[#172554] hover:bg-[#EEF2FF] cursor-pointer py-2.5"
+                              >
+                                <Check weight="duotone" className={cn('mr-2 h-4 w-4 shrink-0', selected ? 'opacity-100 text-[#4F46E5]' : 'opacity-0')} />
+                                <span className="flex-1 truncate">{opt.code}</span>
+                                <span className="text-[10px] text-[#94A3B8] font-mono ml-2">{opt.patternCode}</span>
+                              </CommandItem>
+                            )
+                          })}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="border border-[#E0E7FF] rounded-md bg-[#F4F6FB] max-h-[220px] overflow-y-auto divide-y divide-[#E0E7FF]">
+                {!formData.restrictedCoreBoxes?.length ? (
+                  <p className="text-sm text-[#94A3B8] px-3 py-3">No core boxes mapped yet.</p>
+                ) : (
+                  formData.restrictedCoreBoxes.map(code => {
+                    const opt = coreBoxOptions.find(o => o.code === code)
+                    return (
+                      <div key={code} className="flex items-center justify-between px-3 py-2 hover:bg-[#EEF2FF]/50">
+                        <div>
+                          <span className="text-sm font-mono font-medium text-[#172554]">{code}</span>
+                          {opt && <span className="text-[10px] text-[#94A3B8] font-mono ml-2">{opt.patternCode}</span>}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => toggleCoreBox(code)}
+                          className="text-[#94A3B8] hover:text-red-400 text-lg leading-none px-1"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    )
+                  })
+                )}
+              </div>
             </div>
           )}
         </div>

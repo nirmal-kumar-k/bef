@@ -203,7 +203,7 @@ export function ViewOrderModal({
             </div>
             <div>
               <p className="text-[#64748B] text-xs font-semibold uppercase tracking-wider mb-1">Total Quantity</p>
-              <p className="text-[16px] font-bold text-[#172554]">{((order.items || []).reduce((acc: number, item: any) => acc + (item.quantity || 0), 0)).toLocaleString()}</p>
+              <p className="text-[16px] font-bold text-[#172554]">{((order.cart || []).reduce((acc: number, item: any) => acc + (item.quantity || 0), 0)).toLocaleString()}</p>
             </div>
           </div>
 

@@ -21,7 +21,17 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const data = await req.json()
-    const [row] = await db.insert(equipment).values(data).returning()
+    const safeData = {
+      name: data.name,
+      type: data.type,
+      weightCapacity: data.weightCapacity,
+      firstHeatDurationMins: data.firstHeatDurationMins,
+      regularHeatDurationMins: data.regularHeatDurationMins,
+      avgPiecesPerHour: data.avgPiecesPerHour,
+      restrictedCoreBoxes: data.restrictedCoreBoxes,
+      isActive: data.isActive,
+    }
+    const [row] = await db.insert(equipment).values(safeData).returning()
     return NextResponse.json(row)
   } catch (error) {
     console.error('Failed to create equipment:', error)

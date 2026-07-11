@@ -73,7 +73,6 @@ export function NewOrderModal({
   const [selectedProduct, setSelectedProduct] = useState('')
   const [productDropdownOpen, setProductDropdownOpen] = useState(false)
   const [quantity, setQuantity] = useState<number | ''>('')
-  const [ratePerKg, setRatePerKg] = useState<number | ''>('')
   const [unitCost, setUnitCost] = useState<number | ''>('')
   
   // Cart state
@@ -123,7 +122,6 @@ export function NewOrderModal({
     setRemarks('')
     setSelectedProduct('')
     setQuantity('')
-    setRatePerKg('')
     setUnitCost('')
     setCart([])
     setGstPercent('18')
@@ -180,8 +178,8 @@ export function NewOrderModal({
     const productDetails = allProductsList.find(p => p.value === selectedProduct)
     if (!productDetails) return
 
-    const rKg = ratePerKg === '' ? productDetails.ratePerKg : Number(ratePerKg)
-    const uCost = unitCost === '' ? (productDetails.weight * rKg) : Number(unitCost)
+    const uCost = unitCost === '' ? (productDetails.weight * productDetails.ratePerKg) : Number(unitCost)
+    const rKg = productDetails.weight > 0 ? uCost / productDetails.weight : productDetails.ratePerKg
 
     const newItem: CartItem = {
       id: Math.random().toString(36).substr(2, 9),
@@ -195,11 +193,10 @@ export function NewOrderModal({
     }
 
     setCart([...cart, newItem])
-    
+
     // Reset inputs
     setSelectedProduct('')
     setQuantity('')
-    setRatePerKg('')
     setUnitCost('')
   }
 
@@ -221,8 +218,8 @@ export function NewOrderModal({
   const gstAmount = subtotal * ((Number(gstPercent) || 0) / 100)
   const grandTotal = subtotal + gstAmount
 
-  // Extreme speed entry: Enter on Quantity immediately adds the item and refocuses Pattern
-  const handleQuantityKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  // Extreme speed entry: Enter on Unit Cost immediately adds the item and refocuses Product
+  const handleUnitCostKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       e.stopPropagation(); // Stop the global handler
@@ -361,10 +358,9 @@ export function NewOrderModal({
                                 value={p.label}
                                 onSelect={() => {
                                   setSelectedProduct(p.value);
-                                  setRatePerKg(p.ratePerKg);
                                   setUnitCost(p.ratePerKg * p.weight);
                                   setProductDropdownOpen(false);
-                                  setTimeout(() => document.getElementById('rate-input')?.focus(), 10);
+                                  setTimeout(() => document.getElementById('quantity-input')?.focus(), 10);
                                 }}
                                 className="text-[#172554] hover:bg-[#EEF2FF] cursor-pointer"
                               >
@@ -385,52 +381,33 @@ export function NewOrderModal({
                   </Popover>
                 </div>
 
-                    <div className="w-[100px] space-y-2">
-                      <Label className="text-[#64748B] text-xs font-semibold uppercase">Rate/kg</Label>
-                      <Input 
-                        id="rate-input"
-                        type="number" 
-                        min="0"
-                        value={ratePerKg}
-                        onChange={(e) => {
-                          const val = e.target.value === '' ? '' : Number(e.target.value);
-                          setRatePerKg(val);
-                          const p = allProductsList.find(x => x.value === selectedProduct);
-                          if (p && val !== '') setUnitCost(val * p.weight);
-                        }}
-                        onKeyDown={(e) => e.key === 'Enter' && document.getElementById('unit-input')?.focus()}
-                        placeholder="Rate" 
-                        className="h-10 px-3 rounded-md bg-[#FFFFFF] border-[#E0E7FF] text-[#172554] text-sm" 
-                      />
-                    </div>
-                    <div className="w-[110px] space-y-2">
-                      <Label className="text-[#64748B] text-xs font-semibold uppercase">Unit Cost</Label>
-                      <Input 
-                        id="unit-input"
-                        type="number" 
-                        min="0"
-                        value={unitCost}
-                        onChange={(e) => setUnitCost(e.target.value === '' ? '' : Number(e.target.value))}
-                        onKeyDown={(e) => e.key === 'Enter' && document.getElementById('quantity-input')?.focus()}
-                        placeholder="Cost" 
-                        className="h-10 px-3 rounded-md bg-[#FFFFFF] border-[#E0E7FF] text-[#172554] text-sm" 
-                      />
-                    </div>
-
                 <div className="w-[100px] space-y-2">
                   <Label className="text-[#64748B] text-xs font-semibold uppercase">Quantity</Label>
-                  <Input 
+                  <Input
                     id="quantity-input"
-                    type="number" 
+                    type="number"
                     min="1"
                     value={quantity}
                     onChange={(e) => setQuantity(e.target.value === '' ? '' : Number(e.target.value))}
-                    onKeyDown={handleQuantityKeyDown}
-                    placeholder="0" 
-                    className="h-10 px-3 rounded-md bg-[#FFFFFF] border-[#E0E7FF] text-[#172554] text-sm" 
+                    onKeyDown={(e) => e.key === 'Enter' && document.getElementById('unit-input')?.focus()}
+                    placeholder="0"
+                    className="h-10 px-3 rounded-md bg-[#FFFFFF] border-[#E0E7FF] text-[#172554] text-sm"
                   />
                 </div>
-                <Button 
+                    <div className="w-[110px] space-y-2">
+                      <Label className="text-[#64748B] text-xs font-semibold uppercase">Unit Cost</Label>
+                      <Input
+                        id="unit-input"
+                        type="number"
+                        min="0"
+                        value={unitCost}
+                        onChange={(e) => setUnitCost(e.target.value === '' ? '' : Number(e.target.value))}
+                        onKeyDown={handleUnitCostKeyDown}
+                        placeholder="Cost"
+                        className="h-10 px-3 rounded-md bg-[#FFFFFF] border-[#E0E7FF] text-[#172554] text-sm"
+                      />
+                    </div>
+                <Button
                   onClick={handleAddItem}
                   disabled={!selectedProduct || !quantity}
                   className="bg-[#4F46E5] hover:bg-[#4F46E5] text-white h-10 px-6 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"

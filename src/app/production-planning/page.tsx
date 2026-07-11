@@ -28,6 +28,7 @@ export default function ProductionPlanningPage() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'Summary' | 'Core' | 'Mould' | 'Melt' | 'Pour' | 'Knockout' | 'Actuals'>('Summary')
   const [splitUpStage, setSplitUpStage] = useState<'Core' | 'Mould' | 'Melt' | null>(null)
+  const [summaryView, setSummaryView] = useState<'calendar' | 'list'>('calendar')
 
   const fetchData = useCallback(async () => {
     try {
@@ -63,102 +64,115 @@ export default function ProductionPlanningPage() {
     const mouldBacklog: BacklogItem[] = []
     const meltBacklog: BacklogItem[] = []
     const knockoutBacklog: BacklogItem[] = []
-    
+
     openOrders.forEach(order => {
-      order.cart?.forEach((item: any, idx: number) => {
-        const uniqueId = `${order.id || order._id}-${idx}`
-        const product = products.find(p => p.name === item.productName || p.code === item.product)
-        const pattern = patterns.find(p => p.mappedProducts?.some((mp: any) => mp.name === product?.name))
-        
-        const cavities = product?.cavities || 1
-        const plannedQty = item.quantity
-        const finalMoulds = Math.ceil(plannedQty / cavities)
-        
+      const orderId = order.id || order._id
+
+      // Resolve each cart line to its product/pattern/cavity-adjusted mould count first.
+      // Cavities come from the pattern's own mapping for this product (how many of it
+      // one pour of THIS mould yields), not the standalone product catalog's cavities
+      // field - a product could theoretically be cast from different patterns with
+      // different cavity counts, so the pattern mapping is the authoritative source.
+      const cartItems = ((order.cart || []) as any[]).map((item: any, idx: number) => {
+        const product = products.find((p: any) => p.name === item.productName || p.code === item.product)
+        const pattern = patterns.find((p: any) => p.mappedProducts?.some((mp: any) => mp.name === product?.name))
+        const mappedProduct = pattern?.mappedProducts?.find((mp: any) => mp.name === product?.name)
+        const cavities = mappedProduct?.cavities || product?.cavities || 1
+        const itemMoulds = Math.ceil(item.quantity / cavities)
+        return { item, idx, product, pattern, mappedProduct, itemMoulds, uniqueId: `${orderId}-${idx}` }
+      })
+
+      // Group by pattern: multiple products mapped to the same pattern are cast
+      // together in the same mould pour (one pour yields all of them at once, split
+      // across their allotted cavities), so the pour count for the group is the max
+      // across its products' individual requirements - not the sum. A pour count
+      // summed per-product would double-count the same physical mould run.
+      const groups = new Map<string, typeof cartItems>()
+      cartItems.forEach(ci => {
+        const key = ci.pattern ? `pattern:${ci.pattern.code}` : `item:${ci.uniqueId}`
+        if (!groups.has(key)) groups.set(key, [])
+        groups.get(key)!.push(ci)
+      })
+
+      groups.forEach(groupItems => {
+        const pattern = groupItems[0].pattern
+        const finalMoulds = Math.max(...groupItems.map(ci => ci.itemMoulds))
+        const representativeId = groupItems[0].uniqueId
+        const productName = Array.from(new Set(groupItems.map(ci => ci.item.productName))).join(', ')
+
         // MOULD
-        const mouldScheduled = plans.filter(p => p.stage === 'Mould' && p.itemId === uniqueId).reduce((sum, p) => sum + p.quantityScheduled, 0)
+        const mouldScheduled = plans.filter(p => p.stage === 'Mould' && p.itemId === representativeId).reduce((sum, p) => sum + p.quantityScheduled, 0)
         mouldBacklog.push({
-          itemId: uniqueId, orderNo: order.customerOrderNo, patternRef: pattern?.code || '-', productName: item.productName,
+          itemId: representativeId, orderNo: order.customerOrderNo, patternRef: pattern?.code || '-', productName,
           totalRequired: finalMoulds, totalScheduled: mouldScheduled, unit: 'boxes'
         })
 
         // MELT
         const boxWeight = pattern?.totalWeight || 0
         const metalRequired = finalMoulds * boxWeight
-        const meltScheduled = plans.filter(p => p.stage === 'Melt' && p.itemId === uniqueId).reduce((sum, p) => sum + p.quantityScheduled, 0)
+        const meltScheduled = plans.filter(p => p.stage === 'Melt' && p.itemId === representativeId).reduce((sum, p) => sum + p.quantityScheduled, 0)
         meltBacklog.push({
-          itemId: uniqueId, orderNo: order.customerOrderNo, patternRef: pattern?.code || '-', productName: item.productName,
+          itemId: representativeId, orderNo: order.customerOrderNo, patternRef: pattern?.code || '-', productName,
           totalRequired: metalRequired, totalScheduled: meltScheduled, unit: 'kg'
         })
-        
+
         // KNOCKOUT
-        const pouredMoulds = plans.filter(p => p.stage === 'Melt' && p.itemId === uniqueId).reduce((sum, p) => sum + (p.actualPouredMoulds || 0), 0)
-        const knockoutScheduled = plans.filter(p => p.stage === 'Knockout' && p.itemId === uniqueId).reduce((sum, p) => sum + p.quantityScheduled, 0)
+        const pouredMoulds = plans.filter(p => p.stage === 'Melt' && p.itemId === representativeId).reduce((sum, p) => sum + (p.actualPouredMoulds || 0), 0)
+        const knockoutScheduled = plans.filter(p => p.stage === 'Knockout' && p.itemId === representativeId).reduce((sum, p) => sum + p.quantityScheduled, 0)
         if (pouredMoulds > 0) {
           knockoutBacklog.push({
-            itemId: uniqueId, orderNo: order.customerOrderNo, patternRef: pattern?.code || '-', productName: item.productName,
+            itemId: representativeId, orderNo: order.customerOrderNo, patternRef: pattern?.code || '-', productName,
             totalRequired: pouredMoulds, totalScheduled: knockoutScheduled, unit: 'moulds'
           })
         }
 
-        // CORE
-        const mappedProduct = pattern?.mappedProducts?.find((mp: any) => mp.name === product?.name)
-        if (mappedProduct && mappedProduct.selectedCoreBoxes && mappedProduct.selectedCoreBoxes.length > 0) {
-          mappedProduct.selectedCoreBoxes.forEach((cb: any) => {
-            const qtyPerMould = cb.quantity || 1
+        // CORE - union every mapped product's core box requirements across the group
+        // (they all go into the same pour together), deduped by core box code so the
+        // same core isn't counted once per product that happens to need it.
+        const coreBoxReqs = new Map<string, number>() // code -> qty per mould
+        let hasProductSpecificCoreBoxes = false
+        groupItems.forEach(ci => {
+          if (ci.mappedProduct?.selectedCoreBoxes?.length > 0) {
+            hasProductSpecificCoreBoxes = true
+            ci.mappedProduct.selectedCoreBoxes.forEach((cb: any) => {
+              const code = cb.coreBoxCode || 'Unnamed Core Box'
+              const qty = cb.quantity || 1
+              coreBoxReqs.set(code, Math.max(coreBoxReqs.get(code) || 0, qty))
+            })
+          }
+        })
+
+        if (hasProductSpecificCoreBoxes) {
+          coreBoxReqs.forEach((qtyPerMould, codeToUse) => {
             const totalCoreRequired = finalMoulds * qtyPerMould
-            const codeToUse = cb.coreBoxCode || 'Unnamed Core Box'
-            const coreScheduled = plans.filter(p => p.stage === 'Core' && p.itemId === uniqueId && p.coreBoxCode === codeToUse).reduce((sum, p) => sum + p.quantityScheduled, 0)
+            const coreScheduled = plans.filter(p => p.stage === 'Core' && p.itemId === representativeId && p.coreBoxCode === codeToUse).reduce((sum, p) => sum + p.quantityScheduled, 0)
             coreBacklog.push({
-              itemId: uniqueId, orderNo: order.customerOrderNo, patternRef: pattern?.code || '-', productName: item.productName, coreBoxCode: codeToUse,
+              itemId: representativeId, orderNo: order.customerOrderNo, patternRef: pattern?.code || '-', productName, coreBoxCode: codeToUse,
               totalRequired: totalCoreRequired, totalScheduled: coreScheduled, unit: 'cores'
             })
           })
         } else if (pattern && pattern.sharedCoreBoxes && pattern.sharedCoreBoxes.length > 0) {
           pattern.sharedCoreBoxes.forEach((cb: any) => {
-            const qtyPerMould = 1
-            const totalCoreRequired = finalMoulds * qtyPerMould
+            const totalCoreRequired = finalMoulds
             const codeToUse = cb.code || 'Unnamed Core Box'
-            const coreScheduled = plans.filter(p => p.stage === 'Core' && p.itemId === uniqueId && p.coreBoxCode === codeToUse).reduce((sum, p) => sum + p.quantityScheduled, 0)
+            const coreScheduled = plans.filter(p => p.stage === 'Core' && p.itemId === representativeId && p.coreBoxCode === codeToUse).reduce((sum, p) => sum + p.quantityScheduled, 0)
             coreBacklog.push({
-              itemId: uniqueId, orderNo: order.customerOrderNo, patternRef: pattern.code, productName: item.productName, coreBoxCode: codeToUse,
+              itemId: representativeId, orderNo: order.customerOrderNo, patternRef: pattern.code, productName, coreBoxCode: codeToUse,
               totalRequired: totalCoreRequired, totalScheduled: coreScheduled, unit: 'cores'
             })
           })
         } else if (pattern && pattern.coreBoxes > 0) {
           const totalCoreRequired = finalMoulds * pattern.coreBoxes
-          const coreScheduled = plans.filter(p => p.stage === 'Core' && p.itemId === uniqueId && p.coreBoxCode === 'Legacy').reduce((sum, p) => sum + p.quantityScheduled, 0)
+          const coreScheduled = plans.filter(p => p.stage === 'Core' && p.itemId === representativeId && p.coreBoxCode === 'Legacy').reduce((sum, p) => sum + p.quantityScheduled, 0)
           coreBacklog.push({
-            itemId: uniqueId, orderNo: order.customerOrderNo, patternRef: pattern.code, productName: item.productName, coreBoxCode: 'Legacy',
+            itemId: representativeId, orderNo: order.customerOrderNo, patternRef: pattern.code, productName, coreBoxCode: 'Legacy',
             totalRequired: totalCoreRequired, totalScheduled: coreScheduled, unit: 'cores'
           })
         }
       })
     })
-    
-    // Group coreBacklog by orderNo, patternRef, and coreBoxCode to avoid duplicates! (D.1)
-    const groupedCoreMap = new Map<string, BacklogItem>()
-    coreBacklog.forEach(item => {
-      const key = `${item.orderNo}::${item.patternRef}::${item.coreBoxCode || 'Common'}`
-      if (groupedCoreMap.has(key)) {
-        const existing = groupedGroupItem(groupedCoreMap.get(key)!, item)
-        groupedCoreMap.set(key, existing)
-      } else {
-        groupedCoreMap.set(key, { ...item })
-      }
-    })
-    
-    function groupedGroupItem(existing: BacklogItem, newItem: BacklogItem): BacklogItem {
-      return {
-        ...existing,
-        totalRequired: existing.totalRequired + newItem.totalRequired,
-        totalScheduled: existing.totalScheduled + newItem.totalScheduled,
-        productName: existing.productName.includes(newItem.productName) 
-          ? existing.productName 
-          : `${existing.productName}, ${newItem.productName}`
-      }
-    }
-    
-    return { Core: Array.from(groupedCoreMap.values()), Mould: mouldBacklog, Melt: meltBacklog, Knockout: knockoutBacklog }
+
+    return { Core: coreBacklog, Mould: mouldBacklog, Melt: meltBacklog, Knockout: knockoutBacklog }
   }, [openOrders, products, patterns, plans])
 
   const totals = useMemo(() => {
@@ -169,6 +183,38 @@ export default function ProductionPlanningPage() {
       knockouts: backlogData.Knockout.reduce((acc, curr) => acc + curr.totalRequired, 0)
     }
   }, [backlogData])
+
+  // Summary calendar - the Production Schedule page's calendar moved here, now
+  // sourced straight from production_plans instead of the separate schedules
+  // table, so it always matches what's actually been planned.
+  const calendarDays = useMemo(() => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1)
+    const startOffset = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1
+    const startDate = new Date(firstDay)
+    startDate.setDate(firstDay.getDate() - startOffset)
+    return Array.from({ length: 42 }, (_, i) => {
+      const d = new Date(startDate)
+      d.setDate(startDate.getDate() + i)
+      return d
+    })
+  }, [])
+
+  const planningByDate = useMemo(() => {
+    const map = new Map<string, { core: number, coreDone: number, mould: number, mouldDone: number, melt: number, meltDone: number }>()
+    plans.forEach(p => {
+      if (!['Core', 'Mould', 'Melt'].includes(p.stage)) return
+      if (!map.has(p.date)) map.set(p.date, { core: 0, coreDone: 0, mould: 0, mouldDone: 0, melt: 0, meltDone: 0 })
+      const entry = map.get(p.date)!
+      const planned = Number(p.quantityScheduled) || 0
+      const completed = Number(p.actualQuantity) || 0
+      if (p.stage === 'Core') { entry.core += planned; entry.coreDone += completed }
+      else if (p.stage === 'Mould') { entry.mould += planned; entry.mouldDone += completed }
+      else if (p.stage === 'Melt') { entry.melt += planned; entry.meltDone += completed }
+    })
+    return map
+  }, [plans])
 
   const handleSaveDayPlan = async (date: string, newPlans: any[]) => {
     try {
@@ -295,6 +341,101 @@ export default function ProductionPlanningPage() {
 
             <div className="mt-4">
               {activeTab === 'Summary' && (
+                <div className="space-y-6">
+                  <div className="flex justify-end">
+                    <div className="flex items-center gap-3 bg-[#FFFFFF] px-4 py-1.5 border border-[#E0E7FF] rounded-xl shadow-sm">
+                      <Label htmlFor="summary-view-mode" className={cn("text-sm font-semibold cursor-pointer transition-colors duration-200", summaryView === 'calendar' ? 'text-[#172554]' : 'text-[#94A3B8]')} onClick={() => setSummaryView('calendar')}>Calendar</Label>
+                      <div
+                        className="w-12 h-6 bg-[#F4F6FB] rounded-full relative cursor-pointer border border-[#E0E7FF] shadow-inner transition-colors duration-200 hover:bg-[#EEF2FF]"
+                        onClick={() => setSummaryView(v => v === 'calendar' ? 'list' : 'calendar')}
+                      >
+                        <div className={cn(
+                          "w-4 h-4 bg-[#4F46E5] rounded-full absolute top-[3px] transition-all duration-300 shadow-sm",
+                          summaryView === 'list' ? "left-[27px]" : "left-[3px]"
+                        )} />
+                      </div>
+                      <Label htmlFor="summary-view-mode" className={cn("text-sm font-semibold cursor-pointer transition-colors duration-200", summaryView === 'list' ? 'text-[#172554]' : 'text-[#94A3B8]')} onClick={() => setSummaryView('list')}>List</Label>
+                    </div>
+                  </div>
+
+                  {summaryView === 'calendar' ? (
+                  <div className="bg-[#F4F6FB] border border-[#E0E7FF] rounded-xl p-4 overflow-x-auto">
+                    <div>
+                      <h3 className="text-[#172554] font-bold text-lg font-heading">Planning Calendar</h3>
+                      <p className="text-[#64748B] text-xs mt-1">Core, Mould, and Melt quantities scheduled per day (completed / planned).</p>
+                    </div>
+                    <div className="grid grid-cols-7 mt-4 mb-2 min-w-[800px]">
+                      {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
+                        <div key={day} className="py-2 text-center text-xs font-semibold text-[#64748B] uppercase tracking-wider">
+                          {day}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-7 gap-3 min-w-[800px]">
+                      {calendarDays.map((date, i) => {
+                        const dateStr = date.toISOString().split('T')[0]
+                        const isToday = new Date().toISOString().split('T')[0] === dateStr
+                        const isCurrentMonth = date.getMonth() === new Date().getMonth()
+                        const counts = planningByDate.get(dateStr)
+
+                        return (
+                          <div
+                            key={i}
+                            className={cn(
+                              "min-h-[130px] bg-white p-2 rounded-[12px] border border-[#E0E7FF] flex flex-col gap-1",
+                              !isCurrentMonth && "bg-[#F8FAFC]/50 opacity-70"
+                            )}
+                          >
+                            <div className="flex justify-end w-full">
+                              <span className={cn(
+                                "text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full",
+                                isToday ? "bg-[#4F46E5] text-white" : "text-[#64748B]"
+                              )}>
+                                {date.getDate()}
+                              </span>
+                            </div>
+
+                            <div className="flex flex-col gap-1 mt-1">
+                              {counts?.core ? (
+                                <div className="flex items-center justify-between px-1.5 py-0.5 rounded-md">
+                                  <div className="flex items-center gap-1.5">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-yellow-400" />
+                                    <span className="text-[10.5px] font-medium text-[#64748B]">Core</span>
+                                  </div>
+                                  <span className="text-[10.5px] font-bold text-[#0F172A]">
+                                    {counts.coreDone} <span className="text-[#94A3B8] font-normal mx-0.5">/</span> {counts.core}
+                                  </span>
+                                </div>
+                              ) : null}
+                              {counts?.mould ? (
+                                <div className="flex items-center justify-between px-1.5 py-0.5 rounded-md">
+                                  <div className="flex items-center gap-1.5">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-[#4F46E5]" />
+                                    <span className="text-[10.5px] font-medium text-[#64748B]">Mould</span>
+                                  </div>
+                                  <span className="text-[10.5px] font-bold text-[#0F172A]">
+                                    {counts.mouldDone} <span className="text-[#94A3B8] font-normal mx-0.5">/</span> {counts.mould}
+                                  </span>
+                                </div>
+                              ) : null}
+                              {counts?.melt ? (
+                                <div className="flex items-center justify-between px-1.5 py-0.5 rounded-md">
+                                  <div className="flex items-center gap-1.5">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-orange-400" />
+                                    <span className="text-[10.5px] font-medium text-[#64748B]">Melt</span>
+                                  </div>
+                                  <span className="text-[10.5px] font-bold text-[#0F172A]">
+                                    {counts.meltDone} <span className="text-[#94A3B8] font-normal mx-0.5">/</span> {counts.melt}
+                                  </span>
+                                </div>
+                              ) : null}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                  ) : (
                 <div className="space-y-6 bg-white p-6 rounded-2xl border border-[#E0E7FF] shadow-lg">
                   <div>
                     <h3 className="text-[#4F46E5] font-bold text-lg font-heading">Production Split-up Summary</h3>
@@ -359,6 +500,8 @@ export default function ProductionPlanningPage() {
                       </tbody>
                     </table>
                   </div>
+                </div>
+                  )}
                 </div>
               )}
 

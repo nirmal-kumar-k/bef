@@ -34,6 +34,9 @@ export default function PatternsPage() {
   const [mappingPatternId, setMappingPatternId] = useState<string | null>(null)
   const [viewPattern, setViewPattern] = useState<any | null>(null)
   const [patternToDelete, setPatternToDelete] = useState<Pattern | null>(null)
+  const [isSavingPatternEdit, setIsSavingPatternEdit] = useState(false)
+  const [isSavingNewPattern, setIsSavingNewPattern] = useState(false)
+  const [isSavingMapping, setIsSavingMapping] = useState(false)
   const [activeCategory, setActiveCategory] = useState<FilterCategory>('All')
   const [selectedCustomer, setSelectedCustomer] = useState('')
   const [customerOpen, setCustomerOpen] = useState(false)
@@ -78,6 +81,7 @@ export default function PatternsPage() {
   }, [fetchPatterns])
 
   const handleSavePattern = async (pattern: Omit<Pattern, 'id'>) => {
+    setIsSavingNewPattern(true)
     try {
       const res = await fetch('/api/patterns', {
         method: 'POST',
@@ -90,11 +94,14 @@ export default function PatternsPage() {
       }
     } catch (err) {
       console.error('Failed to save pattern:', err)
+    } finally {
+      setIsSavingNewPattern(false)
     }
   }
 
   const handleSaveMapping = async (mappedProducts: any[]) => {
     if (!mappingPatternId) return
+    setIsSavingMapping(true)
     try {
       const res = await fetch(`/api/patterns/${mappingPatternId}`, {
         method: 'PUT',
@@ -107,11 +114,14 @@ export default function PatternsPage() {
       }
     } catch (err) {
       console.error('Failed to save mapping:', err)
+    } finally {
+      setIsSavingMapping(false)
     }
   }
 
   const handleSavePatternEdit = async (updated: any) => {
     if (!updated?.id) return
+    setIsSavingPatternEdit(true)
     try {
       const res = await fetch(`/api/patterns/${updated.id}`, {
         method: 'PUT',
@@ -124,6 +134,8 @@ export default function PatternsPage() {
       }
     } catch (err) {
       console.error('Failed to update pattern:', err)
+    } finally {
+      setIsSavingPatternEdit(false)
     }
   }
 
@@ -349,6 +361,7 @@ export default function PatternsPage() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSave={handleSavePattern}
+        isSaving={isSavingNewPattern}
       />
 
       <ProductMappingModal
@@ -356,6 +369,7 @@ export default function PatternsPage() {
         onClose={() => setIsMappingModalOpen(false)}
         patternId={mappingPatternId}
         onSave={handleSaveMapping}
+        isSaving={isSavingMapping}
         initialMappedProducts={patterns.find(p => p.id === mappingPatternId)?.mappedProducts || []}
         coreBoxes={patterns.find(p => p.id === mappingPatternId)?.sharedCoreBoxes || []}
       />
@@ -364,6 +378,7 @@ export default function PatternsPage() {
         isOpen={!!viewPattern}
         onClose={() => setViewPattern(null)}
         onSave={handleSavePatternEdit}
+        isSaving={isSavingPatternEdit}
         onDelete={viewPattern && role === 'Admin' ? handleDeletePattern : undefined}
       />
       <ConfirmDeleteDialog

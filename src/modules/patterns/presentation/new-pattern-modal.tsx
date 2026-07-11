@@ -54,10 +54,12 @@ export function NewPatternModal({
   isOpen,
   onClose,
   onSave,
+  isSaving,
 }: {
   isOpen: boolean
   onClose: () => void
   onSave: (pattern: Omit<Pattern, 'id'>) => void
+  isSaving?: boolean
 }) {
   const [customerOpen, setCustomerOpen] = useState(false)
   const [coreBoxToDelete, setCoreBoxToDelete] = useState<{id: string, type: 'top'|'bottom'} | null>(null)
@@ -83,7 +85,7 @@ export function NewPatternModal({
 
   // Top Core Boxes
   const [topCoreBoxPresent, setTopCoreBoxPresent] = useState<'Yes' | 'No'>('Yes')
-  const [topCoreBoxes, setTopCoreBoxes] = useState<CoreBox[]>([{ id: 'init-top', code: '', owner: 'Foundry', images: [] }])
+  const [topCoreBoxes, setTopCoreBoxes] = useState<CoreBox[]>([{ id: 'init-top', code: '', owner: 'Customer', images: [] }])
 
   // Bottom Matchplate/Drag
   const [bottomPresent, setBottomPresent] = useState<'Yes' | 'No'>('Yes')
@@ -92,14 +94,14 @@ export function NewPatternModal({
 
   // Bottom Core Boxes
   const [bottomCoreBoxPresent, setBottomCoreBoxPresent] = useState<'Yes' | 'No'>('Yes')
-  const [bottomCoreBoxes, setBottomCoreBoxes] = useState<CoreBox[]>([{ id: 'init-bottom', code: '', owner: 'Foundry', images: [] }])
+  const [bottomCoreBoxes, setBottomCoreBoxes] = useState<CoreBox[]>([{ id: 'init-bottom', code: '', owner: 'Customer', images: [] }])
 
   // Shared Core Box (common for Top & Bottom)
   const [coreBoxPresent, setCoreBoxPresent] = useState<'Yes' | 'No'>('Yes')
-  const [sharedCoreBoxes, setSharedCoreBoxes] = useState<CoreBox[]>([{ id: 'init-shared', code: '', owner: 'Foundry', images: [] }])
+  const [sharedCoreBoxes, setSharedCoreBoxes] = useState<CoreBox[]>([{ id: 'init-shared', code: '', owner: 'Customer', images: [] }])
 
   // Core Box Details
-  const [typeOfCoreOptions, setTypeOfCoreOptions] = useState<string[]>(['Oil Core', 'CO2 Core', 'Amine Core'])
+  const [typeOfCoreOptions, setTypeOfCoreOptions] = useState<string[]>(['Oil', 'CO2', 'Amine'])
   const [typeOfCoreInput, setTypeOfCoreInput] = useState('')
 
   // Moulding metrics
@@ -107,13 +109,7 @@ export function NewPatternModal({
 
   // Weights
   const [goodCastingWeight, setGoodCastingWeight] = useState<number | ''>('')
-  const [runnerRiserWeight, setRunnerRiserWeight] = useState<number | ''>('')
-
-  const totalBoxWeight = useMemo(() => {
-    const gw = typeof goodCastingWeight === 'number' ? goodCastingWeight : 0
-    const rw = typeof runnerRiserWeight === 'number' ? runnerRiserWeight : 0
-    return gw + rw > 0 ? gw + rw : ''
-  }, [goodCastingWeight, runnerRiserWeight])
+  const [totalBoxWeight, setTotalBoxWeight] = useState<number | ''>('')
 
   // Photos Preview
   const [patternImages, setPatternImages] = useState<string[]>([])
@@ -142,17 +138,17 @@ export function NewPatternModal({
     setTopOwner('Customer')
     setTopImages([])
     setTopCoreBoxPresent('Yes')
-    setTopCoreBoxes([{ id: Date.now().toString(), code: '', owner: 'Foundry', images: [] }])
+    setTopCoreBoxes([{ id: Date.now().toString(), code: '', owner: 'Customer', images: [] }])
     setBottomPresent('Yes')
     setBottomOwner('Customer')
     setBottomImages([])
     setBottomCoreBoxPresent('Yes')
-    setBottomCoreBoxes([{ id: (Date.now() + 1).toString(), code: '', owner: 'Foundry', images: [] }])
+    setBottomCoreBoxes([{ id: (Date.now() + 1).toString(), code: '', owner: 'Customer', images: [] }])
     setCoreBoxPresent('Yes')
     setSharedCoreBoxes([])
     setAvgMouldsPerHour('')
     setGoodCastingWeight('')
-    setRunnerRiserWeight('')
+    setTotalBoxWeight('')
     setPatternImages([])
   }
 
@@ -165,13 +161,15 @@ export function NewPatternModal({
       customer: customerLabel,
       category,
       goodWeight: typeof goodCastingWeight === 'number' ? goodCastingWeight : 0,
-      runnerRiserWeight: typeof runnerRiserWeight === 'number' ? runnerRiserWeight : 0,
+      runnerRiserWeight: typeof goodCastingWeight === 'number' && typeof totalBoxWeight === 'number'
+        ? Math.max(0, totalBoxWeight - goodCastingWeight)
+        : 0,
       totalWeight: typeof totalBoxWeight === 'number' ? totalBoxWeight : 0,
       topMatchplate: topPresent === 'Yes',
-      topOwner: topPresent === 'Yes' ? topOwner : 'Foundry',
+      topOwner: topPresent === 'Yes' ? topOwner : 'Customer',
       topImages: topPresent === 'Yes' ? topImages : [],
       bottomMatchplate: bottomPresent === 'Yes',
-      bottomOwner: bottomPresent === 'Yes' ? bottomOwner : 'Foundry',
+      bottomOwner: bottomPresent === 'Yes' ? bottomOwner : 'Customer',
       bottomImages: bottomPresent === 'Yes' ? bottomImages : [],
       coreBoxes: coreBoxPresent === 'Yes' ? sharedCoreBoxes.length : 0,
       sharedCoreBoxes: coreBoxPresent === 'Yes' ? sharedCoreBoxes : [],
@@ -289,6 +287,17 @@ export function NewPatternModal({
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-2">
+                <Label className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">Avg Moulds per Hour</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  placeholder="e.g. 12"
+                  value={avgMouldsPerHour}
+                  onChange={(e) => setAvgMouldsPerHour(e.target.value === '' ? '' : Number(e.target.value))}
+                  className="bg-[#FFFFFF] border-[#E0E7FF] text-[#172554]"
+                />
+              </div>
             </div>
 
             {/* Pattern Images */}
@@ -399,23 +408,9 @@ export function NewPatternModal({
                     </SelectContent>
                   </Select>
                 </div>
-                <Button size="sm" variant="ghost" onClick={() => setSharedCoreBoxes([...sharedCoreBoxes, { id: Date.now().toString(), code: '', owner: 'Foundry', images: [] }])} disabled={coreBoxPresent === 'No'} className="text-[#4F46E5] hover:bg-[#4F46E5]/10 hover:text-[#4F46E5]">
+                <Button size="sm" variant="ghost" onClick={() => setSharedCoreBoxes([...sharedCoreBoxes, { id: Date.now().toString(), code: '', owner: 'Customer', images: [] }])} disabled={coreBoxPresent === 'No'} className="text-[#4F46E5] hover:bg-[#4F46E5]/10 hover:text-[#4F46E5]">
                   <Plus className="w-4 h-4 mr-1" /> Add Core Box
                 </Button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 pb-2">
-                <div className="space-y-2">
-                  <Label className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">Avg Moulds per Hour</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    placeholder="e.g. 12"
-                    value={avgMouldsPerHour}
-                    onChange={(e) => setAvgMouldsPerHour(e.target.value === '' ? '' : Number(e.target.value))}
-                    className="bg-[#FFFFFF] border-[#E0E7FF] text-[#172554]"
-                  />
-                </div>
               </div>
 
               <div className={cn("transition-opacity duration-300", coreBoxPresent === 'No' && "opacity-50 pointer-events-none")}>
@@ -467,12 +462,19 @@ export function NewPatternModal({
                         <div className="grid grid-cols-3 gap-4 pt-2 border-t border-[#E0E7FF]">
                           <div className="space-y-1.5">
                             <Label className="text-xs text-[#64748B]">Type of Core</Label>
-                            <Input
+                            <Select
                               value={cb.typeOfCore || ''}
-                              onChange={(e) => setSharedCoreBoxes(sharedCoreBoxes.map(b => b.id === cb.id ? { ...b, typeOfCore: e.target.value } : b))}
-                              placeholder="e.g. Shell"
-                              className="bg-[#F4F6FB]/50 border-[#E0E7FF] text-[#172554] h-9 focus-visible:ring-1 focus-visible:ring-[#4F46E5]"
-                            />
+                              onValueChange={(val) => setSharedCoreBoxes(sharedCoreBoxes.map(b => b.id === cb.id ? { ...b, typeOfCore: val } : b))}
+                            >
+                              <SelectTrigger className="bg-[#F4F6FB]/50 border-[#E0E7FF] text-[#172554] h-9 focus-visible:ring-1 focus-visible:ring-[#4F46E5]">
+                                <SelectValue placeholder="Select type" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-[#F4F6FB] border-[#E0E7FF]">
+                                {typeOfCoreOptions.map(opt => (
+                                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
                           <div className="space-y-1.5">
                             <Label className="text-xs text-[#64748B]">Core Wt (kg)</Label>
@@ -528,28 +530,16 @@ export function NewPatternModal({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-[#172554]">Runner/Riser Wt (kg)</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    value={runnerRiserWeight}
-                    onChange={(e) => setRunnerRiserWeight(e.target.value === '' ? '' : Number(e.target.value))}
-                    placeholder="0.0"
-                    className="bg-[#FFFFFF] border-[#E0E7FF] text-[#172554]"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-[#172554]">Total Box Wt (kg)</Label>
-                  <Input
-                    type="number"
-                    readOnly
-                    value={totalBoxWeight}
-                    placeholder="0.0"
-                    className="bg-[#EEF2FF]/50 border-[#E0E7FF] text-[#172554] cursor-not-allowed"
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label className="text-[#172554]">Total Box Wt (Runner/Riser) (kg)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={totalBoxWeight}
+                  onChange={(e) => setTotalBoxWeight(e.target.value === '' ? '' : Number(e.target.value))}
+                  placeholder="0.0"
+                  className="bg-[#FFFFFF] border-[#E0E7FF] text-[#172554]"
+                />
               </div>
             </div>
 
@@ -570,8 +560,8 @@ export function NewPatternModal({
           <Button variant="ghost" onClick={handleClose} className="text-[#64748B] hover:bg-[#EEF2FF] hover:text-[#172554]">
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={!patternCode.trim() || !patternName.trim()} className="bg-[#4F46E5] hover:bg-[#4F46E5]/90 text-white shadow-lg shadow-[#4F46E5]/20 disabled:opacity-50 font-semibold px-6">
-            Save Pattern
+          <Button onClick={handleSave} disabled={!patternCode.trim() || !patternName.trim() || isSaving} className="bg-[#4F46E5] hover:bg-[#4F46E5]/90 text-white shadow-lg shadow-[#4F46E5]/20 disabled:opacity-50 font-semibold px-6">
+            {isSaving ? 'Saving...' : 'Save Pattern'}
           </Button>
         </DialogFooter>
       </DialogContent>

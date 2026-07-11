@@ -37,10 +37,20 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const [row] = await db.insert(customers).values(body).returning()
-    return NextResponse.json({ value: row.value, label: row.label, id: row.id }, { status: 201 })
-  } catch (error) {
+    const insertData = {
+      value: body.value,
+      label: body.label,
+      email: body.email,
+      phone: body.phone,
+      contactPerson: body.contactPerson,
+      address: body.address,
+      status: body.status || 'Active',
+    }
+    const [row] = await db.insert(customers).values(insertData).returning()
+    return NextResponse.json(row, { status: 201 })
+  } catch (error: any) {
     console.error('POST /api/customers error:', error)
-    return NextResponse.json({ error: 'Failed to create customer' }, { status: 500 })
+    const message = error?.code === '23505' ? 'A customer with this code already exists' : (error?.message || 'Failed to create customer')
+    return NextResponse.json({ error: message }, { status: error?.code === '23505' ? 409 : 500 })
   }
 }

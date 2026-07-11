@@ -10,7 +10,15 @@ export async function PUT(
   try {
     const { id } = await params
     const body = await request.json()
-    const [grade] = await db.update(grades).set(body).where(eq(grades.id, id)).returning()
+    // Strip system-managed fields so a caller spreading a previously-fetched
+    // record (id, createdAt/updatedAt as JSON strings) can't crash the
+    // timestamp columns or overwrite the id.
+    const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...rest } = body
+    const updateData: Record<string, any> = { updatedAt: new Date() }
+    for (const [key, value] of Object.entries(rest)) {
+      if (value !== undefined) updateData[key] = value
+    }
+    const [grade] = await db.update(grades).set(updateData).where(eq(grades.id, id)).returning()
     if (!grade) {
       return NextResponse.json({ error: 'Grade not found' }, { status: 404 })
     }

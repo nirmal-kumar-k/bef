@@ -1,5 +1,5 @@
 export interface Order {
-  id: number
+  id: string
   customerOrderNo: string
   internalOrderNo: string
   customer: string

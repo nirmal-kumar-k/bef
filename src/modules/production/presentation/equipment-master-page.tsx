@@ -78,7 +78,7 @@ export function EquipmentMasterPage() {
     }
   }
 
-  const equipmentTypes = ['Furnace', 'Moulding Machine', 'Core Machine', 'Knockout'] as const
+  const equipmentTypes = ['Core Machine', 'Moulding Machine', 'Furnace', 'Knockout'] as const
 
   return (
     <div className="p-8 max-w-6xl mx-auto animate-in fade-in duration-300 ease-out">

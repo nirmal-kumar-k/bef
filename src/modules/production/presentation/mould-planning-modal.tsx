@@ -6,7 +6,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/shared/ui/dialog'
-import { Button } from '@/shared/ui/button'
+import { Button, buttonVariants } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
@@ -44,6 +44,10 @@ interface PlannedRow {
   hourlyActuals: Record<string, number>
   actualQuantity?: number
   isConfirmed: boolean
+  // Quantity this row already contributed to the backlog's totalScheduled when the
+  // modal opened - needed to compute how much MORE this row can take without
+  // double-subtracting its own prior contribution from the remaining pending qty.
+  originalQty: number
 }
 
 export function MouldPlanningModal({
@@ -125,7 +129,8 @@ export function MouldPlanningModal({
           hourlyWorkers: p.hourlyWorkers || {},
           hourlyActuals: p.hourlyActuals || {},
           actualQuantity: p.actualQuantity,
-          isConfirmed: !!p.isConfirmed
+          isConfirmed: !!p.isConfirmed,
+          originalQty: p.quantityScheduled || 0
         }
       })
       setPlannedRows(initRows)
@@ -209,61 +214,72 @@ export function MouldPlanningModal({
     onClose()
   }
 
+  // How much more this row can be scheduled for without exceeding the pending
+  // backlog quantity. backlogData.totalScheduled already includes this row's own
+  // prior saved value (if it existed before this session), so that's added back in
+  // - otherwise editing an existing row would immediately look "over budget" by its
+  // own amount.
+  const getMaxAllowedQty = (row: PlannedRow) => {
+    const backlogItem = backlogData.find(b => b.orderNo === row.orderNo && b.patternRef === row.patternRef)
+    if (!backlogItem) return Infinity
+    return Math.max(0, backlogItem.totalRequired - backlogItem.totalScheduled + row.originalQty)
+  }
+
   // Auto-fill logic
   const handleTargetQtyInput = (rowId: string, value: string) => {
-    setPlannedRows(prev => prev.map(r => r.id === rowId ? { ...r, targetQty: value } : r))
+    setPlannedRows(prev => prev.map(r => {
+      if (r.id !== rowId) return r
+      if (value === '') return { ...r, targetQty: value }
+      const num = parseInt(value, 10)
+      if (isNaN(num)) return { ...r, targetQty: value }
+      const capped = Math.min(num, getMaxAllowedQty(r))
+      return { ...r, targetQty: String(capped) }
+    }))
+  }
+
+  // Shared hourly distribution: spreads target qty evenly across time slots using
+  // avg-moulds-production for worker counts. The first slot of the shift is always
+  // left out - the machine isn't actually productive at the shift's nominal start
+  // time (warm-up/changeover), real output starts from the second slot.
+  const distributeQty = (target: number, patternRef: string, machineId: string) => {
+    const pattern = patterns.find(p => p.code === patternRef)
+    const eq = equipments.find(e => e.id === machineId)
+    const avgProd = Number(pattern?.avgMouldsPerHour) || eq?.avgPiecesPerHour || 10
+
+    const hourlyTargets: Record<string, number> = {}
+    const hourlyWorkers: Record<string, number> = {}
+
+    const fillableSlots = TIME_SLOTS.slice(1)
+    if (TIME_SLOTS[0]) {
+      hourlyTargets[TIME_SLOTS[0].time] = 0
+      hourlyWorkers[TIME_SLOTS[0].time] = 0
+    }
+
+    const basePerSlot = fillableSlots.length > 0 ? Math.floor(target / fillableSlots.length) : 0
+    let remainder = target - (basePerSlot * fillableSlots.length)
+
+    fillableSlots.forEach(slot => {
+      const qty = basePerSlot + (remainder > 0 ? 1 : 0)
+      if (remainder > 0) remainder--
+
+      hourlyTargets[slot.time] = qty
+      hourlyWorkers[slot.time] = qty > 0 ? Math.max(1, Math.ceil(qty / (avgProd * slot.hours))) : 0
+    })
+
+    return { hourlyTargets, hourlyWorkers }
   }
 
   const autoFillRow = (rowId: string) => {
     setPlannedRows(prev => {
       const row = prev.find(r => r.id === rowId)
       if (!row) return prev
-      
+
       const target = parseInt(row.targetQty, 10)
       if (isNaN(target) || target <= 0) return prev
-      
-      const pattern = patterns.find(p => p.code === row.patternRef)
-      const eq = equipments.find(e => e.id === row.machineId)
-      
-      const avgProd = Number(pattern?.avgMouldsPerHour) || eq?.avgPiecesPerHour || 10
-      
-      const newRow = { ...row, hourlyTargets: {}, hourlyWorkers: {} }
-      
-      // We no longer strictly block slots, but we try to avoid slots where other rows have >0
-      const otherRows = prev.filter(or => or.id !== rowId && or.machineId === row.machineId)
-      const availableSlots = TIME_SLOTS.filter(slot => {
-        return !otherRows.some(or => (or.hourlyTargets[slot.time] || 0) > 0)
-      })
-      
-      const slotsToUse = availableSlots.length > 0 ? availableSlots : TIME_SLOTS
-      const basePerSlot = Math.floor(target / slotsToUse.length)
-      let remainder = target - (basePerSlot * slotsToUse.length)
-      
-      TIME_SLOTS.forEach(slot => {
-        if (slotsToUse.some(s => s.time === slot.time)) {
-          const qty = basePerSlot + (remainder > 0 ? 1 : 0)
-          if (remainder > 0) remainder--
-          
-          newRow.hourlyTargets[slot.time] = qty
-          newRow.hourlyWorkers[slot.time] = qty > 0 ? Math.max(1, Math.ceil(qty / (avgProd * slot.hours))) : 0
-        } else {
-          newRow.hourlyTargets[slot.time] = 0
-          newRow.hourlyWorkers[slot.time] = 0
-        }
-      })
-      
-      return prev.map(r => r.id === rowId ? newRow : r)
-    })
-  }
 
-  const handleHourlyActualChange = (rowId: string, timeSlot: string, value: string) => {
-    const num = value === '' ? undefined : parseInt(value, 10)
-    setPlannedRows(prev => prev.map(r => {
-      if (r.id !== rowId) return r
-      const newActuals = { ...r.hourlyActuals, [timeSlot]: num || 0 }
-      const newTotal = Object.values(newActuals).reduce((a, b) => a + b, 0)
-      return { ...r, hourlyActuals: newActuals, actualQuantity: newTotal }
-    }))
+      const { hourlyTargets, hourlyWorkers } = distributeQty(target, row.patternRef, row.machineId)
+      return prev.map(r => r.id === rowId ? { ...r, hourlyTargets, hourlyWorkers } : r)
+    })
   }
 
   const handleActualChange = (rowId: string, value: string) => {
@@ -275,8 +291,11 @@ export function MouldPlanningModal({
     const num = value === '' ? undefined : parseInt(value, 10)
     setPlannedRows(prev => prev.map(r => {
       if (r.id !== rowId) return r
-      const newTargets = { ...r.hourlyTargets, [timeSlot]: num || 0 }
-      const newTotal = Object.values(newTargets).reduce((a, b) => a + b, 0)
+      const otherSlotsTotal = Object.entries(r.hourlyTargets).reduce((a, [slot, v]) => slot === timeSlot ? a : a + (v || 0), 0)
+      const maxAllowed = getMaxAllowedQty(r)
+      const cappedValue = Math.max(0, Math.min(num || 0, maxAllowed - otherSlotsTotal))
+      const newTargets = { ...r.hourlyTargets, [timeSlot]: cappedValue }
+      const newTotal = otherSlotsTotal + cappedValue
       return { ...r, hourlyTargets: newTargets, targetQty: String(newTotal) }
     }))
   }
@@ -296,7 +315,12 @@ export function MouldPlanningModal({
     const b = backlogData.find(b => b.orderNo === orderNo && b.patternRef === patternRef)
     if (!b) return
     const order = openOrders.find(o => o.customerOrderNo === orderNo)
-    
+
+    const remaining = Math.max(0, b.totalRequired - b.totalScheduled)
+    const { hourlyTargets, hourlyWorkers } = remaining > 0
+      ? distributeQty(remaining, patternRef, activeMachineId)
+      : { hourlyTargets: {}, hourlyWorkers: {} }
+
     setPlannedRows(prev => [...prev, {
       id: Math.random().toString(),
       orderId: order?.id || '',
@@ -304,11 +328,12 @@ export function MouldPlanningModal({
       productName: order?.productName || '',
       patternRef: patternRef,
       machineId: activeMachineId,
-      targetQty: '',
-      hourlyTargets: {},
-      hourlyWorkers: {},
+      targetQty: remaining > 0 ? String(remaining) : '',
+      hourlyTargets,
+      hourlyWorkers,
       hourlyActuals: {},
-      isConfirmed: false
+      isConfirmed: false,
+      originalQty: 0
     }])
     setComboboxOpen(false)
   }
@@ -324,14 +349,18 @@ export function MouldPlanningModal({
 
   // Combobox options for backlog items needing scheduling
   const backlogOptions = useMemo(() => {
+    // Exclude patterns that already have a row on this machine this session -
+    // adding the same one twice would double-book it and, on save, create a second
+    // DB row instead of updating the first (since neither carries the other's id),
+    // silently doubling what counts as "already scheduled" from then on.
+    const alreadyOnMachine = new Set(activeRows.map(r => `${r.orderNo}|${r.patternRef}`))
     const options = new Map<string, BacklogItem>()
     backlogData.filter(b => b.totalRequired > b.totalScheduled).forEach(b => {
-      // Group by patternRef for uniqueness? Or show each Order + Pattern?
-      // Backlog usually has unique Order+Pattern rows.
-      options.set(`${b.orderNo}|${b.patternRef}`, b)
+      const key = `${b.orderNo}|${b.patternRef}`
+      if (!alreadyOnMachine.has(key)) options.set(key, b)
     })
     return Array.from(options.values())
-  }, [backlogData])
+  }, [backlogData, activeRows])
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -419,15 +448,13 @@ export function MouldPlanningModal({
                   </h3>
                   
                   <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        role="combobox"
-                        aria-expanded={comboboxOpen}
-                        className="w-[320px] justify-between h-10 bg-[#4F46E5] text-white hover:bg-[#4F46E5]/90 font-semibold shadow-md"
-                      >
-                        + Add Pattern to Schedule
-                        <CaretDown className="ml-2 h-4 w-4 shrink-0 opacity-70" />
-                      </Button>
+                    <PopoverTrigger
+                      role="combobox"
+                      aria-expanded={comboboxOpen}
+                      className={cn(buttonVariants(), "w-[320px] justify-between h-10 bg-[#4F46E5] text-white hover:bg-[#4F46E5]/90 font-semibold shadow-md")}
+                    >
+                      + Add Pattern to Schedule
+                      <CaretDown className="ml-2 h-4 w-4 shrink-0 opacity-70" />
                     </PopoverTrigger>
                     <PopoverContent className="w-[320px] p-0 bg-white border-[#E0E7FF] shadow-xl rounded-xl">
                       <Command>
@@ -467,29 +494,19 @@ export function MouldPlanningModal({
                     <p className="text-sm">Click the button above to add a pattern to this machine's schedule.</p>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left whitespace-nowrap">
+                  <div className="w-full">
+                    <table className="w-full table-fixed text-sm text-left">
                       <thead className="bg-[#F8FAFC] border-b border-[#E0E7FF] text-[#64748B] uppercase tracking-wider font-bold text-[11px]">
                         <tr>
-                          <th className="px-6 py-4 sticky left-0 bg-[#F8FAFC] z-10 shadow-[1px_0_0_#E0E7FF]">Pattern Details</th>
-                          <th className="px-6 py-4 text-center border-x border-[#E0E7FF]">Target Qty</th>
+                          <th className="px-3 py-4 w-[150px]">Pattern Details</th>
+                          <th className="px-1.5 py-4 text-center border-x border-[#E0E7FF] w-[68px]">Target Qty</th>
                           {TIME_SLOTS.map(slot => (
-                            <th key={slot.time} className="px-4 py-4 text-center border-r border-[#E0E7FF] min-w-[70px]">
-                              {slot.time}
+                            <th key={slot.time} className="px-1 py-4 text-center border-r border-[#E0E7FF] leading-tight">
+                              <div>{slot.time}</div>
+                              <div className="text-[9px] font-normal normal-case text-[#94A3B8]">to {slot.endTime}</div>
                             </th>
                           ))}
-                          <th className="px-6 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">Actual Qty</th>
-                          <th className="px-6 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">Actual Qty</th>
-                          <th className="px-6 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">Actual Qty</th>
-                          <th className="px-6 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">Actual Qty</th>
-                          <th className="px-6 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">Actual Qty</th>
-                          <th className="px-6 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">Actual Qty</th>
-                          <th className="px-6 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">Actual Qty</th>
-                          <th className="px-6 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">Actual Qty</th>
-                          <th className="px-6 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">Actual Qty</th>
-                          <th className="px-6 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">Actual Qty</th>
-                          <th className="px-6 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">Actual Qty</th>
-                          <th className="px-6 py-4 text-center border-l border-[#E0E7FF]">Actions</th>
+                          <th className="px-1.5 py-4 text-center border-l border-[#E0E7FF] w-[44px]">Del</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[#E0E7FF]">
@@ -502,31 +519,33 @@ export function MouldPlanningModal({
 
                           return (
                             <tr key={row.id} className="hover:bg-[#F4F6FB] transition-colors group">
-                              <td className="px-6 py-4 sticky left-0 bg-inherit z-10 shadow-[1px_0_0_#E0E7FF]">
+                              <td className="px-3 py-4">
                                 <div className="flex flex-col gap-1">
-                                  <span className="font-bold text-[#172554] text-base">{row.patternRef}</span>
-                                  <span className="text-xs text-[#94A3B8]">{row.orderNo} | {row.productName}</span>
-                                  <span className="text-[10px] text-[#10B981] font-semibold tracking-wide">POSSIBLE QTY: {possibleQty}</span>
+                                  <span className="font-bold text-[#172554] text-sm truncate">{row.patternRef}</span>
+                                  <span className="text-[10px] text-[#94A3B8] truncate">{row.orderNo} | {row.productName}</span>
+                                  <span className="text-[10px] text-[#10B981] font-semibold tracking-wide">QTY: {possibleQty}</span>
                                 </div>
                               </td>
-                              <td className="px-4 py-4 text-center border-x border-[#E0E7FF] bg-[#EEF2FF]/20">
-                                <div className="flex items-center justify-center gap-2">
+                              <td className="px-1.5 py-4 text-center border-x border-[#E0E7FF] bg-[#EEF2FF]">
+                                <div className="flex flex-col items-center justify-center gap-1">
                                   <Input
                                     type="number"
                                     min="0"
+                                    max={getMaxAllowedQty(row) === Infinity ? undefined : getMaxAllowedQty(row)}
                                     value={row.targetQty}
                                     onChange={e => handleTargetQtyInput(row.id, e.target.value)}
                                     placeholder="0"
-                                    className="w-20 h-10 mx-auto bg-[#FFFFFF] border-[#C7D2FE] font-mono text-center text-[#4F46E5] font-bold text-lg focus-visible:ring-1 focus-visible:ring-[#4F46E5]"
+                                    title={getMaxAllowedQty(row) === Infinity ? undefined : `Max ${getMaxAllowedQty(row)} pending`}
+                                    className="w-14 h-7 bg-[#FFFFFF] border-[#C7D2FE] font-mono text-center text-[#4F46E5] font-bold text-sm focus-visible:ring-1 focus-visible:ring-[#4F46E5] px-1"
                                   />
-                                  <Button 
-                                    onClick={() => autoFillRow(row.id)} 
+                                  <Button
+                                    onClick={() => autoFillRow(row.id)}
                                     size="icon"
                                     variant="outline"
                                     title="Auto-fill time slots"
-                                    className="h-10 w-10 text-[#4F46E5] border-[#C7D2FE] hover:bg-[#EEF2FF] hover:border-[#4F46E5]"
+                                    className="h-6 w-14 shrink-0 text-[#4F46E5] border-[#C7D2FE] hover:bg-[#EEF2FF] hover:border-[#4F46E5]"
                                   >
-                                    <MagicWand weight="fill" className="w-5 h-5" />
+                                    <MagicWand weight="fill" className="w-3.5 h-3.5" />
                                   </Button>
                                 </div>
                               </td>
@@ -536,8 +555,8 @@ export function MouldPlanningModal({
                                  const isConflict = otherActiveRowsInSlot.length > 0 && (row.hourlyTargets[slot.time] || 0) > 0
                                  
                                  return (
-                                  <td key={slot.time} className={cn("px-2 py-3 text-center border-r border-[#E0E7FF]", isConflict && "bg-red-50")}>
-                                    <div className="flex flex-col gap-1.5 items-center justify-center">
+                                  <td key={slot.time} className={cn("px-1 py-2 text-center border-r border-[#E0E7FF]", isConflict && "bg-red-50")}>
+                                    <div className="flex flex-col gap-1 items-center justify-center">
                                       <Input
                                         type="number"
                                         min="0"
@@ -545,20 +564,9 @@ export function MouldPlanningModal({
                                         onChange={e => handleHourlyChange(row.id, slot.time, e.target.value)}
                                         placeholder="-"
                                         className={cn(
-                                          "w-14 h-8 text-center font-mono text-sm px-1 bg-transparent border-transparent hover:border-[#E0E7FF] focus:border-[#4285F4] focus:bg-white transition-all shadow-none",
+                                          "w-full max-w-[52px] mx-auto h-8 text-center font-mono text-xs px-1 bg-transparent border-transparent hover:border-[#E0E7FF] focus:border-[#4285F4] focus:bg-white transition-all shadow-none",
                                           (row.hourlyTargets[slot.time] || 0) > 0 && "font-bold text-[#172554] bg-[#F4F6FB] border-[#E0E7FF]",
                                           isConflict && "text-red-600 font-bold border-red-200 bg-red-100"
-                                        )}
-                                      />
-                                      <Input
-                                        type="number"
-                                        min="0"
-                                        value={row.hourlyActuals[slot.time] === undefined ? '' : row.hourlyActuals[slot.time]}
-                                        onChange={e => handleHourlyActualChange(row.id, slot.time, e.target.value)}
-                                        placeholder="Act"
-                                        className={cn(
-                                          "w-14 h-7 mt-1 text-center font-mono text-xs px-1 bg-[#F4F6FB] border-[#4285F4]/30 focus:border-[#4285F4] text-[#4285F4] transition-all shadow-inner placeholder:text-[#94A3B8]",
-                                          (row.hourlyActuals[slot.time] || 0) > 0 && "font-bold"
                                         )}
                                       />
                                       {viewLabourers && (
@@ -572,152 +580,9 @@ export function MouldPlanningModal({
                                   </td>
                                  )
                               })}
-                              <td className="px-4 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  value={row.actualQuantity === undefined ? '' : row.actualQuantity}
-                                  onChange={e => handleActualChange(row.id, e.target.value)}
-                                  placeholder="Total"
-                                  className={cn(
-                                    "w-20 h-10 mx-auto bg-[#FFFFFF] border-[#4285F4]/50 font-mono text-center text-[#4285F4] font-bold text-lg focus-visible:ring-1 focus-visible:ring-[#4285F4]",
-                                    row.actualQuantity === undefined && "border-red-400"
-                                  )}
-                                />
-                              </td>
-                              <td className="px-4 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  value={row.actualQuantity === undefined ? '' : row.actualQuantity}
-                                  onChange={e => handleActualChange(row.id, e.target.value)}
-                                  placeholder="Total"
-                                  className={cn(
-                                    "w-20 h-10 mx-auto bg-[#FFFFFF] border-[#4285F4]/50 font-mono text-center text-[#4285F4] font-bold text-lg focus-visible:ring-1 focus-visible:ring-[#4285F4]",
-                                    row.actualQuantity === undefined && "border-red-400"
-                                  )}
-                                />
-                              </td>
-                              <td className="px-4 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  value={row.actualQuantity === undefined ? '' : row.actualQuantity}
-                                  onChange={e => handleActualChange(row.id, e.target.value)}
-                                  placeholder="Total"
-                                  className={cn(
-                                    "w-20 h-10 mx-auto bg-[#FFFFFF] border-[#4285F4]/50 font-mono text-center text-[#4285F4] font-bold text-lg focus-visible:ring-1 focus-visible:ring-[#4285F4]",
-                                    row.actualQuantity === undefined && "border-red-400"
-                                  )}
-                                />
-                              </td>
-                              <td className="px-4 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  value={row.actualQuantity === undefined ? '' : row.actualQuantity}
-                                  onChange={e => handleActualChange(row.id, e.target.value)}
-                                  placeholder="Total"
-                                  className={cn(
-                                    "w-20 h-10 mx-auto bg-[#FFFFFF] border-[#4285F4]/50 font-mono text-center text-[#4285F4] font-bold text-lg focus-visible:ring-1 focus-visible:ring-[#4285F4]",
-                                    row.actualQuantity === undefined && "border-red-400"
-                                  )}
-                                />
-                              </td>
-                              <td className="px-4 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  value={row.actualQuantity === undefined ? '' : row.actualQuantity}
-                                  onChange={e => handleActualChange(row.id, e.target.value)}
-                                  placeholder="Total"
-                                  className={cn(
-                                    "w-20 h-10 mx-auto bg-[#FFFFFF] border-[#4285F4]/50 font-mono text-center text-[#4285F4] font-bold text-lg focus-visible:ring-1 focus-visible:ring-[#4285F4]",
-                                    row.actualQuantity === undefined && "border-red-400"
-                                  )}
-                                />
-                              </td>
-                              <td className="px-4 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  value={row.actualQuantity === undefined ? '' : row.actualQuantity}
-                                  onChange={e => handleActualChange(row.id, e.target.value)}
-                                  placeholder="Total"
-                                  className={cn(
-                                    "w-20 h-10 mx-auto bg-[#FFFFFF] border-[#4285F4]/50 font-mono text-center text-[#4285F4] font-bold text-lg focus-visible:ring-1 focus-visible:ring-[#4285F4]",
-                                    row.actualQuantity === undefined && "border-red-400"
-                                  )}
-                                />
-                              </td>
-                              <td className="px-4 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  value={row.actualQuantity === undefined ? '' : row.actualQuantity}
-                                  onChange={e => handleActualChange(row.id, e.target.value)}
-                                  placeholder="Total"
-                                  className={cn(
-                                    "w-20 h-10 mx-auto bg-[#FFFFFF] border-[#4285F4]/50 font-mono text-center text-[#4285F4] font-bold text-lg focus-visible:ring-1 focus-visible:ring-[#4285F4]",
-                                    row.actualQuantity === undefined && "border-red-400"
-                                  )}
-                                />
-                              </td>
-                              <td className="px-4 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  value={row.actualQuantity === undefined ? '' : row.actualQuantity}
-                                  onChange={e => handleActualChange(row.id, e.target.value)}
-                                  placeholder="Total"
-                                  className={cn(
-                                    "w-20 h-10 mx-auto bg-[#FFFFFF] border-[#4285F4]/50 font-mono text-center text-[#4285F4] font-bold text-lg focus-visible:ring-1 focus-visible:ring-[#4285F4]",
-                                    row.actualQuantity === undefined && "border-red-400"
-                                  )}
-                                />
-                              </td>
-                              <td className="px-4 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  value={row.actualQuantity === undefined ? '' : row.actualQuantity}
-                                  onChange={e => handleActualChange(row.id, e.target.value)}
-                                  placeholder="Total"
-                                  className={cn(
-                                    "w-20 h-10 mx-auto bg-[#FFFFFF] border-[#4285F4]/50 font-mono text-center text-[#4285F4] font-bold text-lg focus-visible:ring-1 focus-visible:ring-[#4285F4]",
-                                    row.actualQuantity === undefined && "border-red-400"
-                                  )}
-                                />
-                              </td>
-                              <td className="px-4 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  value={row.actualQuantity === undefined ? '' : row.actualQuantity}
-                                  onChange={e => handleActualChange(row.id, e.target.value)}
-                                  placeholder="Total"
-                                  className={cn(
-                                    "w-20 h-10 mx-auto bg-[#FFFFFF] border-[#4285F4]/50 font-mono text-center text-[#4285F4] font-bold text-lg focus-visible:ring-1 focus-visible:ring-[#4285F4]",
-                                    row.actualQuantity === undefined && "border-red-400"
-                                  )}
-                                />
-                              </td>
-                              <td className="px-4 py-4 text-center border-l border-[#E0E7FF] bg-[#F4F6FB]">
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  value={row.actualQuantity === undefined ? '' : row.actualQuantity}
-                                  onChange={e => handleActualChange(row.id, e.target.value)}
-                                  placeholder="Total"
-                                  className={cn(
-                                    "w-20 h-10 mx-auto bg-[#FFFFFF] border-[#4285F4]/50 font-mono text-center text-[#4285F4] font-bold text-lg focus-visible:ring-1 focus-visible:ring-[#4285F4]",
-                                    row.actualQuantity === undefined && "border-red-400"
-                                  )}
-                                />
-                              </td>
-                              <td className="px-6 py-4 text-center border-l border-[#E0E7FF]">
-                                <Button variant="ghost" size="icon" onClick={() => removeRow(row.id)} className="text-[#94A3B8] hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all">
-                                  <Trash className="w-5 h-5" />
+                              <td className="px-1.5 py-4 text-center border-l border-[#E0E7FF]">
+                                <Button variant="ghost" size="icon" onClick={() => removeRow(row.id)} className="text-[#94A3B8] hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all h-8 w-8">
+                                  <Trash className="w-4 h-4" />
                                 </Button>
                               </td>
                             </tr>
@@ -740,7 +605,7 @@ export function MouldPlanningModal({
                   {activeRows.map(row => {
                     const planned = parseInt(row.targetQty, 10) || 0
                     const act = row.actualQuantity
-                    const hasAct = act !== undefined
+                    const hasAct = act !== undefined && act !== null
                     const variance = hasAct ? act - planned : 0
                     
                     return (
@@ -758,11 +623,11 @@ export function MouldPlanningModal({
                           <Input
                             type="number"
                             min="0"
-                            value={act === undefined ? '' : act}
+                            value={hasAct ? act : ''}
                             onChange={e => handleActualChange(row.id, e.target.value)}
                             className={cn(
                               "h-8 bg-[#F4F6FB] text-[#172554] font-mono px-2 text-sm w-full",
-                              act === undefined ? "border-red-500/50 focus:border-red-500" : "border-[#E0E7FF]"
+                              !hasAct ? "border-red-500/50 focus:border-red-500" : "border-[#E0E7FF]"
                             )}
                             placeholder="Required"
                           />

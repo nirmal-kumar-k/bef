@@ -11,10 +11,20 @@ export async function PUT(
     const data = await req.json()
     const { id } = await params
 
-    // Remove id fields before update
-    const { id: _idField, _id: _mongoId, ...updateData } = data
+    // Clean data before DB update
+    const safeData = {
+      name: data.name,
+      type: data.type,
+      weightCapacity: data.weightCapacity,
+      firstHeatDurationMins: data.firstHeatDurationMins,
+      regularHeatDurationMins: data.regularHeatDurationMins,
+      avgPiecesPerHour: data.avgPiecesPerHour,
+      restrictedCoreBoxes: data.restrictedCoreBoxes,
+      isActive: data.isActive,
+      updatedAt: new Date(),
+    }
 
-    const [row] = await db.update(equipment).set(updateData).where(eq(equipment.id, id)).returning()
+    const [row] = await db.update(equipment).set(safeData).where(eq(equipment.id, id)).returning()
 
     if (!row) {
       return NextResponse.json(
