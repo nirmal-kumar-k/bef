@@ -21,15 +21,29 @@ export default function OrdersPage() {
   const [activeCategory, setActiveCategory] = useState('All')
   const { role } = useRole()
 
-  const handleDeleteOrder = async (id: string) => {
+  const handleDeleteOrder = async (id: string, force = false) => {
     try {
-      const res = await fetch(`/api/orders/${id}`, { method: 'DELETE' })
+      const res = await fetch(`/api/orders/${id}${force ? '?force=true' : ''}`, { method: 'DELETE' })
       if (res.ok) {
         await fetchOrders()
         setViewOrderId(null)
+        return
       }
+
+      const data = await res.json().catch(() => ({}))
+      if (res.status === 409 && data.hasProductionPlans) {
+        const plural = data.planCount === 1 ? 'plan' : 'plans'
+        const confirmed = confirm(
+          `This order has ${data.planCount} active production ${plural} (Core/Mould/Melt/Knockout). Deleting it will also delete those plans. Delete anyway?`
+        )
+        if (confirmed) await handleDeleteOrder(id, true)
+        return
+      }
+
+      alert(data.error || 'Failed to delete order.')
     } catch (err) {
       console.error('Failed to delete order:', err)
+      alert('Failed to delete order.')
     }
   }
 

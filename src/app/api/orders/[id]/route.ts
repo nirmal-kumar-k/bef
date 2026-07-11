@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { eq } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
-import { orders, orderItems } from '@/infrastructure/database/schema'
+import { orders, orderItems, productionPlans } from '@/infrastructure/database/schema'
 
 export async function GET(
   _request: NextRequest,
@@ -70,11 +70,33 @@ export async function PUT(
 }
 
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params
+    const force = new URL(request.url).searchParams.get('force') === 'true'
+
+    const existingPlans = await db.select({ id: productionPlans.id }).from(productionPlans).where(eq(productionPlans.orderId, id))
+    if (existingPlans.length > 0 && !force) {
+      return NextResponse.json(
+        {
+          error: 'This order has active production plans.',
+          hasProductionPlans: true,
+          planCount: existingPlans.length,
+        },
+        { status: 409 }
+      )
+    }
+
+    // production_plans has no FK to orders (orderId is a plain text column), so
+    // it won't cascade on its own - clean it up explicitly before the order goes.
+    // schedules/order_items do have real FKs with ON DELETE CASCADE, so those
+    // clean up automatically once the order row is deleted.
+    if (existingPlans.length > 0) {
+      await db.delete(productionPlans).where(eq(productionPlans.orderId, id))
+    }
+
     await db.delete(orders).where(eq(orders.id, id))
     return NextResponse.json({ success: true })
   } catch (error) {
