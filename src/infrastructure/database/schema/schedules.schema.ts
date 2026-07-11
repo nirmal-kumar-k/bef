@@ -26,7 +26,7 @@ export const scheduleStageNameEnum = pgEnum('schedule_stage_name', [
 
 export const schedules = pgTable('schedules', {
   id: uuid('id').primaryKey().defaultRandom(),
-  orderId: uuid('order_id').notNull().references(() => orders.id),
+  orderId: uuid('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
   date: text('date').notNull(), // YYYY-MM-DD
   shift: scheduleShiftEnum('shift').default('Morning'),
   priority: schedulePriorityEnum('priority').default('Normal'),
