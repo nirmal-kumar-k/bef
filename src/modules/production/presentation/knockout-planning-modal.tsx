@@ -224,8 +224,9 @@ export function KnockoutPlanningModal({
       activeKnockouts.forEach(cb => {
         const key = `${activeMachineTab}_${cb.patternRef}`
         const pattern = patterns.find(p => p.code === cb.patternRef)
-        const avgProd = Number(pattern?.avgKnockoutsPerHour) || 10
-        
+        const selectedEq = equipments.find(e => e.id === activeMachineTab)
+        const avgProd = Number(pattern?.avgKnockoutsPerHour) || selectedEq?.avgPiecesPerHour || 10
+
         let patternTotal = 0
         Object.keys(prevMatrix).forEach(k => {
           if (k.endsWith(`_${cb.patternRef}`)) {
@@ -267,8 +268,9 @@ export function KnockoutPlanningModal({
       activeKnockouts.forEach(cb => {
         const key = `${activeMachineTab}_${cb.patternRef}`
         const pattern = patterns.find(p => p.code === cb.patternRef)
-        const avgProd = Number(pattern?.avgKnockoutsPerHour) || 10
-        
+        const selectedEq = equipments.find(e => e.id === activeMachineTab)
+        const avgProd = Number(pattern?.avgKnockoutsPerHour) || selectedEq?.avgPiecesPerHour || 10
+
         let patternTotal = 0
         Object.keys(hourlyMatrix).forEach(k => {
           if (k.endsWith(`_${cb.patternRef}`)) {
@@ -579,7 +581,7 @@ export function KnockoutPlanningModal({
                         const pattern = patterns.find(p => p.code === cb.patternRef)
                         
                         const selectedEq = equipments.find(e => e.id === activeMachineTab)
-                        const avgProd = selectedEq?.avgPiecesPerHour || Number(pattern?.avgKnockoutsPerHour) || 10
+                        const avgProd = Number(pattern?.avgKnockoutsPerHour) || selectedEq?.avgPiecesPerHour || 10
                         
                         const expectedOutput = getExpectedOutput(cb.patternRef!, avgProd)
                         

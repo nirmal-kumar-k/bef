@@ -177,7 +177,9 @@ export function CorePlanningModal({
       const maxWorkers = Math.max(1, ...Object.values(r.hourlyWorkers))
 
       const eq = equipments.find(e => e.id === r.machineId)
-      const avgProd = eq?.avgPiecesPerHour || 10
+      const pattern = patterns.find(p => p.code === r.patternRef)
+      const scb = pattern?.sharedCoreBoxes?.find((s: any) => s.code === r.coreBoxCode)
+      const avgProd = Number(scb?.avgCoreProduction) || Number(pattern?.avgMouldsPerHour) || eq?.avgPiecesPerHour || 10
       const shiftHours = TIME_SLOTS.reduce((s, sl) => s + sl.hours, 0)
       const possibleQty = Math.round(avgProd * shiftHours)
 
