@@ -75,6 +75,17 @@ const formatTime = (mins: number) => {
   return `${h12.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')} ${ampm}`
 }
 
+// Explicit first/regular heat durations win when set; otherwise fall back to
+// the furnace's Avg Heats Per Hour (60 / avgPiecesPerHour minutes per heat),
+// same fallback role avgPiecesPerHour plays for Core/Mould/Knockout equipment,
+// before finally defaulting to a hardcoded duration.
+const getHeatDurationMins = (furnace: any, isFirstHeat: boolean) => {
+  const explicit = isFirstHeat ? furnace?.firstHeatDurationMins : furnace?.regularHeatDurationMins
+  if (explicit) return explicit
+  if (furnace?.avgPiecesPerHour) return Math.round(60 / furnace.avgPiecesPerHour)
+  return isFirstHeat ? 120 : 90
+}
+
 export function MeltPlanningModal({
   isOpen,
   onClose,
@@ -205,7 +216,7 @@ export function MeltPlanningModal({
       const shift = shifts.find(s => s.id === selectedShiftId)
       currentStart = parseTime(shift?.startTime || '08:00 AM')
     }
-    const duration = nextNumber === 1 ? (furnace?.firstHeatDurationMins || 120) : (furnace?.regularHeatDurationMins || 90)
+    const duration = getHeatDurationMins(furnace, nextNumber === 1)
 
     setHeats(prev => [...prev, {
       id: `${activeFurnaceId}-heat-${nextNumber}`,
@@ -271,8 +282,8 @@ export function MeltPlanningModal({
       if (targetIdx === -1) return prev
 
       const furnace = equipments.find(e => e.id === activeFurnaceId)
-      const firstDur = furnace?.firstHeatDurationMins || 120
-      const regDur = furnace?.regularHeatDurationMins || 90
+      const firstDur = getHeatDurationMins(furnace, true)
+      const regDur = getHeatDurationMins(furnace, false)
 
       let currentMins = parseTime(newStartTime)
       
@@ -389,8 +400,8 @@ export function MeltPlanningModal({
                   <h3 className="font-bold text-[#172554] text-lg">Heat Schedule</h3>
                   <div className="flex items-center gap-4">
                     <div className="text-sm text-[#64748B] font-semibold flex gap-4">
-                      <span>First Heat: <span className="text-amber-600">{furnace?.firstHeatDurationMins || 120}m</span></span>
-                      <span>Regular Heat: <span className="text-amber-600">{furnace?.regularHeatDurationMins || 90}m</span></span>
+                      <span>First Heat: <span className="text-amber-600">{getHeatDurationMins(furnace, true)}m</span></span>
+                      <span>Regular Heat: <span className="text-amber-600">{getHeatDurationMins(furnace, false)}m</span></span>
                       <span>Max Capacity: <span className="text-amber-600">{maxCapacity} kg</span></span>
                     </div>
                     <Popover open={addHeatOpen} onOpenChange={(open) => {
