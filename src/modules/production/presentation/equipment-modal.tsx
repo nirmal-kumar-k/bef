@@ -211,7 +211,7 @@ export function EquipmentModal({ isOpen, onClose, initialData }: EquipmentModalP
             </div>
           )}
 
-          {formData.type === 'Knockout' && (
+          {['Knockout', 'Core Machine', 'Moulding Machine'].includes(formData.type || '') && (
             <div className="grid gap-2">
               <Label htmlFor="avgPieces" className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">
                 Avg Pieces Per Hour
