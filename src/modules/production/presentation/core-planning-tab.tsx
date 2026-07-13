@@ -54,8 +54,11 @@ export function CorePlanningTab({ coreBacklog, patterns, openOrders, dailyPlans,
       
       const pattern = patterns.find(p => p.code === b.patternRef)
       const specificCoreBox = pattern?.sharedCoreBoxes?.find((scb: any) => scb.code === b.coreBoxCode)
-      // Check core box first, then fallback to pattern level
-      const avgProd = Number(specificCoreBox?.avgCoreProduction) || Number((pattern as any)?.avgCoreProduction) || 10
+      // Check core box first, then fallback to pattern level. Patterns have no
+      // avgCoreProduction field of their own - that only exists per core box -
+      // so the pattern-level fallback is avgMouldsPerHour, same field
+      // core-planning-modal.tsx falls back to.
+      const avgProd = Number(specificCoreBox?.avgCoreProduction) || Number((pattern as any)?.avgMouldsPerHour) || 10
 
       if (!boxMap.has(b.coreBoxCode)) {
         boxMap.set(b.coreBoxCode, { totalRequired: 0, avgProduction: avgProd, patternRef: b.patternRef })
