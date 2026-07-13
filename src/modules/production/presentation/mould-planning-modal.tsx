@@ -499,7 +499,7 @@ export function MouldPlanningModal({
                       <thead className="bg-[#F8FAFC] border-b border-[#E0E7FF] text-[#64748B] uppercase tracking-wider font-bold text-[11px]">
                         <tr>
                           <th className="px-3 py-4 w-[150px]">Pattern Details</th>
-                          <th className="px-1.5 py-4 text-center border-x border-[#E0E7FF] w-[68px]">Target Qty</th>
+                          <th className="px-1.5 py-4 text-center border-x border-[#E0E7FF] w-[68px]">Pending Qty</th>
                           {TIME_SLOTS.map(slot => (
                             <th key={slot.time} className="px-1 py-4 text-center border-r border-[#E0E7FF] leading-tight">
                               <div>{slot.time}</div>

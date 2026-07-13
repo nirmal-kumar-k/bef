@@ -19,6 +19,13 @@ export interface Equipment {
   isActive: boolean
 }
 
+const AVG_PER_HOUR_LABELS: Record<string, string> = {
+  'Core Machine': 'Avg Cores / Hr',
+  'Moulding Machine': 'Avg Moulds / Hr',
+  'Furnace': 'Avg Heats / Hr',
+  'Knockout': 'Avg Pieces / Hr',
+}
+
 export function EquipmentMasterPage() {
   const [equipmentList, setEquipmentList] = useState<Equipment[]>([])
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -140,8 +147,8 @@ export function EquipmentMasterPage() {
                           <th className="px-6 py-4 text-center">Regular Heat</th>
                         </>
                       )}
-                      {['Knockout', 'Core Machine', 'Moulding Machine'].includes(activeTab) && (
-                        <th className="px-6 py-4 text-center">Avg Pieces / Hr</th>
+                      {['Knockout', 'Core Machine', 'Moulding Machine', 'Furnace'].includes(activeTab) && (
+                        <th className="px-6 py-4 text-center">{AVG_PER_HOUR_LABELS[activeTab] || 'Avg Pieces / Hr'}</th>
                       )}
                       <th className="px-6 py-4 text-center">Status</th>
                       <th className="px-6 py-4 text-right">Actions</th>
@@ -168,7 +175,7 @@ export function EquipmentMasterPage() {
                           </>
                         )}
                         
-                        {['Knockout', 'Core Machine', 'Moulding Machine'].includes(activeTab) && (
+                        {['Knockout', 'Core Machine', 'Moulding Machine', 'Furnace'].includes(activeTab) && (
                           <td className="px-6 py-4 text-center text-[#64748B] font-mono">
                             {eq.avgPiecesPerHour || '-'}
                           </td>

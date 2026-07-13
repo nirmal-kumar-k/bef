@@ -107,7 +107,7 @@ export function EquipmentModal({ isOpen, onClose, initialData }: EquipmentModalP
         payload.firstHeatDurationMins = undefined
         payload.regularHeatDurationMins = undefined
       }
-      if (!['Knockout', 'Core Machine', 'Moulding Machine'].includes(payload.type || '')) {
+      if (!['Knockout', 'Core Machine', 'Moulding Machine', 'Furnace'].includes(payload.type || '')) {
         payload.avgPiecesPerHour = undefined
       }
       if (payload.type !== 'Core Machine') {
@@ -133,6 +133,13 @@ export function EquipmentModal({ isOpen, onClose, initialData }: EquipmentModalP
   }
 
   const isFurnace = formData.type === 'Furnace'
+
+  const AVG_PER_HOUR_LABELS: Record<string, string> = {
+    'Core Machine': 'Avg Cores Per Hour',
+    'Moulding Machine': 'Avg Moulds Per Hour',
+    'Furnace': 'Avg Heats Per Hour',
+    'Knockout': 'Avg Pieces Per Hour',
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -211,10 +218,10 @@ export function EquipmentModal({ isOpen, onClose, initialData }: EquipmentModalP
             </div>
           )}
 
-          {['Knockout', 'Core Machine', 'Moulding Machine'].includes(formData.type || '') && (
+          {['Knockout', 'Core Machine', 'Moulding Machine', 'Furnace'].includes(formData.type || '') && (
             <div className="grid gap-2">
               <Label htmlFor="avgPieces" className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">
-                Avg Pieces Per Hour
+                {AVG_PER_HOUR_LABELS[formData.type || ''] || 'Avg Pieces Per Hour'}
               </Label>
               <Input
                 id="avgPieces"
