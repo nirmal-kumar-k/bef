@@ -16,7 +16,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { BacklogItem } from './daily-planning-modal'
 import { CubeTransparent, Trash, CaretDown, MagicWand } from '@phosphor-icons/react'
 import { cn } from '@/shared/lib/utils'
-import { generateTimeSlots, TimeSlot } from '@/shared/lib/utils'
+import { generateTimeSlots, TimeSlot, resolveAvgProductionRate } from '@/shared/lib/utils'
 import type { Shift } from './shift-master-page'
 
 interface MouldPlanningModalProps {
@@ -178,7 +178,7 @@ export function MouldPlanningModal({
       
       const eq = equipments.find(e => e.id === r.machineId)
       const pattern = patterns.find(p => p.code === r.patternRef)
-      const avgProd = Number(pattern?.avgMouldsPerHour) || eq?.avgPiecesPerHour || 10
+      const avgProd = resolveAvgProductionRate(Number(pattern?.avgMouldsPerHour) || undefined, eq?.avgPiecesPerHour)
       const shiftHours = TIME_SLOTS.reduce((s, sl) => s + sl.hours, 0)
       const possibleQty = Math.round(avgProd * shiftHours)
 
@@ -245,7 +245,7 @@ export function MouldPlanningModal({
   const distributeQty = (target: number, patternRef: string, machineId: string) => {
     const pattern = patterns.find(p => p.code === patternRef)
     const eq = equipments.find(e => e.id === machineId)
-    const avgProd = Number(pattern?.avgMouldsPerHour) || eq?.avgPiecesPerHour || 10
+    const avgProd = resolveAvgProductionRate(Number(pattern?.avgMouldsPerHour) || undefined, eq?.avgPiecesPerHour)
 
     const hourlyTargets: Record<string, number> = {}
     const hourlyWorkers: Record<string, number> = {}
@@ -514,7 +514,7 @@ export function MouldPlanningModal({
                         {activeRows.map(row => {
                           const pattern = patterns.find(p => p.code === row.patternRef)
                           const eq = equipments.find(e => e.id === row.machineId)
-                          const avgProd = Number(pattern?.avgMouldsPerHour) || eq?.avgPiecesPerHour || 10
+                          const avgProd = resolveAvgProductionRate(Number(pattern?.avgMouldsPerHour) || undefined, eq?.avgPiecesPerHour)
                           const shiftHours = TIME_SLOTS.reduce((acc, sl) => acc + sl.hours, 0)
                           const possibleQty = Math.round(avgProd * shiftHours)
 

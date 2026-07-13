@@ -16,7 +16,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { BacklogItem } from './daily-planning-modal'
 import { CubeTransparent, Trash, Check, CaretDown, MagicWand } from '@phosphor-icons/react'
 import { cn } from '@/shared/lib/utils'
-import { generateTimeSlots, TimeSlot } from '@/shared/lib/utils'
+import { generateTimeSlots, TimeSlot, resolveAvgProductionRate } from '@/shared/lib/utils'
 import type { Shift } from './shift-master-page'
 
 interface CorePlanningModalProps {
@@ -179,7 +179,7 @@ export function CorePlanningModal({
       const eq = equipments.find(e => e.id === r.machineId)
       const pattern = patterns.find(p => p.code === r.patternRef)
       const scb = pattern?.sharedCoreBoxes?.find((s: any) => s.code === r.coreBoxCode)
-      const avgProd = Number(scb?.avgCoreProduction) || Number(pattern?.avgMouldsPerHour) || eq?.avgPiecesPerHour || 10
+      const avgProd = resolveAvgProductionRate(Number(scb?.avgCoreProduction) || Number(pattern?.avgMouldsPerHour) || undefined, eq?.avgPiecesPerHour)
       const shiftHours = TIME_SLOTS.reduce((s, sl) => s + sl.hours, 0)
       const possibleQty = Math.round(avgProd * shiftHours)
 
@@ -248,7 +248,7 @@ export function CorePlanningModal({
     const pattern = patterns.find(p => p.code === patternRef)
     const eq = equipments.find(e => e.id === machineId)
     const scb = pattern?.sharedCoreBoxes?.find((s: any) => s.code === coreBoxCode)
-    const avgProd = Number(scb?.avgCoreProduction) || Number(pattern?.avgMouldsPerHour) || eq?.avgPiecesPerHour || 10
+    const avgProd = resolveAvgProductionRate(Number(scb?.avgCoreProduction) || Number(pattern?.avgMouldsPerHour) || undefined, eq?.avgPiecesPerHour)
 
     const hourlyTargets: Record<string, number> = {}
     const hourlyWorkers: Record<string, number> = {}
@@ -383,7 +383,7 @@ export function CorePlanningModal({
       const pattern = patterns.find(p => p.code === row.patternRef)
       const eq = equipments.find(e => e.id === row.machineId)
       const scb = pattern?.sharedCoreBoxes?.find((s: any) => s.code === row.coreBoxCode)
-      const avgProd = Number(scb?.avgCoreProduction) || Number(pattern?.avgMouldsPerHour) || eq?.avgPiecesPerHour || 10
+      const avgProd = resolveAvgProductionRate(Number(scb?.avgCoreProduction) || Number(pattern?.avgMouldsPerHour) || undefined, eq?.avgPiecesPerHour)
       const possibleQty = Math.round(avgProd * shiftHours)
       return { row, possibleQty }
     })

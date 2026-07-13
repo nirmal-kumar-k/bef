@@ -14,7 +14,7 @@ import { BacklogItem } from './daily-planning-modal'
 import { CubeTransparent } from '@phosphor-icons/react'
 import { cn } from '@/shared/lib/utils'
 
-import { generateTimeSlots, TimeSlot } from '@/shared/lib/utils'
+import { generateTimeSlots, TimeSlot, resolveAvgProductionRate } from '@/shared/lib/utils'
 import type { Shift } from './shift-master-page'
 
 interface KnockoutPlanningModalProps {
@@ -225,7 +225,7 @@ export function KnockoutPlanningModal({
         const key = `${activeMachineTab}_${cb.patternRef}`
         const pattern = patterns.find(p => p.code === cb.patternRef)
         const selectedEq = equipments.find(e => e.id === activeMachineTab)
-        const avgProd = Number(pattern?.avgKnockoutsPerHour) || selectedEq?.avgPiecesPerHour || 10
+        const avgProd = resolveAvgProductionRate(Number(pattern?.avgKnockoutsPerHour) || undefined, selectedEq?.avgPiecesPerHour)
 
         let patternTotal = 0
         Object.keys(prevMatrix).forEach(k => {
@@ -269,7 +269,7 @@ export function KnockoutPlanningModal({
         const key = `${activeMachineTab}_${cb.patternRef}`
         const pattern = patterns.find(p => p.code === cb.patternRef)
         const selectedEq = equipments.find(e => e.id === activeMachineTab)
-        const avgProd = Number(pattern?.avgKnockoutsPerHour) || selectedEq?.avgPiecesPerHour || 10
+        const avgProd = resolveAvgProductionRate(Number(pattern?.avgKnockoutsPerHour) || undefined, selectedEq?.avgPiecesPerHour)
 
         let patternTotal = 0
         Object.keys(hourlyMatrix).forEach(k => {
@@ -581,7 +581,7 @@ export function KnockoutPlanningModal({
                         const pattern = patterns.find(p => p.code === cb.patternRef)
                         
                         const selectedEq = equipments.find(e => e.id === activeMachineTab)
-                        const avgProd = Number(pattern?.avgKnockoutsPerHour) || selectedEq?.avgPiecesPerHour || 10
+                        const avgProd = resolveAvgProductionRate(Number(pattern?.avgKnockoutsPerHour) || undefined, selectedEq?.avgPiecesPerHour)
                         
                         const expectedOutput = getExpectedOutput(cb.patternRef!, avgProd)
                         

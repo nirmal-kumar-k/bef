@@ -121,3 +121,14 @@ export function generateTimeSlots(startTime: string, endTime: string, breaks: {s
   return slots
 }
 
+
+// The achievable production rate for a process step is bounded by whichever is
+// slower: the pattern/core-box's own rate (its inherent design complexity/cure
+// time) or the machine's rate (its physical cycle capability) - a bottleneck,
+// not a preference. Only one side missing just uses the other; neither set
+// falls back to `fallback`.
+export function resolveAvgProductionRate(patternRate: number | undefined, machineRate: number | undefined, fallback = 10): number {
+  const rates = [patternRate, machineRate].filter((r): r is number => !!r && r > 0)
+  if (rates.length === 0) return fallback
+  return Math.min(...rates)
+}
