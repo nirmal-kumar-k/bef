@@ -400,6 +400,9 @@ export function MeltPlanningModal({
                   <h3 className="font-bold text-[#172554] text-lg">Heat Schedule</h3>
                   <div className="flex items-center gap-4">
                     <div className="text-sm text-[#64748B] font-semibold flex gap-4">
+                      {furnace?.avgPiecesPerHour && (
+                        <span>Avg Heats/Hr: <span className="text-amber-600">{furnace.avgPiecesPerHour}</span></span>
+                      )}
                       <span>First Heat: <span className="text-amber-600">{getHeatDurationMins(furnace, true)}m</span></span>
                       <span>Regular Heat: <span className="text-amber-600">{getHeatDurationMins(furnace, false)}m</span></span>
                       <span>Max Capacity: <span className="text-amber-600">{maxCapacity} kg</span></span>

@@ -444,8 +444,13 @@ export function MouldPlanningModal({
                 <div className="p-5 border-b border-[#E0E7FF] flex items-center justify-between bg-gradient-to-r from-[#F8FAFC] to-white">
                   <h3 className="font-bold text-[#172554] text-lg flex items-center gap-2">
                     Schedule for {equipments.find(e => e.id === activeMachineId)?.name}
+                    {equipments.find(e => e.id === activeMachineId)?.avgPiecesPerHour && (
+                      <span className="text-xs font-bold text-[#4F46E5] bg-[#EEF2FF] border border-[#E0E7FF] px-2.5 py-1 rounded-full whitespace-nowrap">
+                        Avg {equipments.find(e => e.id === activeMachineId)?.avgPiecesPerHour} Moulds/hr
+                      </span>
+                    )}
                   </h3>
-                  
+
                   <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
                     <PopoverTrigger
                       role="combobox"

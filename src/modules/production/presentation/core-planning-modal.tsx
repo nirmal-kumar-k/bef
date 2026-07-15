@@ -489,6 +489,11 @@ export function CorePlanningModal({
                     <h3 className="font-bold text-[#172554] text-lg">
                       Schedule for {activeMachine?.name}
                     </h3>
+                    {activeMachine?.avgPiecesPerHour && (
+                      <span className="text-xs font-bold text-[#4F46E5] bg-[#EEF2FF] border border-[#E0E7FF] px-2.5 py-1 rounded-full whitespace-nowrap">
+                        Avg {activeMachine.avgPiecesPerHour} Cores/hr
+                      </span>
+                    )}
                     <div className="flex items-center gap-2 pl-4 ml-2 border-l border-[#E0E7FF]">
                       <Label htmlFor="viewLab" className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Labourers</Label>
                       <Switch id="viewLab" checked={viewLabourers} onCheckedChange={setViewLabourers} className="data-[state=checked]:bg-[#4F46E5]" />
