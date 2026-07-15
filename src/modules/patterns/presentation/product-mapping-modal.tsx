@@ -59,7 +59,7 @@ export function ProductMappingModal({
   onSave?: (mappedProducts: any[]) => void
   isSaving?: boolean
   initialMappedProducts?: any[]
-  coreBoxes?: { id: string; code: string; owner: string; typeOfCore?: string; coreWeight?: number; avgCoreProduction?: string }[]
+  coreBoxes?: { id: string; code: string; owner: string; typeOfCore?: string; coreWeight?: number }[]
 }) {
   const [lines, setLines] = useState<MappingLine[]>([
     { id: 1, productCode: '', selectedProductId: '', cavities: '', selectedCoreBoxes: [] }
@@ -339,7 +339,7 @@ function CoreBoxMultiSelect({
   onToggle,
   onQtyChange,
 }: {
-  coreBoxes: { id: string; code: string; owner: string; typeOfCore?: string; coreWeight?: number; avgCoreProduction?: string }[]
+  coreBoxes: { id: string; code: string; owner: string; typeOfCore?: string; coreWeight?: number }[]
   selected: CoreBoxEntry[]
   onToggle: (id: string, code: string) => void
   onQtyChange: (id: string, code: string, qty: number | string) => void
@@ -409,11 +409,6 @@ function CoreBoxMultiSelect({
                   {cb.coreWeight != null && (
                     <span className="bg-[#EEF2FF] text-[#64748B] px-2 py-0.5 rounded border border-[#E0E7FF]">
                       {cb.coreWeight} kg
-                    </span>
-                  )}
-                  {cb.avgCoreProduction && (
-                    <span className="bg-[#EEF2FF] text-[#64748B] px-2 py-0.5 rounded border border-[#E0E7FF]">
-                      {cb.avgCoreProduction}/hr
                     </span>
                   )}
                 </div>

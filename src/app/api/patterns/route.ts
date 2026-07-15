@@ -37,7 +37,6 @@ export async function POST(request: NextRequest) {
       topImages: patternData.topImages,
       bottomOwner: patternData.bottomOwner,
       bottomImages: patternData.bottomImages,
-      avgMouldsPerHour: patternData.avgMouldsPerHour != null ? String(patternData.avgMouldsPerHour) : null,
       patternImages: patternData.patternImages,
       remarks: patternData.remarks,
     }
@@ -54,7 +53,6 @@ export async function POST(request: NextRequest) {
               images: cb.images,
               typeOfCore: cb.typeOfCore,
               coreWeight: cb.coreWeight != null ? String(cb.coreWeight) : null,
-              avgCoreProduction: cb.avgCoreProduction,
             }))
           ).returning()
         : []

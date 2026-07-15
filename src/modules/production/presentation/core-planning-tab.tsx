@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { BacklogItem } from './daily-planning-modal'
 import { Input } from '@/shared/ui/input'
 import { Button } from '@/shared/ui/button'
@@ -18,9 +18,17 @@ export function CorePlanningTab({ coreBacklog, patterns, openOrders, dailyPlans,
   const [viewMode, setViewMode] = useState<'table' | 'calendar'>('calendar')
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
 
-  
   // Workers state per core box code
   const [workersPerBox, setWorkersPerBox] = useState<Record<string, number>>({})
+
+  // Equipment master is the only source for the per-hour core production rate
+  const [coreEquipments, setCoreEquipments] = useState<any[]>([])
+  useEffect(() => {
+    fetch('/api/equipment')
+      .then(res => res.json())
+      .then(data => setCoreEquipments(data.filter((e: any) => e.type === 'Core Machine' && e.isActive)))
+      .catch(console.error)
+  }, [])
 
   const SHIFT_HOURS = 12.5 // 8:00 AM to 8:30 PM
 
@@ -45,34 +53,33 @@ export function CorePlanningTab({ coreBacklog, patterns, openOrders, dailyPlans,
   const days = getDays()
   const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
+  // Average core production rate across active Core Machines in equipment master -
+  // patterns/core boxes no longer carry their own rate.
+  const equipmentAvgProd = useMemo(() => {
+    const rates = coreEquipments.map(e => Number(e.avgPiecesPerHour)).filter(r => r > 0)
+    return rates.length > 0 ? rates.reduce((s, r) => s + r, 0) / rates.length : 10
+  }, [coreEquipments])
+
   // Group backlog by Core Box to calculate Shift Planning
   const shiftPlanningData = useMemo(() => {
     const boxMap = new Map<string, { totalRequired: number, avgProduction: number, patternRef: string }>()
-    
+
     coreBacklog.forEach(b => {
       if (!b.coreBoxCode) return
-      
-      const pattern = patterns.find(p => p.code === b.patternRef)
-      const specificCoreBox = pattern?.sharedCoreBoxes?.find((scb: any) => scb.code === b.coreBoxCode)
-      // Check core box first, then fallback to pattern level. Patterns have no
-      // avgCoreProduction field of their own - that only exists per core box -
-      // so the pattern-level fallback is avgMouldsPerHour, same field
-      // core-planning-modal.tsx falls back to.
-      const avgProd = Number(specificCoreBox?.avgCoreProduction) || Number((pattern as any)?.avgMouldsPerHour) || 10
 
       if (!boxMap.has(b.coreBoxCode)) {
-        boxMap.set(b.coreBoxCode, { totalRequired: 0, avgProduction: avgProd, patternRef: b.patternRef })
+        boxMap.set(b.coreBoxCode, { totalRequired: 0, avgProduction: equipmentAvgProd, patternRef: b.patternRef })
       }
-      
+
       const existing = boxMap.get(b.coreBoxCode)!
       existing.totalRequired += Math.max(0, b.totalRequired - b.totalScheduled) // Remaining
     })
-    
+
     return Array.from(boxMap.entries()).map(([code, data]) => ({
       code,
       ...data
     }))
-  }, [coreBacklog, patterns])
+  }, [coreBacklog, equipmentAvgProd])
 
   // Aggregate capacities
   const totalRemainingCores = coreBacklog.reduce((sum, b) => sum + Math.max(0, b.totalRequired - b.totalScheduled), 0)

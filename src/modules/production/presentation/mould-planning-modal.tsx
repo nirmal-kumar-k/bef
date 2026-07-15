@@ -177,8 +177,7 @@ export function MouldPlanningModal({
       const maxWorkers = Math.max(1, ...Object.values(r.hourlyWorkers))
       
       const eq = equipments.find(e => e.id === r.machineId)
-      const pattern = patterns.find(p => p.code === r.patternRef)
-      const avgProd = resolveAvgProductionRate(Number(pattern?.avgMouldsPerHour) || undefined, eq?.avgPiecesPerHour)
+      const avgProd = resolveAvgProductionRate(undefined, eq?.avgPiecesPerHour)
       const shiftHours = TIME_SLOTS.reduce((s, sl) => s + sl.hours, 0)
       const possibleQty = Math.round(avgProd * shiftHours)
 
@@ -243,9 +242,8 @@ export function MouldPlanningModal({
   // left out - the machine isn't actually productive at the shift's nominal start
   // time (warm-up/changeover), real output starts from the second slot.
   const distributeQty = (target: number, patternRef: string, machineId: string) => {
-    const pattern = patterns.find(p => p.code === patternRef)
     const eq = equipments.find(e => e.id === machineId)
-    const avgProd = resolveAvgProductionRate(Number(pattern?.avgMouldsPerHour) || undefined, eq?.avgPiecesPerHour)
+    const avgProd = resolveAvgProductionRate(undefined, eq?.avgPiecesPerHour)
 
     const hourlyTargets: Record<string, number> = {}
     const hourlyWorkers: Record<string, number> = {}
@@ -512,9 +510,8 @@ export function MouldPlanningModal({
                       </thead>
                       <tbody className="divide-y divide-[#E0E7FF]">
                         {activeRows.map(row => {
-                          const pattern = patterns.find(p => p.code === row.patternRef)
                           const eq = equipments.find(e => e.id === row.machineId)
-                          const avgProd = resolveAvgProductionRate(Number(pattern?.avgMouldsPerHour) || undefined, eq?.avgPiecesPerHour)
+                          const avgProd = resolveAvgProductionRate(undefined, eq?.avgPiecesPerHour)
                           const shiftHours = TIME_SLOTS.reduce((acc, sl) => acc + sl.hours, 0)
                           const possibleQty = Math.round(avgProd * shiftHours)
 

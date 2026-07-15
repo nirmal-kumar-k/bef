@@ -177,9 +177,7 @@ export function CorePlanningModal({
       const maxWorkers = Math.max(1, ...Object.values(r.hourlyWorkers))
 
       const eq = equipments.find(e => e.id === r.machineId)
-      const pattern = patterns.find(p => p.code === r.patternRef)
-      const scb = pattern?.sharedCoreBoxes?.find((s: any) => s.code === r.coreBoxCode)
-      const avgProd = resolveAvgProductionRate(Number(scb?.avgCoreProduction) || Number(pattern?.avgMouldsPerHour) || undefined, eq?.avgPiecesPerHour)
+      const avgProd = resolveAvgProductionRate(undefined, eq?.avgPiecesPerHour)
       const shiftHours = TIME_SLOTS.reduce((s, sl) => s + sl.hours, 0)
       const possibleQty = Math.round(avgProd * shiftHours)
 
@@ -245,10 +243,8 @@ export function CorePlanningModal({
   // left out - the machine isn't actually productive at the shift's nominal start
   // time (warm-up/changeover), real output starts from the second slot.
   const distributeQty = (target: number, patternRef: string, coreBoxCode: string, machineId: string) => {
-    const pattern = patterns.find(p => p.code === patternRef)
     const eq = equipments.find(e => e.id === machineId)
-    const scb = pattern?.sharedCoreBoxes?.find((s: any) => s.code === coreBoxCode)
-    const avgProd = resolveAvgProductionRate(Number(scb?.avgCoreProduction) || Number(pattern?.avgMouldsPerHour) || undefined, eq?.avgPiecesPerHour)
+    const avgProd = resolveAvgProductionRate(undefined, eq?.avgPiecesPerHour)
 
     const hourlyTargets: Record<string, number> = {}
     const hourlyWorkers: Record<string, number> = {}
@@ -380,14 +376,12 @@ export function CorePlanningModal({
   const rowMeta = useMemo(() => {
     const shiftHours = TIME_SLOTS.reduce((acc, sl) => acc + sl.hours, 0)
     return activeRows.map(row => {
-      const pattern = patterns.find(p => p.code === row.patternRef)
       const eq = equipments.find(e => e.id === row.machineId)
-      const scb = pattern?.sharedCoreBoxes?.find((s: any) => s.code === row.coreBoxCode)
-      const avgProd = resolveAvgProductionRate(Number(scb?.avgCoreProduction) || Number(pattern?.avgMouldsPerHour) || undefined, eq?.avgPiecesPerHour)
+      const avgProd = resolveAvgProductionRate(undefined, eq?.avgPiecesPerHour)
       const possibleQty = Math.round(avgProd * shiftHours)
       return { row, possibleQty }
     })
-  }, [activeRows, patterns, equipments, TIME_SLOTS])
+  }, [activeRows, equipments, TIME_SLOTS])
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>

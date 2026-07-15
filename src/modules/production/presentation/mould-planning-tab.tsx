@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { BacklogItem } from './daily-planning-modal'
 import { Label } from '@/shared/ui/label'
 import { MouldPlanningModal } from './mould-planning-modal'
@@ -18,6 +18,15 @@ export function MouldPlanningTab({ mouldBacklog, patterns, openOrders, dailyPlan
 
 
   const SHIFT_HOURS = 12.5 // 8:00 AM to 8:30 PM
+
+  // Equipment master is the only source for the per-hour mould production rate
+  const [mouldEquipments, setMouldEquipments] = useState<any[]>([])
+  useEffect(() => {
+    fetch('/api/equipment')
+      .then(res => res.json())
+      .then(data => setMouldEquipments(data.filter((e: any) => e.type === 'Moulding Machine' && e.isActive)))
+      .catch(console.error)
+  }, [])
 
   // Calendar logic
   const getDays = () => {
@@ -43,19 +52,12 @@ export function MouldPlanningTab({ mouldBacklog, patterns, openOrders, dailyPlan
   // Calculate capacities
   const totalRemainingMoulds = mouldBacklog.reduce((sum, b) => sum + Math.max(0, b.totalRequired - b.totalScheduled), 0)
   
-  // Calculate average capacity per shift across all required patterns
+  // Average mould production rate across active Moulding Machines in equipment
+  // master - patterns no longer carry their own rate.
   const averageMouldsPerHour = useMemo(() => {
-    let sum = 0
-    let count = 0
-    mouldBacklog.forEach(b => {
-      const pattern = patterns.find(p => p.code === b.patternRef)
-      if (pattern && pattern.avgMouldsPerHour) {
-        sum += Number(pattern.avgMouldsPerHour)
-        count++
-      }
-    })
-    return count > 0 ? sum / count : 20 // default 20 if not set
-  }, [mouldBacklog, patterns])
+    const rates = mouldEquipments.map(e => Number(e.avgPiecesPerHour)).filter(r => r > 0)
+    return rates.length > 0 ? rates.reduce((s, r) => s + r, 0) / rates.length : 20
+  }, [mouldEquipments])
 
   const shiftCapacity = averageMouldsPerHour * SHIFT_HOURS
   const capacityRatio = totalRemainingMoulds / shiftCapacity
@@ -238,8 +240,7 @@ export function MouldPlanningTab({ mouldBacklog, patterns, openOrders, dailyPlan
               {mouldBacklog.map((b) => {
                 const remaining = b.totalRequired - b.totalScheduled
                 const isPending = remaining > 0
-                const pattern = patterns.find(p => p.code === b.patternRef)
-                const avgPerHour = pattern?.avgMouldsPerHour || '-'
+                const avgPerHour = averageMouldsPerHour || '-'
 
                 return (
                   <tr key={b.itemId} className="hover:bg-[#FFFFFF]/50 transition-colors">

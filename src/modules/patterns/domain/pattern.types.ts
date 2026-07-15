@@ -16,8 +16,6 @@ export interface Pattern {
   bottomImages?: string[]
   typeOfCore?: string
   coreWeight?: number
-  avgCoreProduction?: string
-  avgMouldsPerHour?: number
   patternImages?: string[]
   remarks: string
   mappedProducts: { name: string; cavities: number; selectedCoreBoxes?: { coreBoxCode: string; quantity: number }[] }[]

@@ -17,7 +17,6 @@ export const patterns = pgTable('patterns', {
   topImages: jsonb('top_images').$type<string[]>().default([]),
   bottomOwner: text('bottom_owner').default('Customer'),
   bottomImages: jsonb('bottom_images').$type<string[]>().default([]),
-  avgMouldsPerHour: numeric('avg_moulds_per_hour'),
   patternImages: jsonb('pattern_images').$type<string[]>().default([]),
   remarks: text('remarks').default(''),
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -33,7 +32,6 @@ export const patternCoreBoxes = pgTable('pattern_core_boxes', {
   images: jsonb('images').$type<string[]>().default([]),
   typeOfCore: text('type_of_core'),
   coreWeight: numeric('core_weight'),
-  avgCoreProduction: text('avg_core_production'),
 })
 
 // Mirrors IPattern.mappedProducts (selectedCoreBoxes kept as jsonb: small, references core box by code)

@@ -36,7 +36,7 @@ export async function PUT(
 
     // Partial update: only include fields the client actually sent, so a PUT
     // that only touches e.g. mappedProducts can't null out unrelated columns.
-    const NUMERIC_FIELDS = new Set(['goodWeight', 'runnerRiserWeight', 'totalWeight', 'avgMouldsPerHour'])
+    const NUMERIC_FIELDS = new Set(['goodWeight', 'runnerRiserWeight', 'totalWeight'])
     const safePatternData: Record<string, any> = { updatedAt: new Date() }
     for (const [key, value] of Object.entries(patternData)) {
       if (value === undefined) continue
@@ -61,7 +61,6 @@ export async function PUT(
                 images: cb.images,
                 typeOfCore: cb.typeOfCore,
                 coreWeight: cb.coreWeight != null ? String(cb.coreWeight) : null,
-                avgCoreProduction: cb.avgCoreProduction,
               }))
             ).returning()
           : []

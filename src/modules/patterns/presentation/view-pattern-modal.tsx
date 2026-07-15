@@ -44,7 +44,6 @@ interface CoreBox {
   images: string[]
   typeOfCore?: string
   coreWeight?: number
-  avgCoreProduction?: string
 }
 
 const TYPE_OF_CORE_OPTIONS = ['Oil', 'CO2', 'Amine']
@@ -91,9 +90,6 @@ export function ViewPatternModal({
 
   const [typeOfCoreInput, setTypeOfCoreInput] = useState('')
 
-  // Moulding metrics
-  const [avgMouldsPerHour, setAvgMouldsPerHour] = useState<number | ''>('')
-
   // Weights & Images
   const [goodCastingWeight, setGoodCastingWeight] = useState<number | ''>('')
   const [totalBoxWeight, setTotalBoxWeight] = useState<number | ''>('')
@@ -136,8 +132,6 @@ export function ViewPatternModal({
         setCoreBoxPresent('Yes')
         setSharedCoreBoxes([{ id: 'init-shared', code: '', owner: 'Customer', images: [] }])
       }
-
-      setAvgMouldsPerHour(pattern.avgMouldsPerHour ?? '')
     }
   }, [pattern, isOpen])
 
@@ -171,7 +165,6 @@ export function ViewPatternModal({
       bottomImages,
       coreBoxes: coreBoxPresent === 'Yes' ? sharedCoreBoxes.length : 0,
       sharedCoreBoxes: coreBoxPresent === 'Yes' ? sharedCoreBoxes : [],
-      avgMouldsPerHour: typeof avgMouldsPerHour === 'number' ? avgMouldsPerHour : null,
       patternImages,
       remarks,
     })
@@ -251,17 +244,6 @@ export function ViewPatternModal({
                     <SelectItem value="Hand Moulding">Hand Moulding</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">Avg Moulds per Hour</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  placeholder="e.g. 12"
-                  value={avgMouldsPerHour}
-                  onChange={(e) => setAvgMouldsPerHour(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="h-12 bg-[#FFFFFF] border-[#E0E7FF] text-[#172554]"
-                />
               </div>
             </div>
           </div>
@@ -391,7 +373,7 @@ export function ViewPatternModal({
                       </div>
 
                       {/* Core Box Attributes */}
-                      <div className="grid grid-cols-3 gap-4 pt-2 border-t border-[#E0E7FF]">
+                      <div className="grid grid-cols-2 gap-4 pt-2 border-t border-[#E0E7FF]">
                         <div className="space-y-1.5">
                           <Label className="text-xs text-[#64748B]">Type of Core</Label>
                           <Select
@@ -416,15 +398,6 @@ export function ViewPatternModal({
                             value={cb.coreWeight || ''}
                             onChange={(e) => setSharedCoreBoxes(sharedCoreBoxes.map(b => b.id === cb.id ? { ...b, coreWeight: e.target.value === '' ? undefined : Number(e.target.value) } : b))}
                             placeholder="0.0"
-                            className="bg-[#F4F6FB]/50 border-[#E0E7FF] text-[#172554] h-9 focus-visible:ring-1 focus-visible:ring-[#4F46E5]"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs text-[#64748B]">Avg Core/hr</Label>
-                          <Input
-                            value={cb.avgCoreProduction || ''}
-                            onChange={(e) => setSharedCoreBoxes(sharedCoreBoxes.map(b => b.id === cb.id ? { ...b, avgCoreProduction: e.target.value } : b))}
-                            placeholder="e.g. 10"
                             className="bg-[#F4F6FB]/50 border-[#E0E7FF] text-[#172554] h-9 focus-visible:ring-1 focus-visible:ring-[#4F46E5]"
                           />
                         </div>
