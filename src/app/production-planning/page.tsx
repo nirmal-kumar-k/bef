@@ -97,6 +97,11 @@ export default function ProductionPlanningPage() {
       groups.forEach(groupItems => {
         const pattern = groupItems[0].pattern
         const finalMoulds = Math.max(...groupItems.map(ci => ci.itemMoulds))
+        // A core box is required per UNIT cast, not per mould pour - a mould with
+        // multiple cavities still needs one core per cavity/unit, so core
+        // requirement must scale with raw unit quantity, not the cavity-divided
+        // mould count finalMoulds uses.
+        const finalUnits = Math.max(...groupItems.map(ci => ci.item.quantity))
         const representativeId = groupItems[0].uniqueId
         const productName = Array.from(new Set(groupItems.map(ci => ci.item.productName))).join(', ')
 
@@ -143,8 +148,8 @@ export default function ProductionPlanningPage() {
         })
 
         if (hasProductSpecificCoreBoxes) {
-          coreBoxReqs.forEach((qtyPerMould, codeToUse) => {
-            const totalCoreRequired = finalMoulds * qtyPerMould
+          coreBoxReqs.forEach((qtyPerUnit, codeToUse) => {
+            const totalCoreRequired = finalUnits * qtyPerUnit
             const coreScheduled = plans.filter(p => p.stage === 'Core' && p.itemId === representativeId && p.coreBoxCode === codeToUse).reduce((sum, p) => sum + p.quantityScheduled, 0)
             coreBacklog.push({
               itemId: representativeId, orderNo: order.customerOrderNo, patternRef: pattern?.code || '-', productName, coreBoxCode: codeToUse,
@@ -153,7 +158,7 @@ export default function ProductionPlanningPage() {
           })
         } else if (pattern && pattern.sharedCoreBoxes && pattern.sharedCoreBoxes.length > 0) {
           pattern.sharedCoreBoxes.forEach((cb: any) => {
-            const totalCoreRequired = finalMoulds
+            const totalCoreRequired = finalUnits
             const codeToUse = cb.code || 'Unnamed Core Box'
             const coreScheduled = plans.filter(p => p.stage === 'Core' && p.itemId === representativeId && p.coreBoxCode === codeToUse).reduce((sum, p) => sum + p.quantityScheduled, 0)
             coreBacklog.push({
@@ -162,7 +167,7 @@ export default function ProductionPlanningPage() {
             })
           })
         } else if (pattern && pattern.coreBoxes > 0) {
-          const totalCoreRequired = finalMoulds * pattern.coreBoxes
+          const totalCoreRequired = finalUnits * pattern.coreBoxes
           const coreScheduled = plans.filter(p => p.stage === 'Core' && p.itemId === representativeId && p.coreBoxCode === 'Legacy').reduce((sum, p) => sum + p.quantityScheduled, 0)
           coreBacklog.push({
             itemId: representativeId, orderNo: order.customerOrderNo, patternRef: pattern.code, productName, coreBoxCode: 'Legacy',
