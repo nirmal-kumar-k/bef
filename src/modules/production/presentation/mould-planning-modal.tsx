@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/shared/ui/switch'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/shared/ui/command'
+import { CapacityErrorDialog } from '@/shared/ui/capacity-error-dialog'
 import { BacklogItem } from './daily-planning-modal'
 import { CubeTransparent, Trash, CaretDown, MagicWand } from '@phosphor-icons/react'
 import { cn } from '@/shared/lib/utils'
@@ -74,6 +75,7 @@ export function MouldPlanningModal({
   // UI Toggles
   const [viewLabourers, setViewLabourers] = useState<boolean>(false)
   const [comboboxOpen, setComboboxOpen] = useState(false)
+  const [capacityErrorLines, setCapacityErrorLines] = useState<string[] | null>(null)
 
   // Fetch shifts & equipments
   useEffect(() => {
@@ -268,8 +270,7 @@ export function MouldPlanningModal({
     }).filter(({ scheduledSum, possibleQty }) => scheduledSum > possibleQty)
 
     if (overCapacityRows.length > 0) {
-      const details = overCapacityRows.map(({ r, scheduledSum, possibleQty }) => `${r.patternRef}: ${scheduledSum} scheduled, max ${possibleQty}`).join('\n')
-      alert(`Cannot save - the following exceed this machine's possible capacity for the shift:\n\n${details}`)
+      setCapacityErrorLines(overCapacityRows.map(({ r, scheduledSum, possibleQty }) => `${r.patternRef}: ${scheduledSum} scheduled, max ${possibleQty}`))
       return
     }
 
@@ -471,6 +472,7 @@ export function MouldPlanningModal({
   }, [backlogData, activeRows])
 
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className={cn("w-[98vw] sm:max-w-[98vw] min-h-[60vh] max-h-[95vh] text-foreground p-0 shadow-2xl flex flex-col transition-colors duration-500 ease-in-out", theme.dialog)}>
         <div className="flex flex-col w-full h-full">
@@ -811,5 +813,7 @@ export function MouldPlanningModal({
         </div>
       </DialogContent>
     </Dialog>
+    <CapacityErrorDialog lines={capacityErrorLines} onClose={() => setCapacityErrorLines(null)} />
+    </>
   )
 }

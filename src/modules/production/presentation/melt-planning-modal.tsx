@@ -10,6 +10,7 @@ import { Button, buttonVariants } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
+import { CapacityErrorDialog } from '@/shared/ui/capacity-error-dialog'
 import { BacklogItem } from './daily-planning-modal'
 import { Fire, Trash, Plus, Clock, WarningCircle } from '@phosphor-icons/react'
 import { cn } from '@/shared/lib/utils'
@@ -128,6 +129,7 @@ export function MeltPlanningModal({
 
   // Add Heat flow: pick a grade first, then a heat code field appears
   const [addHeatOpen, setAddHeatOpen] = useState(false)
+  const [capacityErrorLines, setCapacityErrorLines] = useState<string[] | null>(null)
   const [newHeatGrade, setNewHeatGrade] = useState('')
   const [newHeatCode, setNewHeatCode] = useState('')
 
@@ -303,8 +305,7 @@ export function MeltPlanningModal({
     }).filter(({ totalWeight, cap }) => totalWeight > cap)
 
     if (overCapacityHeats.length > 0) {
-      const details = overCapacityHeats.map(({ h, totalWeight, cap }) => `Heat ${h.heatNumber} (${h.heatCode}): ${totalWeight.toFixed(1)} kg scheduled, max ${cap} kg`).join('\n')
-      alert(`Cannot save - the following heats exceed furnace capacity:\n\n${details}`)
+      setCapacityErrorLines(overCapacityHeats.map(({ h, totalWeight, cap }) => `Heat ${h.heatNumber} (${h.heatCode}): ${totalWeight.toFixed(1)} kg scheduled, max ${cap} kg`))
       return
     }
 
@@ -413,6 +414,7 @@ export function MeltPlanningModal({
   const warmBorder = isNightShift ? 'border-orange-200' : 'border-[#E0E7FF]'
 
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className={cn("w-[95vw] sm:max-w-[1200px] min-h-[60vh] max-h-[90vh] text-foreground p-0 shadow-2xl flex flex-col transition-colors duration-500 ease-in-out", warmBg, warmBorder)}>
         <div className="flex flex-col w-full h-full">
@@ -721,6 +723,8 @@ export function MeltPlanningModal({
         </div>
       </DialogContent>
     </Dialog>
+    <CapacityErrorDialog lines={capacityErrorLines} onClose={() => setCapacityErrorLines(null)} />
+    </>
   )
 }
 
