@@ -228,7 +228,13 @@ export default function ProductionPlanningPage() {
       for (const plan of newPlans) {
         const id = plan._id || plan.id
         if (id) {
-          if (plan.quantityScheduled === 0 && !plan.actualQuantity) {
+          // Core/Mould no longer have an Actual-entry field, so `actualQuantity`
+          // can never be set for them again - treating an unscheduled (0-hourly)
+          // row as "delete this plan" would wipe existing rows any time hourly
+          // cells are left empty, with no way to opt out. Melt/Knockout still
+          // rely on this guard since their Actual-entry flow is unchanged.
+          const usesActualSafetyValve = plan.stage !== 'Core' && plan.stage !== 'Mould'
+          if (usesActualSafetyValve && plan.quantityScheduled === 0 && !plan.actualQuantity) {
             // Delete
             await fetch(`/api/production-plans/${id}`, { method: 'DELETE' })
           } else {
