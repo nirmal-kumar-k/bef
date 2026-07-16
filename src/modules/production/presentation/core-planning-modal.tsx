@@ -257,7 +257,7 @@ export function CorePlanningModal({
     })
 
     plannedRows.forEach(r => {
-      // Actual hourly-scheduled total, not the (possibly higher) Pending Qty -
+      // Actual hourly-scheduled total, not the (possibly higher) TQ -
       // matches what handleSave actually records, so this preview isn't
       // misleading about what will really get produced/saved.
       const scheduled = Object.values(r.hourlyTargets).reduce((s, v) => s + (v || 0), 0)
@@ -534,10 +534,10 @@ export function CorePlanningModal({
     return Array.from(options.values())
   }, [backlogData, mappedCoreBoxes, activeRows])
 
-  // Per-row derived metrics, shared between the column header and the blocking check below
+  // Per-row wrapper, shared between the column header and the blocking check below
   const rowMeta = useMemo(() => {
-    return activeRows.map(row => ({ row, possibleQty: computePossibleQty(row.machineId) }))
-  }, [activeRows, equipments, TIME_SLOTS])
+    return activeRows.map(row => ({ row }))
+  }, [activeRows])
 
   return (
     <>
@@ -720,7 +720,7 @@ export function CorePlanningModal({
                         </tr>
                       </thead>
                       <tbody className={cn("divide-y transition-colors duration-500 ease-in-out", theme.tableDivide)}>
-                        {rowMeta.map(({ row, possibleQty }) => {
+                        {rowMeta.map(({ row }) => {
                           const scheduledSum = Object.values(row.hourlyTargets).reduce((s, v) => s + (v || 0), 0)
                           const target = parseInt(row.totalQty, 10) || 0
                           const delta = target - scheduledSum

@@ -251,7 +251,7 @@ export function MouldPlanningModal({
     })
     
     plannedRows.forEach(r => {
-      // Actual hourly-scheduled total, not the (possibly higher) Pending Qty -
+      // Actual hourly-scheduled total, not the (possibly higher) TQ -
       // matches what handleSave actually records, so this preview isn't
       // misleading about what will really get produced/saved.
       const scheduled = Object.values(r.hourlyTargets).reduce((s, v) => s + (v || 0), 0)

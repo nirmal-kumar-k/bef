@@ -171,9 +171,9 @@ export function CorePlanningTab({ coreBacklog, patterns, openOrders, dailyPlans,
               prevDate.setDate(date.getDate() - 1)
               const prevDateStr = prevDate.toISOString().split('T')[0]
               const prevDayPlans = dailyPlans.filter(p => p.date === prevDateStr && p.stage === 'Core')
-              // Core plans no longer carry an Actual entry - whatever was
-              // scheduled into hourly slots is treated as completed, so any
-              // remaining backlog carries forward as the full scheduled amount.
+              // With no Actual entry to compare against, we can't know what was
+              // actually produced, so we conservatively carry the full
+              // scheduled amount forward as still-pending.
               const carryForwardAmount = prevDayPlans.reduce((s, p) => s + p.quantityScheduled, 0)
               const hasCarryForward = carryForwardAmount > 0
 
