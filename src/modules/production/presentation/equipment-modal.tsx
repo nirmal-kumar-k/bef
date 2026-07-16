@@ -47,6 +47,7 @@ export function EquipmentModal({ isOpen, onClose, initialData }: EquipmentModalP
   })
   
   const [isSaving, setIsSaving] = useState(false)
+  const [isResettingSequence, setIsResettingSequence] = useState(false)
   const [coreBoxOptions, setCoreBoxOptions] = useState<CoreBoxOption[]>([])
   const [coreBoxPickerOpen, setCoreBoxPickerOpen] = useState(false)
 
@@ -129,6 +130,28 @@ export function EquipmentModal({ isOpen, onClose, initialData }: EquipmentModalP
       console.error('Error saving equipment:', error)
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  // The heat sequence badge shown on Melt Planning cards never auto-resets -
+  // it's a running count of every heat this furnace has ever run. This is
+  // the only way to zero it back out (e.g. starting a new production cycle).
+  const resetHeatSequence = async () => {
+    if (!formData.id) return
+    setIsResettingSequence(true)
+    try {
+      const res = await fetch(`/api/equipment/${formData.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ heatSequence: 0 }),
+      })
+      if (res.ok) {
+        setFormData(prev => ({ ...prev, heatSequence: 0 }))
+      }
+    } catch (error) {
+      console.error('Error resetting heat sequence:', error)
+    } finally {
+      setIsResettingSequence(false)
     }
   }
 
@@ -215,6 +238,25 @@ export function EquipmentModal({ isOpen, onClose, initialData }: EquipmentModalP
                   className="bg-[#F4F6FB] border-[#4F46E5]/30 focus:border-[#4F46E5] text-[#172554] font-mono"
                 />
               </div>
+              {initialData && (
+                <div className="grid gap-2 col-span-2">
+                  <Label className="text-[#4F46E5] text-[10px] font-bold uppercase tracking-wider">Heat Sequence Counter</Label>
+                  <div className="flex items-center justify-between bg-[#F4F6FB] border border-[#4F46E5]/30 rounded-md px-3 py-2">
+                    <span className="font-mono font-bold text-[#172554]">{formData.heatSequence || 0}</span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={resetHeatSequence}
+                      disabled={isResettingSequence}
+                      className="h-7 text-xs border-[#E0E7FF] text-[#64748B] hover:text-red-600 hover:border-red-200"
+                    >
+                      {isResettingSequence ? 'Resetting...' : 'Reset'}
+                    </Button>
+                  </div>
+                  <p className="text-[10px] text-[#94A3B8]">Never resets automatically - only when reset here.</p>
+                </div>
+              )}
             </div>
           )}
 

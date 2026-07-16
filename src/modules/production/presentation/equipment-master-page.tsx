@@ -16,6 +16,7 @@ export interface Equipment {
   regularHeatDurationMins?: number
   avgPiecesPerHour?: number
   restrictedCoreBoxes?: string[]
+  heatSequence?: number
   isActive: boolean
 }
 

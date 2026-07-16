@@ -1,22 +1,12 @@
-import { EmptyState } from '@/shared/ui/empty-state'
+import { redirect } from 'next/navigation'
+import { getSessionUser } from '@/shared/lib/auth'
+import { UsersMasterPage } from '@/modules/users/presentation/users-master-page'
 
-export default function UsersPage() {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-4xl font-bold text-foreground font-heading mb-2">
-          Users & Access
-        </h1>
-        <p className="text-muted-foreground">
-          Team management and permissions
-        </p>
-      </div>
+export default async function UsersPage() {
+  const session = await getSessionUser()
+  if (!session || session.role !== 'admin') {
+    redirect('/dashboard')
+  }
 
-      <EmptyState
-        title="Coming Soon"
-        description="User accounts, role management, and access control settings will be available here."
-        icon="🔐"
-      />
-    </div>
-  )
+  return <UsersMasterPage />
 }

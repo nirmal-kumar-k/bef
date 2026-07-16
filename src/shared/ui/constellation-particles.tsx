@@ -11,7 +11,7 @@ interface Node {
   color: string
 }
 
-const COLORS = ['#48CAE4', '#90E0EF', '#7209B7']
+const COLORS = ['#4F46E5', '#6366F1', '#A5B4FC']
 
 export function ConstellationParticles() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -92,7 +92,7 @@ export function ConstellationParticles() {
             
             const opacity = 1 - dist / connectRadius
             const grad = ctx.createLinearGradient(mouse.x, mouse.y, nodes[i].x, nodes[i].y)
-            grad.addColorStop(0, 'rgba(114, 9, 183, 1)') // Purple center at mouse
+            grad.addColorStop(0, 'rgba(79, 70, 229, 1)') // Indigo center at mouse, matching the app's brand accent
             grad.addColorStop(1, nodes[i].color)
             
             ctx.strokeStyle = grad

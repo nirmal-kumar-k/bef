@@ -45,12 +45,12 @@ export default function ShiftMasterPage() {
           await fetch('/api/shifts', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: 'Shift 1', startTime: '08:00 AM', endTime: '08:30 PM', breaks: [{ startTime: '01:00 PM', endTime: '01:30 PM' }] })
+            body: JSON.stringify({ name: 'Day Shift', startTime: '08:00 AM', endTime: '08:30 PM', breaks: [{ startTime: '01:00 PM', endTime: '01:30 PM' }] })
           })
           await fetch('/api/shifts', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: 'Shift 2', startTime: '08:00 PM', endTime: '07:30 AM', breaks: [] })
+            body: JSON.stringify({ name: 'Night Shift', startTime: '08:00 PM', endTime: '07:30 AM', breaks: [] })
           })
           const res2 = await fetch('/api/shifts')
           if (res2.ok) {

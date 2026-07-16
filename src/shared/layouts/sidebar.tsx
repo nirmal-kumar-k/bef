@@ -3,12 +3,12 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
-import { 
-  SquaresFour, 
-  ListDashes, 
-  Shapes, 
-  Package, 
-  Users, 
+import {
+  SquaresFour,
+  ListDashes,
+  Shapes,
+  Package,
+  Users,
   ChartBar,
   List,
   X,
@@ -16,11 +16,13 @@ import {
   Factory,
   Fire,
   Wrench,
+  UserGear,
   SignOut
 } from '@phosphor-icons/react'
 import { logoutUser } from '@/modules/users/application/auth.actions'
+import { useRole } from '@/shared/context/role-context'
 
-const navGroups: { label: string; items: { href: string; label: string; icon: React.ReactNode; badge?: string | number }[] }[] = [
+const navGroups: { label: string; adminOnly?: boolean; items: { href: string; label: string; icon: React.ReactNode; badge?: string | number }[] }[] = [
   {
     label: 'Operations',
     items: [
@@ -47,11 +49,18 @@ const navGroups: { label: string; items: { href: string; label: string; icon: Re
     items: [
       { href: '/reports', label: 'Reports', icon: <ChartBar weight="duotone" className="w-[18px] h-[18px] opacity-80 group-hover:opacity-100 transition-opacity" /> },
     ]
+  },
+  {
+    label: 'Admin',
+    adminOnly: true,
+    items: [
+      { href: '/users', label: 'Users', icon: <UserGear weight="duotone" className="w-[18px] h-[18px] opacity-80 group-hover:opacity-100 transition-opacity" /> },
+    ]
   }
 ]
 
 interface SidebarProps {
-  user: { name: string; email: string } | null
+  user: { name: string; username: string } | null
 }
 
 export function Sidebar({ user }: SidebarProps) {
@@ -59,8 +68,9 @@ export function Sidebar({ user }: SidebarProps) {
   const [isOpen, setIsOpen] = useState(false)
 
   const isActive = (href: string) => pathname === href
+  const { role } = useRole()
 
-  const filteredNavGroups = navGroups
+  const filteredNavGroups = navGroups.filter(group => !group.adminOnly || role === 'Admin')
 
   const initials = user?.name
     ? user.name.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase()
@@ -158,7 +168,7 @@ export function Sidebar({ user }: SidebarProps) {
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-[12.5px] font-medium text-[#172554] truncate">{user?.name ?? 'Not signed in'}</div>
-            <div className="text-[10.5px] text-[#94A3B8] truncate">{user?.email ?? ''}</div>
+            <div className="text-[10.5px] text-[#94A3B8] truncate">{user?.username ? `@${user.username}` : ''}</div>
           </div>
           <form action={logoutUser}>
             <button

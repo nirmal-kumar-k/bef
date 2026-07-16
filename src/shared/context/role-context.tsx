@@ -11,9 +11,8 @@ interface RoleContextType {
 
 const RoleContext = createContext<RoleContextType | undefined>(undefined)
 
-export function RoleProvider({ children }: { children: ReactNode }) {
-  // Default to Admin for demonstration
-  const [role, setRole] = useState<Role>('Admin')
+export function RoleProvider({ children, initialRole = 'Supervisor' }: { children: ReactNode; initialRole?: Role }) {
+  const [role, setRole] = useState<Role>(initialRole)
 
   return (
     <RoleContext.Provider value={{ role, setRole }}>

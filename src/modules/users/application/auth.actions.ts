@@ -21,52 +21,54 @@ async function isRequestSecure() {
   return process.env.NODE_ENV === 'production'
 }
 
+async function issueSession(user: { id: string; role: string; name: string; username: string }) {
+  const token = await new SignJWT({ id: user.id, role: user.role, name: user.name, username: user.username })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('7d')
+    .sign(JWT_SECRET)
+
+  const cookieStore = await cookies()
+  cookieStore.set('auth_token', token, {
+    httpOnly: true,
+    secure: await isRequestSecure(),
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 7 * 24 * 60 * 60, // 7 days
+  })
+}
+
 export async function loginUser(formData: FormData) {
-  const email = formData.get('email') as string
+  const username = formData.get('username') as string
   const password = formData.get('password') as string
 
-  if (!email || !password) {
-    return { error: 'Email and password are required' }
+  if (!username || !password) {
+    return { error: 'Username and password are required' }
   }
 
   try {
-    const [user] = await db.select().from(users).where(eq(users.email, email))
-
-    // For development: If no user exists at all in the DB, create an admin user
-    // This allows the very first login to work automatically.
+    // For development: if no user exists at all in the DB, create a default
+    // admin so the very first login works without a manual seed step.
     const [{ value: userCount }] = await db.select({ value: count() }).from(users)
     if (userCount === 0) {
       console.log('No users found in database. Creating default admin user.')
       const hashedPassword = await bcrypt.hash('admin123', 10)
       const [newUser] = await db.insert(users).values({
         name: 'Admin User',
-        email: 'admin@bef.com',
+        username: 'admin',
         passwordHash: hashedPassword,
         role: 'admin'
       }).returning()
 
-      // If this was the attempt, verify it
-      if (email === 'admin@bef.com' && password === 'admin123') {
-        const token = await new SignJWT({ id: newUser.id, role: newUser.role, name: newUser.name, email: newUser.email })
-          .setProtectedHeader({ alg: 'HS256' })
-          .setIssuedAt()
-          .setExpirationTime('7d')
-          .sign(JWT_SECRET)
-
-        const cookieStore = await cookies()
-        cookieStore.set('auth_token', token, {
-          httpOnly: true,
-          secure: await isRequestSecure(),
-          sameSite: 'lax',
-          path: '/',
-          maxAge: 7 * 24 * 60 * 60, // 7 days
-        })
-
+      if (username === 'admin' && password === 'admin123') {
+        await issueSession(newUser)
         return { success: true }
       }
     }
 
-    if (!user) {
+    const [user] = await db.select().from(users).where(eq(users.username, username))
+
+    if (!user || !user.isActive) {
       return { error: 'Invalid credentials' }
     }
 
@@ -75,21 +77,7 @@ export async function loginUser(formData: FormData) {
       return { error: 'Invalid credentials' }
     }
 
-    const token = await new SignJWT({ id: user.id, role: user.role, name: user.name, email: user.email })
-      .setProtectedHeader({ alg: 'HS256' })
-      .setIssuedAt()
-      .setExpirationTime('7d')
-      .sign(JWT_SECRET)
-
-    const cookieStore = await cookies()
-    cookieStore.set('auth_token', token, {
-      httpOnly: true,
-      secure: await isRequestSecure(),
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 7 * 24 * 60 * 60, // 7 days
-    })
-
+    await issueSession(user)
     return { success: true }
   } catch (error) {
     console.error('Login error:', error)

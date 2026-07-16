@@ -16,6 +16,11 @@ export const equipment = pgTable('equipment', {
   regularHeatDurationMins: integer('regular_heat_duration_mins').default(150),
   avgPiecesPerHour: integer('avg_pieces_per_hour'),
   restrictedCoreBoxes: jsonb('restricted_core_boxes').$type<string[]>().default([]),
+  // Furnace-only: a persistent, never-auto-resetting count of heats ever run on
+  // this furnace, used for the heat card's sequence badge. Unlike the heat
+  // code's daily segment, this only changes when a heat is added or the user
+  // explicitly resets it in Equipment Master.
+  heatSequence: integer('heat_sequence').default(0),
   isActive: boolean('is_active').default(true),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),

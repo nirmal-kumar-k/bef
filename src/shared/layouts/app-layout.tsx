@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 
 interface AppLayoutProps {
   children: React.ReactNode
-  user: { name: string; email: string } | null
+  user: { name: string; username: string } | null
 }
 
 export function AppLayout({ children, user }: AppLayoutProps) {

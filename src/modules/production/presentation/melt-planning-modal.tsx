@@ -36,6 +36,10 @@ interface Heat {
   actualMeltWeight?: number
   grade: string
   heatCode: string
+  // Persistent, never-auto-resets - the furnace's running heat count at the
+  // moment this heat was created (see the Heat Sequence Counter in Equipment
+  // Master). Distinct from heatCode's date segment, which resets daily.
+  sequenceNumber?: number
 }
 
 interface Pour {
@@ -73,6 +77,20 @@ const formatTime = (mins: number) => {
   const ampm = h >= 12 ? 'PM' : 'AM'
   const h12 = h % 12 || 12
   return `${h12.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')} ${ampm}`
+}
+
+const MONTH_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L']
+
+// Default heat code: YY-MonthLetter-DD-DailySequence, e.g. 26-G-13-01 for the
+// 1st heat run on this furnace on 13 Jul 2026. The daily sequence resets each
+// day (it's just this furnace's heat count for the plan's date), unlike the
+// separate, never-resetting sequence number shown on the card.
+const buildDefaultHeatCode = (planDate: string, dailySequence: number) => {
+  const d = new Date(planDate)
+  const yy = String(d.getFullYear()).slice(-2)
+  const monthLetter = MONTH_LETTERS[d.getMonth()]
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${yy}-${monthLetter}-${dd}-${String(dailySequence).padStart(2, '0')}`
 }
 
 // Explicit first/regular heat durations win when set; otherwise fall back to
@@ -158,7 +176,8 @@ export function MeltPlanningModal({
             endTime: p.endTime || '09:30 AM',
             actualMeltWeight: p.actualMeltWeight,
             grade: p.grade || '',
-            heatCode: p.heatNo || ''
+            heatCode: p.heatNo || '',
+            sequenceNumber: p.heatSequenceNumber
           }
         }
 
@@ -198,16 +217,21 @@ export function MeltPlanningModal({
       setHeats(Object.values(loadedHeats))
       setPours(loadedPours)
     }
-  }, [isOpen, dailyPlans, equipments, openOrders, products, patterns])
+  // equipments.length (not equipments itself) is the dependency deliberately -
+  // this should only re-run when equipment data first loads, not every time
+  // its contents change (e.g. addHeat updating a furnace's heatSequence
+  // locally), which would otherwise wipe out any heat added but not yet saved.
+  }, [isOpen, dailyPlans, equipments.length, openOrders, products, patterns])
 
   // Add a heat manually: grade is picked first, then a heat code is entered for it.
   // Start time cascades off the last existing heat for this furnace (or the shift
   // start if this is the first one), matching the timing logic heats always used.
-  const addHeat = () => {
+  const addHeat = async () => {
     if (!activeFurnaceId || !newHeatGrade || !newHeatCode.trim()) return
     const furnace = equipments.find(e => e.id === activeFurnaceId)
     const furnaceHeats = heats.filter(h => h.furnaceId === activeFurnaceId).sort((a, b) => a.heatNumber - b.heatNumber)
     const nextNumber = (furnaceHeats[furnaceHeats.length - 1]?.heatNumber || 0) + 1
+    const nextSequence = (furnace?.heatSequence || 0) + 1
 
     let currentStart: number
     if (furnaceHeats.length > 0) {
@@ -225,11 +249,32 @@ export function MeltPlanningModal({
       startTime: formatTime(currentStart),
       endTime: formatTime(currentStart + duration),
       grade: newHeatGrade,
-      heatCode: newHeatCode.trim()
+      heatCode: newHeatCode.trim(),
+      sequenceNumber: nextSequence
     }])
     setAddHeatOpen(false)
-    setNewHeatGrade('')
     setNewHeatCode('')
+
+    // Persist the furnace's running heat count immediately - it must survive
+    // across days/sessions, unlike the rest of this modal's in-memory state.
+    setEquipments(prev => prev.map(e => e.id === activeFurnaceId ? { ...e, heatSequence: nextSequence } : e))
+    try {
+      await fetch(`/api/equipment/${activeFurnaceId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ heatSequence: nextSequence }),
+      })
+    } catch (error) {
+      console.error('Failed to persist heat sequence:', error)
+    }
+  }
+
+  // Deleting a heat also drops any pours already allocated to it - a heat
+  // with dangling pours pointing at a heat that no longer exists would be
+  // broken, not just orphaned.
+  const removeHeat = (heatId: string) => {
+    setHeats(prev => prev.filter(h => h.id !== heatId))
+    setPours(prev => prev.filter(p => p.heatId !== heatId))
   }
 
   // Group backlog by Grade
@@ -265,6 +310,7 @@ export function MeltPlanningModal({
         actualMeltWeight: h?.actualMeltWeight,
         grade: h?.grade,
         heatNo: h?.heatCode,
+        heatSequenceNumber: h?.sequenceNumber,
         isConfirmed: p.isConfirmed
       }
     })
@@ -336,15 +382,24 @@ export function MeltPlanningModal({
   
   const furnace = equipments.find(e => e.id === activeFurnaceId)
   const maxCapacity = furnace?.maxMeltCapacityKg || 150
-  
+
   const activeHeats = heats.filter(h => h.furnaceId === activeFurnaceId).sort((a, b) => a.heatNumber - b.heatNumber)
+
+  // Melt Planning is amber-branded by default (Furnace/heat cards), so Night
+  // Shift doesn't need a new accent color like Core/Mould do - it just gets
+  // the same warm cream background wash used elsewhere, while the existing
+  // amber buttons/badges stay as they are.
+  const selectedShift = shifts.find(s => s.id === selectedShiftId)
+  const isNightShift = selectedShift?.name === 'Night Shift'
+  const warmBg = isNightShift ? 'bg-orange-50' : 'bg-[#F4F6FB]'
+  const warmBorder = isNightShift ? 'border-orange-200' : 'border-[#E0E7FF]'
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="w-[95vw] sm:max-w-[1200px] min-h-[60vh] max-h-[90vh] bg-[#F4F6FB] border-[#E0E7FF] text-foreground p-0 shadow-2xl flex flex-col">
+      <DialogContent className={cn("w-[95vw] sm:max-w-[1200px] min-h-[60vh] max-h-[90vh] text-foreground p-0 shadow-2xl flex flex-col transition-colors duration-500 ease-in-out", warmBg, warmBorder)}>
         <div className="flex flex-col w-full h-full">
           {/* Header */}
-          <DialogHeader className="p-6 pb-4 border-b border-[#E0E7FF] shrink-0 bg-white">
+          <DialogHeader className={cn("p-6 pb-4 border-b shrink-0 bg-white transition-colors duration-500 ease-in-out", warmBorder)}>
             <div className="flex items-center justify-between">
               <div>
                 <DialogTitle className="text-2xl font-heading text-[#172554]">
@@ -355,7 +410,12 @@ export function MeltPlanningModal({
                   {shifts.length > 0 && (
                     <Select value={selectedShiftId} onValueChange={setSelectedShiftId}>
                       <SelectTrigger className="h-9 px-4 text-sm font-semibold rounded-lg border border-[#E0E7FF] bg-[#FFFFFF] text-[#172554] shadow-sm hover:bg-[#F8FAFC] w-48">
-                        <SelectValue placeholder="Select Shift" />
+                        <SelectValue placeholder="Select Shift">
+                          {(id: string) => {
+                            const s = shifts.find(sh => sh.id === id)
+                            return s ? `${s.name} (${s.startTime} - ${s.endTime})` : 'Select Shift'
+                          }}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         {shifts.map(s => (
@@ -374,16 +434,16 @@ export function MeltPlanningModal({
           {/* Body */}
           <div className="flex-1 overflow-y-auto min-h-0 p-6 space-y-6">
             {/* Furnace Tabs */}
-            <div className="flex gap-2 overflow-x-auto pb-2 border-b border-[#E0E7FF]">
+            <div className={cn("flex gap-2 overflow-x-auto pb-2 border-b transition-colors duration-500 ease-in-out", warmBorder)}>
               {equipments.map(eq => (
                 <Button
                   key={eq.id}
                   variant={activeFurnaceId === eq.id ? "default" : "outline"}
                   className={cn(
                     "h-11 px-8 text-sm font-bold transition-all rounded-t-xl rounded-b-none border-b-0",
-                    activeFurnaceId === eq.id 
-                      ? "bg-amber-500 text-white shadow-[0_-4px_10px_-2px_rgba(245,158,11,0.2)] hover:bg-amber-600" 
-                      : "bg-[#FFFFFF] border-[#E0E7FF] text-[#64748B] hover:bg-amber-50 hover:text-amber-700"
+                    activeFurnaceId === eq.id
+                      ? "bg-amber-500 text-white shadow-[0_-4px_10px_-2px_rgba(245,158,11,0.2)] hover:bg-amber-600"
+                      : cn("bg-[#FFFFFF] text-[#64748B] hover:bg-amber-50 hover:text-amber-700", warmBorder)
                   )}
                   onClick={() => setActiveFurnaceId(eq.id)}
                 >
@@ -399,47 +459,55 @@ export function MeltPlanningModal({
                 <div className="flex items-center justify-between px-2">
                   <h3 className="font-bold text-[#172554] text-lg">Heat Schedule</h3>
                   <div className="flex items-center gap-4">
-                    <div className="text-sm text-[#64748B] font-semibold flex gap-4">
+                    <div className="text-sm text-[#64748B] font-semibold flex items-center gap-4">
                       {furnace?.avgPiecesPerHour && (
                         <span>Avg Heats/Hr: <span className="text-amber-600">{furnace.avgPiecesPerHour}</span></span>
                       )}
                       <span>First Heat: <span className="text-amber-600">{getHeatDurationMins(furnace, true)}m</span></span>
                       <span>Regular Heat: <span className="text-amber-600">{getHeatDurationMins(furnace, false)}m</span></span>
+                      <div className="flex items-center gap-1.5">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]">Grade</label>
+                        <Select value={newHeatGrade} onValueChange={setNewHeatGrade}>
+                          <SelectTrigger className="h-8 w-[130px] text-sm">
+                            <SelectValue placeholder="Select grade" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {grades.map(g => (
+                              <SelectItem key={g.id} value={g.code}>{g.code} - {g.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                       <span>Max Capacity: <span className="text-amber-600">{maxCapacity} kg</span></span>
                     </div>
                     <Popover open={addHeatOpen} onOpenChange={(open) => {
                       setAddHeatOpen(open)
-                      if (!open) { setNewHeatGrade(''); setNewHeatCode('') }
+                      if (open) {
+                        const furnaceHeats = heats.filter(h => h.furnaceId === activeFurnaceId)
+                        setNewHeatCode(buildDefaultHeatCode(date, furnaceHeats.length + 1))
+                      } else {
+                        setNewHeatCode('')
+                      }
                     }}>
-                      <PopoverTrigger className={cn(buttonVariants({ variant: "default" }), "h-9 px-4 bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold")}>
+                      <PopoverTrigger
+                        disabled={!newHeatGrade}
+                        title={!newHeatGrade ? 'Select a grade first' : undefined}
+                        className={cn(buttonVariants({ variant: "default" }), "h-9 px-4 bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold disabled:opacity-50 disabled:pointer-events-none")}
+                      >
                         <Plus className="w-4 h-4 mr-1" /> Add Heat
                       </PopoverTrigger>
                       <PopoverContent className="w-[280px] p-4 shadow-2xl border-[#E0E7FF] rounded-xl" side="bottom" align="end">
                         <div className="space-y-3">
+                          <div className="text-xs text-[#64748B]">Grade: <span className="font-bold text-amber-600">{newHeatGrade}</span></div>
                           <div className="space-y-1.5">
-                            <label className="text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]">Grade</label>
-                            <Select value={newHeatGrade} onValueChange={setNewHeatGrade}>
-                              <SelectTrigger className="h-9 text-sm">
-                                <SelectValue placeholder="Select grade" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {grades.map(g => (
-                                  <SelectItem key={g.id} value={g.code}>{g.code} - {g.name}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]">Heat Code</label>
+                            <Input
+                              value={newHeatCode}
+                              onChange={e => setNewHeatCode(e.target.value)}
+                              placeholder="e.g. H001"
+                              className="h-9 text-sm font-mono"
+                            />
                           </div>
-                          {newHeatGrade && (
-                            <div className="space-y-1.5">
-                              <label className="text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]">Heat Code</label>
-                              <Input
-                                value={newHeatCode}
-                                onChange={e => setNewHeatCode(e.target.value)}
-                                placeholder="e.g. H001"
-                                className="h-9 text-sm font-mono"
-                              />
-                            </div>
-                          )}
                           <Button
                             onClick={addHeat}
                             disabled={!newHeatGrade || !newHeatCode.trim()}
@@ -454,7 +522,7 @@ export function MeltPlanningModal({
                 </div>
 
                 {activeHeats.length === 0 && (
-                  <div className="p-10 text-center text-[#94A3B8] text-sm italic bg-white rounded-xl border border-dashed border-[#E0E7FF]">
+                  <div className={cn("p-10 text-center text-[#94A3B8] text-sm italic bg-white rounded-xl border border-dashed transition-colors duration-500 ease-in-out", warmBorder)}>
                     No heats added yet for this furnace. Click &quot;Add Heat&quot; to create one.
                   </div>
                 )}
@@ -468,12 +536,12 @@ export function MeltPlanningModal({
                     return (
                       <div key={heat.id} className={cn(
                         "bg-white rounded-xl border shadow-sm flex flex-col overflow-hidden transition-all",
-                        isOverCapacity ? "border-red-300 ring-1 ring-red-300" : "border-[#E0E7FF]"
+                        isOverCapacity ? "border-red-300 ring-1 ring-red-300" : warmBorder
                       )}>
                         {/* Heat Header - identity row */}
                         <div className={cn(
-                          "px-4 py-3 border-b flex items-center gap-2.5",
-                          isOverCapacity ? "bg-red-50 border-red-200" : "bg-gradient-to-r from-amber-50/70 to-white border-[#E0E7FF]"
+                          "px-4 py-3 border-b flex items-center gap-2.5 transition-colors duration-500 ease-in-out",
+                          isOverCapacity ? "bg-red-50 border-red-200" : cn("bg-gradient-to-r from-amber-50/70 to-white", warmBorder)
                         )}>
                           <div className={cn(
                             "w-9 h-9 rounded-lg flex items-center justify-center shrink-0",
@@ -481,21 +549,31 @@ export function MeltPlanningModal({
                           )}>
                             <Fire weight="fill" className={cn("w-5 h-5", isOverCapacity ? "text-red-500" : "text-amber-600")} />
                           </div>
-                          <div className="flex flex-col min-w-0">
-                            <span className="font-black text-base text-[#172554] leading-tight">Heat {heat.heatNumber}</span>
-                            <div className="flex items-center gap-1.5 mt-0.5">
-                              <span className="font-mono text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">
-                                {heat.heatCode}
-                              </span>
-                              <span className="text-[11px] font-semibold text-[#64748B] truncate">{heat.grade}</span>
-                            </div>
+                          <div className="flex flex-col min-w-0 flex-1">
+                            <span className="font-mono font-black text-base text-[#172554] leading-tight truncate">{heat.heatCode || `Heat ${heat.heatNumber}`}</span>
+                            <span className="text-[11px] font-semibold text-[#64748B] truncate mt-0.5">{heat.grade}</span>
                           </div>
+                          <span
+                            title="Furnace's running heat count - never resets on its own (reset in Equipment Master)"
+                            className="font-mono text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded shrink-0"
+                          >
+                            #{heat.sequenceNumber ?? heat.heatNumber}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeHeat(heat.id)}
+                            title="Delete heat"
+                            className="h-7 w-7 shrink-0 text-[#94A3B8] hover:text-red-600 hover:bg-red-50"
+                          >
+                            <Trash className="w-4 h-4" />
+                          </Button>
                         </div>
 
                         {/* Heat Header - metrics strip (fixed 3-column grid so values never wrap/orphan) */}
                         <div className={cn(
-                          "grid grid-cols-3 divide-x border-b",
-                          isOverCapacity ? "divide-red-200 bg-red-50/50 border-red-200" : "divide-[#E0E7FF] bg-[#F8FAFC] border-[#E0E7FF]"
+                          "grid grid-cols-3 divide-x border-b transition-colors duration-500 ease-in-out",
+                          isOverCapacity ? "divide-red-200 bg-red-50/50 border-red-200" : cn("bg-[#F8FAFC]", warmBorder, isNightShift ? "divide-orange-200" : "divide-[#E0E7FF]")
                         )}>
                           <div className="px-2 py-2.5 flex flex-col items-center gap-1">
                             <span className="text-[9px] font-bold uppercase tracking-wider text-[#94A3B8] flex items-center gap-1">
@@ -547,7 +625,7 @@ export function MeltPlanningModal({
                           ) : (
                             <div className="space-y-2">
                               {heatPours.map(pour => (
-                                <div key={pour.id} className="flex items-center justify-between bg-[#F4F6FB] p-2 rounded-lg border border-[#E0E7FF]">
+                                <div key={pour.id} className={cn("flex items-center justify-between p-2 rounded-lg border transition-colors duration-500 ease-in-out", warmBg, warmBorder)}>
                                   <div className="flex flex-col">
                                     <span className="font-bold text-sm text-[#172554]">{pour.patternRef} <span className="text-xs font-normal text-[#64748B]">({pour.grade})</span></span>
                                     <span className="text-[10px] text-[#94A3B8]">{pour.orderNo} | {pour.mouldWeight} kg/mould</span>
@@ -618,7 +696,7 @@ export function MeltPlanningModal({
           </div>
 
           {/* Footer */}
-          <DialogFooter className="m-0 p-5 border-t border-[#E0E7FF] bg-[#FFFFFF] shrink-0 sm:justify-end rounded-b-2xl">
+          <DialogFooter className={cn("m-0 p-5 border-t bg-[#FFFFFF] shrink-0 sm:justify-end rounded-b-2xl transition-colors duration-500 ease-in-out", warmBorder)}>
             <Button variant="ghost" onClick={onClose} className="text-[#64748B] hover:text-[#172554] hover:bg-[#F8FAFC]">Cancel</Button>
             <Button onClick={handleSave} className="bg-amber-500 text-white hover:bg-amber-600 shadow-md h-10 px-8 text-sm font-bold">Save Day Plan</Button>
           </DialogFooter>

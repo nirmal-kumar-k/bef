@@ -413,7 +413,9 @@ export function KnockoutPlanningModal({
               {shifts.length > 0 && (
                 <Select value={selectedShiftId} onValueChange={setSelectedShiftId}>
                   <SelectTrigger className="h-6 px-2 text-[10px] font-bold uppercase rounded-md border border-amber-500/20 bg-amber-500/10 text-amber-500 ml-2 w-auto min-w-[100px] border-none focus:ring-0">
-                    <SelectValue placeholder="Select Shift" />
+                    <SelectValue placeholder="Select Shift">
+                      {(id: string) => shifts.find(sh => sh.id === id)?.name || 'Select Shift'}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent className="bg-[#FFFFFF] border-[#E0E7FF]">
                     {shifts.map(s => (

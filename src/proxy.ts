@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuthToken } from '@/shared/lib/auth'
 
 const PUBLIC_PATHS = ['/login']
+const ADMIN_ONLY_PATHS = ['/users']
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -16,6 +17,11 @@ export async function proxy(request: NextRequest) {
   }
 
   if (payload && isPublicPath) {
+    const dashboardUrl = new URL('/dashboard', request.url)
+    return NextResponse.redirect(dashboardUrl)
+  }
+
+  if (payload && payload.role !== 'admin' && ADMIN_ONLY_PATHS.includes(pathname)) {
     const dashboardUrl = new URL('/dashboard', request.url)
     return NextResponse.redirect(dashboardUrl)
   }

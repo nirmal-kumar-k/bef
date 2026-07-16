@@ -106,9 +106,88 @@ export function MouldPlanningModal({
   }, [isOpen])
 
   const selectedShift = shifts.find(s => s.id === selectedShiftId) || shifts[0]
-  const TIME_SLOTS: TimeSlot[] = selectedShift 
-    ? generateTimeSlots(selectedShift.startTime, selectedShift.endTime, selectedShift.breaks || []) 
+  const TIME_SLOTS: TimeSlot[] = selectedShift
+    ? generateTimeSlots(selectedShift.startTime, selectedShift.endTime, selectedShift.breaks || [])
     : []
+
+  // Night Shift gets its own warm light-orange theme (same light structure as
+  // Day Shift, just the indigo accent swapped for orange) so the whole card
+  // visibly signals which shift you're planning for. Every themed element
+  // carries transition-colors so switching shifts fades smoothly.
+  const isNightShift = selectedShift?.name === 'Night Shift'
+  const theme = isNightShift ? {
+    dialog: 'bg-orange-50 border-orange-200',
+    header: 'bg-white border-orange-200',
+    title: 'text-stone-800',
+    label: 'text-stone-500',
+    selectTrigger: 'border-orange-200 bg-white text-stone-800 hover:bg-orange-50',
+    selectContent: 'bg-white border-orange-200',
+    selectItem: 'text-stone-800',
+    metricsBar: 'bg-white border-orange-200',
+    metricLabel: 'text-stone-400',
+    metricValue: 'text-stone-800',
+    tabActive: 'bg-orange-500 text-white',
+    tabInactive: 'bg-white border-orange-200 text-stone-500 hover:bg-orange-50 hover:text-stone-800',
+    card: 'bg-white border-orange-200',
+    cardHeader: 'bg-gradient-to-r from-orange-50 to-white border-orange-200',
+    cardTitle: 'text-stone-800',
+    rateBadge: 'text-orange-700 bg-orange-100 border-orange-200',
+    addButton: 'bg-orange-500 text-white hover:bg-orange-500/90',
+    popoverContent: 'bg-white border-orange-200 text-stone-800',
+    popoverItemBorder: 'border-orange-100',
+    tableHead: 'bg-orange-50 border-orange-200 text-stone-500',
+    tableBorder: 'border-orange-200',
+    tableDivide: 'divide-orange-100',
+    rowHover: 'hover:bg-orange-50',
+    rowText: 'text-stone-800',
+    rowMuted: 'text-stone-400',
+    pendingQtyCell: 'bg-orange-100 border-orange-200',
+    pendingQtyDefault: 'bg-white border-orange-300 text-orange-700',
+    pendingQtyRing: 'focus-visible:ring-orange-400',
+    mismatch: 'bg-rose-50 border-rose-400 text-rose-700 focus-visible:ring-rose-400',
+    mismatchCell: 'bg-rose-50 border-rose-400 text-rose-700',
+    mismatchLabel: 'text-rose-600',
+    autoFillButton: 'bg-white text-orange-600 border-orange-300 hover:bg-orange-50 hover:border-orange-500',
+    hourlyFilled: 'bg-orange-50 border-orange-200 text-stone-800',
+    footer: 'bg-white border-orange-200',
+    cancelButton: 'text-stone-500 hover:text-stone-800 hover:bg-orange-50',
+  } : {
+    dialog: 'bg-[#F4F6FB] border-[#E0E7FF]',
+    header: 'bg-white border-[#E0E7FF]',
+    title: 'text-[#172554]',
+    label: 'text-[#64748B]',
+    selectTrigger: 'border-[#E0E7FF] bg-[#FFFFFF] text-[#172554] hover:bg-[#F8FAFC]',
+    selectContent: 'bg-[#FFFFFF] border-[#E0E7FF]',
+    selectItem: 'text-[#172554]',
+    metricsBar: 'bg-[#FFFFFF] border-[#E0E7FF]',
+    metricLabel: 'text-[#94A3B8]',
+    metricValue: 'text-[#172554]',
+    tabActive: 'bg-[#4F46E5] text-white shadow-[0_-4px_10px_-2px_rgba(79,70,229,0.2)]',
+    tabInactive: 'bg-[#FFFFFF] border-[#E0E7FF] text-[#64748B] hover:bg-[#EEF2FF] hover:text-[#172554]',
+    card: 'bg-white border-[#E0E7FF]',
+    cardHeader: 'bg-gradient-to-r from-[#F8FAFC] to-white border-[#E0E7FF]',
+    cardTitle: 'text-[#172554]',
+    rateBadge: 'text-[#4F46E5] bg-[#EEF2FF] border-[#E0E7FF]',
+    addButton: 'bg-[#4F46E5] text-white hover:bg-[#4F46E5]/90',
+    popoverContent: 'bg-white border-[#E0E7FF] text-[#172554]',
+    popoverItemBorder: 'border-[#F4F6FB]',
+    tableHead: 'bg-[#F8FAFC] border-[#E0E7FF] text-[#64748B]',
+    tableBorder: 'border-[#E0E7FF]',
+    tableDivide: 'divide-[#E0E7FF]',
+    rowHover: 'hover:bg-[#F4F6FB]',
+    rowText: 'text-[#172554]',
+    rowMuted: 'text-[#94A3B8]',
+    pendingQtyCell: 'bg-[#EEF2FF] border-[#E0E7FF]',
+    pendingQtyDefault: 'bg-[#FFFFFF] border-[#C7D2FE] text-[#4F46E5]',
+    pendingQtyRing: 'focus-visible:ring-[#4F46E5]',
+    mismatch: 'bg-orange-50 border-orange-400 text-orange-700 focus-visible:ring-orange-400',
+    mismatchCell: 'bg-orange-50 border-orange-400 text-orange-700',
+    mismatchLabel: 'text-orange-600',
+    autoFillButton: 'text-[#4F46E5] border-[#C7D2FE] hover:bg-[#EEF2FF] hover:border-[#4F46E5]',
+    hourlyFilled: 'bg-[#F4F6FB] border-[#E0E7FF] text-[#172554]',
+    footer: 'bg-[#FFFFFF] border-[#E0E7FF]',
+    cancelButton: 'text-[#64748B] hover:text-[#172554] hover:bg-[#F8FAFC]',
+  }
 
   // Initialize plans
   useEffect(() => {
@@ -214,55 +293,55 @@ export function MouldPlanningModal({
     onClose()
   }
 
-  // How much more this row can be scheduled for without exceeding the pending
-  // backlog quantity. backlogData.totalScheduled already includes this row's own
-  // prior saved value (if it existed before this session), so that's added back in
-  // - otherwise editing an existing row would immediately look "over budget" by its
-  // own amount.
-  const getMaxAllowedQty = (row: PlannedRow) => {
-    const backlogItem = backlogData.find(b => b.orderNo === row.orderNo && b.patternRef === row.patternRef)
-    if (!backlogItem) return Infinity
-    return Math.max(0, backlogItem.totalRequired - backlogItem.totalScheduled + row.originalQty)
-  }
-
-  // Auto-fill logic
+  // Value change only - freely editable, not capped to the pending backlog
+  // quantity, so users can schedule ahead or correct a miscount when needed.
   const handleTargetQtyInput = (rowId: string, value: string) => {
     setPlannedRows(prev => prev.map(r => {
       if (r.id !== rowId) return r
       if (value === '') return { ...r, targetQty: value }
       const num = parseInt(value, 10)
       if (isNaN(num)) return { ...r, targetQty: value }
-      const capped = Math.min(num, getMaxAllowedQty(r))
-      return { ...r, targetQty: String(capped) }
+      return { ...r, targetQty: String(Math.max(0, num)) }
     }))
   }
 
-  // Shared hourly distribution: spreads target qty evenly across time slots using
-  // avg-moulds-production for worker counts. The first slot of the shift is always
-  // left out - the machine isn't actually productive at the shift's nominal start
-  // time (warm-up/changeover), real output starts from the second slot.
-  const distributeQty = (target: number, patternRef: string, machineId: string) => {
+  // How much of this machine's per-slot capacity is already claimed by OTHER
+  // rows scheduled on it (excludeRowId lets a row re-fill around its own prior
+  // allocation instead of double-counting it).
+  const getUsedBySlot = (machineId: string, excludeRowId: string | undefined, rows: PlannedRow[]) => {
+    const used: Record<string, number> = {}
+    rows.forEach(r => {
+      if (r.machineId !== machineId || r.id === excludeRowId) return
+      Object.entries(r.hourlyTargets).forEach(([slot, qty]) => {
+        used[slot] = (used[slot] || 0) + (qty || 0)
+      })
+    })
+    return used
+  }
+
+  // Fills `target` into this machine's shift slots up to its own per-hour
+  // capacity (avg moulds/hr from Equipment Master x slot hours) - not an even
+  // split of the quantity. A slot only spills into the next once it's actually
+  // full, so a second pattern added to the same machine tops off whatever
+  // headroom the first one left behind in a slot rather than restarting the
+  // split from scratch. Every slot, including the shift's first, is fillable.
+  const distributeQty = (target: number, machineId: string, excludeRowId: string | undefined, rows: PlannedRow[]) => {
     const eq = equipments.find(e => e.id === machineId)
     const avgProd = resolveAvgProductionRate(undefined, eq?.avgPiecesPerHour)
+    const usedBySlot = getUsedBySlot(machineId, excludeRowId, rows)
 
     const hourlyTargets: Record<string, number> = {}
     const hourlyWorkers: Record<string, number> = {}
 
-    const fillableSlots = TIME_SLOTS.slice(1)
-    if (TIME_SLOTS[0]) {
-      hourlyTargets[TIME_SLOTS[0].time] = 0
-      hourlyWorkers[TIME_SLOTS[0].time] = 0
-    }
-
-    const basePerSlot = fillableSlots.length > 0 ? Math.floor(target / fillableSlots.length) : 0
-    let remainder = target - (basePerSlot * fillableSlots.length)
-
-    fillableSlots.forEach(slot => {
-      const qty = basePerSlot + (remainder > 0 ? 1 : 0)
-      if (remainder > 0) remainder--
+    let remaining = target
+    TIME_SLOTS.forEach(slot => {
+      const capacity = avgProd * slot.hours
+      const available = Math.max(0, capacity - (usedBySlot[slot.time] || 0))
+      const qty = Math.max(0, Math.min(available, remaining))
+      remaining -= qty
 
       hourlyTargets[slot.time] = qty
-      hourlyWorkers[slot.time] = qty > 0 ? Math.max(1, Math.ceil(qty / (avgProd * slot.hours))) : 0
+      hourlyWorkers[slot.time] = qty > 0 ? 1 : 0
     })
 
     return { hourlyTargets, hourlyWorkers }
@@ -276,7 +355,7 @@ export function MouldPlanningModal({
       const target = parseInt(row.targetQty, 10)
       if (isNaN(target) || target <= 0) return prev
 
-      const { hourlyTargets, hourlyWorkers } = distributeQty(target, row.patternRef, row.machineId)
+      const { hourlyTargets, hourlyWorkers } = distributeQty(target, row.machineId, row.id, prev)
       return prev.map(r => r.id === rowId ? { ...r, hourlyTargets, hourlyWorkers } : r)
     })
   }
@@ -286,16 +365,16 @@ export function MouldPlanningModal({
     setPlannedRows(prev => prev.map(r => r.id === rowId ? { ...r, actualQuantity: num } : r))
   }
 
+  // Editing an hourly cell no longer re-syncs Pending Qty to match - the two
+  // are tracked independently, so the mismatch indicator on Pending Qty fires
+  // whichever side you edit.
   const handleHourlyChange = (rowId: string, timeSlot: string, value: string) => {
     const num = value === '' ? undefined : parseInt(value, 10)
     setPlannedRows(prev => prev.map(r => {
       if (r.id !== rowId) return r
-      const otherSlotsTotal = Object.entries(r.hourlyTargets).reduce((a, [slot, v]) => slot === timeSlot ? a : a + (v || 0), 0)
-      const maxAllowed = getMaxAllowedQty(r)
-      const cappedValue = Math.max(0, Math.min(num || 0, maxAllowed - otherSlotsTotal))
-      const newTargets = { ...r.hourlyTargets, [timeSlot]: cappedValue }
-      const newTotal = otherSlotsTotal + cappedValue
-      return { ...r, hourlyTargets: newTargets, targetQty: String(newTotal) }
+      const newValue = Math.max(0, num || 0)
+      const newTargets = { ...r.hourlyTargets, [timeSlot]: newValue }
+      return { ...r, hourlyTargets: newTargets }
     }))
   }
   
@@ -316,24 +395,27 @@ export function MouldPlanningModal({
     const order = openOrders.find(o => o.customerOrderNo === orderNo)
 
     const remaining = Math.max(0, b.totalRequired - b.totalScheduled)
-    const { hourlyTargets, hourlyWorkers } = remaining > 0
-      ? distributeQty(remaining, patternRef, activeMachineId)
-      : { hourlyTargets: {}, hourlyWorkers: {} }
 
-    setPlannedRows(prev => [...prev, {
-      id: Math.random().toString(),
-      orderId: order?.id || '',
-      orderNo: orderNo,
-      productName: order?.productName || '',
-      patternRef: patternRef,
-      machineId: activeMachineId,
-      targetQty: remaining > 0 ? String(remaining) : '',
-      hourlyTargets,
-      hourlyWorkers,
-      hourlyActuals: {},
-      isConfirmed: false,
-      originalQty: 0
-    }])
+    setPlannedRows(prev => {
+      const { hourlyTargets, hourlyWorkers } = remaining > 0
+        ? distributeQty(remaining, activeMachineId, undefined, prev)
+        : { hourlyTargets: {}, hourlyWorkers: {} }
+
+      return [...prev, {
+        id: Math.random().toString(),
+        orderId: order?.id || '',
+        orderNo: orderNo,
+        productName: order?.productName || '',
+        patternRef: patternRef,
+        machineId: activeMachineId,
+        targetQty: remaining > 0 ? String(remaining) : '',
+        hourlyTargets,
+        hourlyWorkers,
+        hourlyActuals: {},
+        isConfirmed: false,
+        originalQty: 0
+      }]
+    })
     setComboboxOpen(false)
   }
 
@@ -363,24 +445,29 @@ export function MouldPlanningModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="w-[98vw] sm:max-w-[98vw] min-h-[60vh] max-h-[95vh] bg-[#F4F6FB] border-[#E0E7FF] text-foreground p-0 shadow-2xl flex flex-col">
+      <DialogContent className={cn("w-[98vw] sm:max-w-[98vw] min-h-[60vh] max-h-[95vh] text-foreground p-0 shadow-2xl flex flex-col transition-colors duration-500 ease-in-out", theme.dialog)}>
         <div className="flex flex-col w-full h-full">
-          <DialogHeader className="p-6 pb-4 border-b border-[#E0E7FF] shrink-0 bg-white">
+          <DialogHeader className={cn("p-6 pb-4 border-b shrink-0 transition-colors duration-500 ease-in-out", theme.header)}>
             <div className="flex items-center justify-between">
               <div>
-                <DialogTitle className="text-2xl font-heading text-[#172554]">
+                <DialogTitle className={cn("text-2xl font-heading transition-colors duration-500 ease-in-out", theme.title)}>
                   {dateString} - Mould Planning
                 </DialogTitle>
                 <div className="flex items-center gap-3 mt-3">
-                  <span className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">Select Shift:</span>
+                  <span className={cn("text-xs font-semibold uppercase tracking-wider transition-colors duration-500 ease-in-out", theme.label)}>Select Shift:</span>
                   {shifts.length > 0 && (
                     <Select value={selectedShiftId} onValueChange={setSelectedShiftId}>
-                      <SelectTrigger className="h-9 px-4 text-sm font-semibold rounded-lg border border-[#E0E7FF] bg-[#FFFFFF] text-[#172554] shadow-sm hover:bg-[#F8FAFC]">
-                        <SelectValue placeholder="Select Shift" />
+                      <SelectTrigger className={cn("h-9 px-4 text-sm font-semibold rounded-lg border shadow-sm transition-colors duration-500 ease-in-out", theme.selectTrigger)}>
+                        <SelectValue placeholder="Select Shift">
+                          {(id: string) => {
+                            const s = shifts.find(sh => sh.id === id)
+                            return s ? `${s.name} (${s.startTime} - ${s.endTime})` : 'Select Shift'
+                          }}
+                        </SelectValue>
                       </SelectTrigger>
-                      <SelectContent className="bg-[#FFFFFF] border-[#E0E7FF]">
+                      <SelectContent className={theme.selectContent}>
                         {shifts.map(s => (
-                          <SelectItem key={s.id} value={s.id!} className="text-[#172554] text-sm">
+                          <SelectItem key={s.id} value={s.id!} className={cn("text-sm", theme.selectItem)}>
                             {s.name} ({s.startTime} - {s.endTime})
                           </SelectItem>
                         ))}
@@ -389,20 +476,20 @@ export function MouldPlanningModal({
                   )}
                 </div>
               </div>
-              
-              <div className="flex gap-6 bg-[#FFFFFF] p-4 rounded-xl border border-[#E0E7FF] shadow-sm">
+
+              <div className={cn("flex gap-6 p-4 rounded-xl border shadow-sm transition-colors duration-500 ease-in-out", theme.metricsBar)}>
                 <div className="text-center px-4">
-                  <p className="text-[10px] text-[#94A3B8] font-bold uppercase tracking-wider mb-1">Beginning of Day</p>
-                  <p className="text-2xl font-mono font-bold text-[#172554]">{topMetrics.beginningOfDay}</p>
+                  <p className={cn("text-[10px] font-bold uppercase tracking-wider mb-1 transition-colors duration-500 ease-in-out", theme.metricLabel)}>Beginning of Day</p>
+                  <p className={cn("text-2xl font-mono font-bold transition-colors duration-500 ease-in-out", theme.metricValue)}>{topMetrics.beginningOfDay}</p>
                 </div>
-                <div className="w-px bg-[#E0E7FF]"></div>
+                <div className={cn("w-px transition-colors duration-500 ease-in-out", theme.tableBorder)}></div>
                 <div className="text-center px-4">
-                  <p className="text-[10px] text-[#94A3B8] font-bold uppercase tracking-wider mb-1">Day Production</p>
+                  <p className={cn("text-[10px] font-bold uppercase tracking-wider mb-1 transition-colors duration-500 ease-in-out", theme.metricLabel)}>Day Production</p>
                   <p className="text-2xl font-mono font-bold text-[#4285F4]">{topMetrics.dayProduction}</p>
                 </div>
-                <div className="w-px bg-[#E0E7FF]"></div>
+                <div className={cn("w-px transition-colors duration-500 ease-in-out", theme.tableBorder)}></div>
                 <div className="text-center px-4">
-                  <p className="text-[10px] text-[#94A3B8] font-bold uppercase tracking-wider mb-1">End of Day</p>
+                  <p className={cn("text-[10px] font-bold uppercase tracking-wider mb-1 transition-colors duration-500 ease-in-out", theme.metricLabel)}>End of Day</p>
                   <p className="text-2xl font-mono font-bold text-[#10B981]">{topMetrics.endOfDay}</p>
                 </div>
               </div>
@@ -411,17 +498,15 @@ export function MouldPlanningModal({
 
           <div className="flex-1 overflow-y-auto min-h-0 p-6 space-y-6">
             {/* Machine Tabs */}
-            <div className="flex items-center justify-between border-b border-[#E0E7FF] pb-2">
+            <div className={cn("flex items-center justify-between border-b pb-2 transition-colors duration-500 ease-in-out", theme.tableBorder)}>
               <div className="flex gap-2 overflow-x-auto pb-1">
                 {equipments.map(eq => (
                   <Button
                     key={eq.id}
                     variant={activeMachineId === eq.id ? "default" : "outline"}
                     className={cn(
-                      "h-11 px-8 text-sm font-bold transition-all rounded-t-xl rounded-b-none border-b-0",
-                      activeMachineId === eq.id 
-                        ? "bg-[#4F46E5] text-white shadow-[0_-4px_10px_-2px_rgba(79,70,229,0.2)]" 
-                        : "bg-[#FFFFFF] border-[#E0E7FF] text-[#64748B] hover:bg-[#EEF2FF] hover:text-[#172554]"
+                      "h-11 px-8 text-sm font-bold transition-all rounded-t-xl rounded-b-none border-b-0 duration-500 ease-in-out",
+                      activeMachineId === eq.id ? theme.tabActive : theme.tabInactive
                     )}
                     onClick={() => setActiveMachineId(eq.id)}
                   >
@@ -430,22 +515,22 @@ export function MouldPlanningModal({
                   </Button>
                 ))}
               </div>
-              
-              <div className="flex items-center gap-3 pr-4 bg-white px-4 py-2 rounded-full border border-[#E0E7FF] shadow-sm">
-                 <Label htmlFor="viewLabMould" className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Labourers</Label>
-                 <Switch id="viewLabMould" checked={viewLabourers} onCheckedChange={setViewLabourers} className="data-[state=checked]:bg-[#4F46E5]" />
+
+              <div className={cn("flex items-center gap-3 pr-4 px-4 py-2 rounded-full border shadow-sm transition-colors duration-500 ease-in-out", theme.metricsBar)}>
+                 <Label htmlFor="viewLabMould" className={cn("text-[10px] font-bold uppercase tracking-wider transition-colors duration-500 ease-in-out", theme.label)}>Labourers</Label>
+                 <Switch id="viewLabMould" checked={viewLabourers} onCheckedChange={setViewLabourers} className={cn("transition-colors duration-500 ease-in-out", isNightShift ? "data-checked:bg-orange-500" : "data-checked:bg-[#4F46E5]")} />
               </div>
             </div>
 
             {/* Active Machine Content */}
             {activeMachineId && (
               <>
-              <div className="bg-white rounded-xl border border-[#E0E7FF] shadow-lg overflow-hidden">
-                <div className="p-5 border-b border-[#E0E7FF] flex items-center justify-between bg-gradient-to-r from-[#F8FAFC] to-white">
-                  <h3 className="font-bold text-[#172554] text-lg flex items-center gap-2">
+              <div className={cn("rounded-xl border shadow-lg overflow-hidden transition-colors duration-500 ease-in-out", theme.card)}>
+                <div className={cn("p-5 border-b flex items-center justify-between transition-colors duration-500 ease-in-out", theme.cardHeader)}>
+                  <h3 className={cn("font-bold text-lg flex items-center gap-2 transition-colors duration-500 ease-in-out", theme.cardTitle)}>
                     Schedule for {equipments.find(e => e.id === activeMachineId)?.name}
                     {equipments.find(e => e.id === activeMachineId)?.avgPiecesPerHour && (
-                      <span className="text-xs font-bold text-[#4F46E5] bg-[#EEF2FF] border border-[#E0E7FF] px-2.5 py-1 rounded-full whitespace-nowrap">
+                      <span className={cn("text-xs font-bold border px-2.5 py-1 rounded-full whitespace-nowrap transition-colors duration-500 ease-in-out", theme.rateBadge)}>
                         Avg {equipments.find(e => e.id === activeMachineId)?.avgPiecesPerHour} Moulds/hr
                       </span>
                     )}
@@ -455,32 +540,36 @@ export function MouldPlanningModal({
                     <PopoverTrigger
                       role="combobox"
                       aria-expanded={comboboxOpen}
-                      className={cn(buttonVariants(), "w-[320px] justify-between h-10 bg-[#4F46E5] text-white hover:bg-[#4F46E5]/90 font-semibold shadow-md")}
+                      className={cn(buttonVariants(), "w-[320px] justify-between h-10 font-semibold shadow-md transition-colors duration-500 ease-in-out", theme.addButton)}
                     >
                       + Add Pattern to Schedule
                       <CaretDown className="ml-2 h-4 w-4 shrink-0 opacity-70" />
                     </PopoverTrigger>
-                    <PopoverContent className="w-[320px] p-0 bg-white border-[#E0E7FF] shadow-xl rounded-xl">
-                      <Command>
+                    <PopoverContent className={cn("w-[320px] p-0 shadow-xl rounded-xl transition-colors duration-500 ease-in-out", theme.popoverContent)}>
+                      <Command className="bg-transparent text-inherit">
                         <CommandInput placeholder="Search Order or Pattern..." className="border-none focus:ring-0 text-sm h-11" />
                         <CommandList className="max-h-[300px] overflow-y-auto">
-                          <CommandEmpty className="py-6 text-center text-sm text-[#94A3B8]">No pending patterns found.</CommandEmpty>
-                          <CommandGroup heading="Pending Backlog">
+                          <CommandEmpty className={cn("py-6 text-center text-sm transition-colors duration-500 ease-in-out", theme.rowMuted)}>No pending patterns found.</CommandEmpty>
+                          <CommandGroup heading="Pending Backlog" className={isNightShift ? "**:[[cmdk-group-heading]]:text-orange-600!" : undefined}>
                             {backlogOptions.map((b) => (
                               <CommandItem
                                 key={`${b.orderNo}|${b.patternRef}`}
                                 value={`${b.orderNo} ${b.patternRef}`}
                                 onSelect={() => addPatternToMachine(`${b.orderNo}|${b.patternRef}`)}
-                                className="cursor-pointer py-3 px-4 hover:bg-[#F4F6FB] flex items-center gap-3 border-b border-[#F4F6FB] last:border-0"
+                                className={cn(
+                                  "cursor-pointer py-3 px-4 flex items-center gap-3 border-b last:border-0 transition-colors duration-500 ease-in-out",
+                                  theme.popoverItemBorder,
+                                  isNightShift ? "hover:bg-orange-50 data-selected:bg-orange-50" : "hover:bg-[#F4F6FB]"
+                                )}
                               >
                                 <div className="flex-1">
                                   <div className="flex items-center justify-between">
-                                    <span className="font-bold text-[#172554]">{b.patternRef}</span>
-                                    <span className="text-[10px] font-semibold text-[#64748B] bg-[#F4F6FB] px-2 py-0.5 rounded-full">
+                                    <span className={cn("font-bold transition-colors duration-500 ease-in-out", theme.rowText)}>{b.patternRef}</span>
+                                    <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded-full transition-colors duration-500 ease-in-out", isNightShift ? "text-orange-700 bg-orange-100" : "text-[#64748B] bg-[#F4F6FB]")}>
                                       Remaining: {b.totalRequired - b.totalScheduled}
                                     </span>
                                   </div>
-                                  <div className="text-xs text-[#64748B] mt-1">Order: <span className="text-[#4285F4] font-mono">{b.orderNo}</span></div>
+                                  <div className={cn("text-xs mt-1 transition-colors duration-500 ease-in-out", theme.rowMuted)}>Order: <span className="text-[#4285F4] font-mono">{b.orderNo}</span></div>
                                 </div>
                               </CommandItem>
                             ))}
@@ -492,61 +581,73 @@ export function MouldPlanningModal({
                 </div>
 
                 {activeRows.length === 0 ? (
-                  <div className="p-16 flex flex-col items-center justify-center text-[#94A3B8]">
+                  <div className={cn("p-16 flex flex-col items-center justify-center transition-colors duration-500 ease-in-out", theme.rowMuted)}>
                     <CubeTransparent className="w-12 h-12 mb-4 opacity-20" />
-                    <p className="text-lg font-medium text-[#64748B]">No patterns scheduled</p>
+                    <p className={cn("text-lg font-medium transition-colors duration-500 ease-in-out", theme.label)}>No patterns scheduled</p>
                     <p className="text-sm">Click the button above to add a pattern to this machine's schedule.</p>
                   </div>
                 ) : (
                   <div className="w-full">
                     <table className="w-full table-fixed text-sm text-left">
-                      <thead className="bg-[#F8FAFC] border-b border-[#E0E7FF] text-[#64748B] uppercase tracking-wider font-bold text-[11px]">
+                      <thead className={cn("border-b uppercase tracking-wider font-bold text-[11px] transition-colors duration-500 ease-in-out", theme.tableHead)}>
                         <tr>
                           <th className="px-3 py-4 w-[150px]">Pattern Details</th>
-                          <th className="px-1.5 py-4 text-center border-x border-[#E0E7FF] w-[68px]">Pending Qty</th>
+                          <th className={cn("px-1.5 py-4 text-center border-x w-[68px] transition-colors duration-500 ease-in-out", theme.tableBorder)}>Pending Qty</th>
                           {TIME_SLOTS.map(slot => (
-                            <th key={slot.time} className="px-1 py-4 text-center border-r border-[#E0E7FF] leading-tight">
+                            <th key={slot.time} className={cn("px-1 py-4 text-center border-r leading-tight transition-colors duration-500 ease-in-out", theme.tableBorder)}>
                               <div>{slot.time}</div>
-                              <div className="text-[9px] font-normal normal-case text-[#94A3B8]">to {slot.endTime}</div>
+                              <div className={cn("text-[9px] font-normal normal-case transition-colors duration-500 ease-in-out", theme.rowMuted)}>to {slot.endTime}</div>
                             </th>
                           ))}
-                          <th className="px-1.5 py-4 text-center border-l border-[#E0E7FF] w-[44px]">Del</th>
+                          <th className={cn("px-1.5 py-4 text-center border-l w-[44px] transition-colors duration-500 ease-in-out", theme.tableBorder)}>Del</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-[#E0E7FF]">
+                      <tbody className={cn("divide-y transition-colors duration-500 ease-in-out", theme.tableDivide)}>
                         {activeRows.map(row => {
                           const eq = equipments.find(e => e.id === row.machineId)
                           const avgProd = resolveAvgProductionRate(undefined, eq?.avgPiecesPerHour)
                           const shiftHours = TIME_SLOTS.reduce((acc, sl) => acc + sl.hours, 0)
                           const possibleQty = Math.round(avgProd * shiftHours)
+                          const scheduledSum = Object.values(row.hourlyTargets).reduce((s, v) => s + (v || 0), 0)
+                          const target = parseInt(row.targetQty, 10) || 0
+                          const delta = target - scheduledSum
+                          const isMismatched = delta !== 0 && row.targetQty !== ''
 
                           return (
-                            <tr key={row.id} className="hover:bg-[#F4F6FB] transition-colors group">
+                            <tr key={row.id} className={cn("transition-colors duration-500 ease-in-out group", theme.rowHover)}>
                               <td className="px-3 py-4">
                                 <div className="flex flex-col gap-1">
-                                  <span className="font-bold text-[#172554] text-sm truncate">{row.patternRef}</span>
-                                  <span className="text-[10px] text-[#94A3B8] truncate">{row.orderNo} | {row.productName}</span>
+                                  <span className={cn("font-bold text-sm truncate transition-colors duration-500 ease-in-out", theme.rowText)}>{row.patternRef}</span>
+                                  <span className={cn("text-[10px] truncate transition-colors duration-500 ease-in-out", theme.rowMuted)}>{row.orderNo} | {row.productName}</span>
                                   <span className="text-[10px] text-[#10B981] font-semibold tracking-wide">QTY: {possibleQty}</span>
                                 </div>
                               </td>
-                              <td className="px-1.5 py-4 text-center border-x border-[#E0E7FF] bg-[#EEF2FF]">
+                              <td className={cn("px-1.5 py-4 text-center border-x transition-colors duration-500 ease-in-out", theme.pendingQtyCell)}>
                                 <div className="flex flex-col items-center justify-center gap-1">
                                   <Input
                                     type="number"
                                     min="0"
-                                    max={getMaxAllowedQty(row) === Infinity ? undefined : getMaxAllowedQty(row)}
                                     value={row.targetQty}
                                     onChange={e => handleTargetQtyInput(row.id, e.target.value)}
                                     placeholder="0"
-                                    title={getMaxAllowedQty(row) === Infinity ? undefined : `Max ${getMaxAllowedQty(row)} pending`}
-                                    className="w-14 h-7 bg-[#FFFFFF] border-[#C7D2FE] font-mono text-center text-[#4F46E5] font-bold text-sm focus-visible:ring-1 focus-visible:ring-[#4F46E5] px-1"
+                                    title={isMismatched ? (delta > 0 ? `${delta} not yet scheduled to a time slot` : `${-delta} more scheduled than the pending qty`) : undefined}
+                                    className={cn(
+                                      "w-full max-w-[56px] mx-auto h-8 font-mono text-center font-bold text-sm px-1 transition-colors duration-500 ease-in-out focus-visible:ring-1",
+                                      isMismatched ? theme.mismatch : theme.pendingQtyDefault,
+                                      !isMismatched && theme.pendingQtyRing
+                                    )}
                                   />
+                                  {isMismatched && (
+                                    <span className={cn("text-[9px] font-bold leading-none whitespace-nowrap transition-colors duration-500 ease-in-out", theme.mismatchLabel)}>
+                                      {delta > 0 ? `+${delta} unscheduled` : `${-delta} over`}
+                                    </span>
+                                  )}
                                   <Button
                                     onClick={() => autoFillRow(row.id)}
                                     size="icon"
                                     variant="outline"
                                     title="Auto-fill time slots"
-                                    className="h-6 w-14 shrink-0 text-[#4F46E5] border-[#C7D2FE] hover:bg-[#EEF2FF] hover:border-[#4F46E5]"
+                                    className={cn("h-6 w-full max-w-[56px] shrink-0 transition-colors duration-500 ease-in-out", theme.autoFillButton)}
                                   >
                                     <MagicWand weight="fill" className="w-3.5 h-3.5" />
                                   </Button>
@@ -556,9 +657,9 @@ export function MouldPlanningModal({
                                  // Check conflict across multiple rows on this machine
                                  const otherActiveRowsInSlot = activeRows.filter(or => or.id !== row.id && (or.hourlyTargets[slot.time] || 0) > 0)
                                  const isConflict = otherActiveRowsInSlot.length > 0 && (row.hourlyTargets[slot.time] || 0) > 0
-                                 
+
                                  return (
-                                  <td key={slot.time} className={cn("px-1 py-2 text-center border-r border-[#E0E7FF]", isConflict && "bg-red-50")}>
+                                  <td key={slot.time} className={cn("px-1 py-2 text-center border-r transition-colors duration-500 ease-in-out", theme.tableBorder, isConflict && "bg-red-50")}>
                                     <div className="flex flex-col gap-1 items-center justify-center">
                                       <Input
                                         type="number"
@@ -567,23 +668,38 @@ export function MouldPlanningModal({
                                         onChange={e => handleHourlyChange(row.id, slot.time, e.target.value)}
                                         placeholder="-"
                                         className={cn(
-                                          "w-full max-w-[52px] mx-auto h-8 text-center font-mono text-xs px-1 bg-transparent border-transparent hover:border-[#E0E7FF] focus:border-[#4285F4] focus:bg-white transition-all shadow-none",
-                                          (row.hourlyTargets[slot.time] || 0) > 0 && "font-bold text-[#172554] bg-[#F4F6FB] border-[#E0E7FF]",
+                                          "w-full max-w-[52px] mx-auto h-8 text-center font-mono text-xs px-1 bg-transparent border-transparent transition-all shadow-none",
+                                          isNightShift
+                                            ? "hover:border-orange-200 focus:border-orange-400 focus:bg-white"
+                                            : "hover:border-[#E0E7FF] focus:border-[#4285F4] focus:bg-white",
+                                          (row.hourlyTargets[slot.time] || 0) > 0 && (isMismatched ? theme.mismatchCell : theme.hourlyFilled),
                                           isConflict && "text-red-600 font-bold border-red-200 bg-red-100"
                                         )}
                                       />
                                       {viewLabourers && (
                                         <div className="flex items-center justify-center gap-1 opacity-60 hover:opacity-100 transition-opacity">
-                                          <button onClick={() => handleWorkerChange(row.id, slot.time, -1)} className="w-4 h-4 flex items-center justify-center bg-[#E2E8F0] rounded text-[#475569] hover:bg-[#CBD5E1] text-xs font-bold leading-none">-</button>
-                                          <span className="text-[10px] w-3 text-center font-mono font-medium">{row.hourlyWorkers[slot.time] || 0}</span>
-                                          <button onClick={() => handleWorkerChange(row.id, slot.time, 1)} className="w-4 h-4 flex items-center justify-center bg-[#E2E8F0] rounded text-[#475569] hover:bg-[#CBD5E1] text-xs font-bold leading-none">+</button>
+                                          <button
+                                            onClick={() => handleWorkerChange(row.id, slot.time, -1)}
+                                            className={cn(
+                                              "w-4 h-4 flex items-center justify-center rounded text-xs font-bold leading-none transition-colors duration-500 ease-in-out",
+                                              isNightShift ? "bg-orange-100 text-orange-700 hover:bg-orange-200" : "bg-[#E2E8F0] text-[#475569] hover:bg-[#CBD5E1]"
+                                            )}
+                                          >-</button>
+                                          <span className="text-[10px] w-3 text-center font-mono font-medium text-inherit">{row.hourlyWorkers[slot.time] || 0}</span>
+                                          <button
+                                            onClick={() => handleWorkerChange(row.id, slot.time, 1)}
+                                            className={cn(
+                                              "w-4 h-4 flex items-center justify-center rounded text-xs font-bold leading-none transition-colors duration-500 ease-in-out",
+                                              isNightShift ? "bg-orange-100 text-orange-700 hover:bg-orange-200" : "bg-[#E2E8F0] text-[#475569] hover:bg-[#CBD5E1]"
+                                            )}
+                                          >+</button>
                                         </div>
                                       )}
                                     </div>
                                   </td>
                                  )
                               })}
-                              <td className="px-1.5 py-4 text-center border-l border-[#E0E7FF]">
+                              <td className={cn("px-1.5 py-4 text-center border-l transition-colors duration-500 ease-in-out", theme.tableBorder)}>
                                 <Button variant="ghost" size="icon" onClick={() => removeRow(row.id)} className="text-[#94A3B8] hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all h-8 w-8">
                                   <Trash className="w-4 h-4" />
                                 </Button>
@@ -597,29 +713,29 @@ export function MouldPlanningModal({
                 )}
               </div>
               
-              <div className="border border-[#E0E7FF] rounded-xl overflow-hidden mt-8">
-                <div className="w-full flex items-center justify-between bg-[#EEF2FF] p-4 text-[#172554]">
+              <div className={cn("border rounded-xl overflow-hidden mt-8 transition-colors duration-500 ease-in-out", theme.tableBorder)}>
+                <div className={cn("w-full flex items-center justify-between p-4 transition-colors duration-500 ease-in-out", isNightShift ? "bg-orange-100 text-stone-800" : "bg-[#EEF2FF] text-[#172554]")}>
                   <div className="flex items-center gap-2">
                     <h3 className="font-bold text-sm">End of Day - Actual Entry ({equipments.find(e => e.id === activeMachineId)?.name})</h3>
-                    <span className="text-xs text-[#64748B]">Enter produced quantities</span>
+                    <span className={cn("text-xs transition-colors duration-500 ease-in-out", theme.label)}>Enter produced quantities</span>
                   </div>
                 </div>
-                <div className="p-4 bg-[#F4F6FB] space-y-3">
+                <div className={cn("p-4 space-y-3 transition-colors duration-500 ease-in-out", isNightShift ? "bg-orange-50" : "bg-[#F4F6FB]")}>
                   {activeRows.map(row => {
                     const planned = parseInt(row.targetQty, 10) || 0
                     const act = row.actualQuantity
                     const hasAct = act !== undefined && act !== null
                     const variance = hasAct ? act - planned : 0
-                    
+
                     return (
-                      <div key={row.id} className="flex items-center gap-4 p-3 bg-[#FFFFFF] border border-[#E0E7FF] rounded-lg">
+                      <div key={row.id} className={cn("flex items-center gap-4 p-3 border rounded-lg transition-colors duration-500 ease-in-out", isNightShift ? "bg-white border-orange-200" : "bg-[#FFFFFF] border-[#E0E7FF]")}>
                         <div className="w-48 flex flex-col">
-                          <h4 className="text-[#172554] font-mono font-bold text-sm">{row.patternRef}</h4>
-                          <span className="text-[10px] text-[#64748B] truncate">{row.orderNo} | {row.productName}</span>
+                          <h4 className={cn("font-mono font-bold text-sm transition-colors duration-500 ease-in-out", theme.rowText)}>{row.patternRef}</h4>
+                          <span className={cn("text-[10px] truncate transition-colors duration-500 ease-in-out", theme.rowMuted)}>{row.orderNo} | {row.productName}</span>
                         </div>
                         <div className="w-24">
-                          <span className="text-[10px] text-[#64748B] block uppercase font-bold mb-1">Planned</span>
-                          <span className="font-mono text-[#172554]">{planned}</span>
+                          <span className={cn("text-[10px] block uppercase font-bold mb-1 transition-colors duration-500 ease-in-out", theme.label)}>Planned</span>
+                          <span className={cn("font-mono transition-colors duration-500 ease-in-out", theme.rowText)}>{planned}</span>
                         </div>
                         <div className="w-32">
                           <span className="text-[10px] text-[#4285F4] block uppercase font-bold mb-1">Actual</span>
@@ -629,30 +745,31 @@ export function MouldPlanningModal({
                             value={hasAct ? act : ''}
                             onChange={e => handleActualChange(row.id, e.target.value)}
                             className={cn(
-                              "h-8 bg-[#F4F6FB] text-[#172554] font-mono px-2 text-sm w-full",
-                              !hasAct ? "border-red-500/50 focus:border-red-500" : "border-[#E0E7FF]"
+                              "h-8 font-mono px-2 text-sm w-full transition-colors duration-500 ease-in-out",
+                              isNightShift ? "bg-orange-50 text-stone-800" : "bg-[#F4F6FB] text-[#172554]",
+                              !hasAct ? "border-red-500/50 focus:border-red-500" : theme.tableBorder
                             )}
                             placeholder="Required"
                           />
                         </div>
                         <div className="w-24 text-right ml-auto">
-                          <span className="text-[10px] text-[#64748B] block uppercase font-bold mb-1">Variance</span>
+                          <span className={cn("text-[10px] block uppercase font-bold mb-1 transition-colors duration-500 ease-in-out", theme.label)}>Variance</span>
                           {hasAct ? (
                             <span className={cn(
                               "font-mono font-bold text-lg",
-                              variance > 0 ? "text-green-500" : variance < 0 ? "text-red-500" : "text-[#64748B]"
+                              variance > 0 ? "text-green-500" : variance < 0 ? "text-red-500" : theme.label
                             )}>
                               {variance > 0 ? '+' : ''}{variance}
                             </span>
                           ) : (
-                            <span className="text-[#94A3B8]">-</span>
+                            <span className={theme.rowMuted}>-</span>
                           )}
                         </div>
                       </div>
                     )
                   })}
                   {activeRows.length === 0 && (
-                     <div className="text-center text-[#94A3B8] py-4 text-sm">No items scheduled yet.</div>
+                     <div className={cn("text-center py-4 text-sm transition-colors duration-500 ease-in-out", theme.rowMuted)}>No items scheduled yet.</div>
                   )}
                 </div>
               </div>
@@ -660,9 +777,9 @@ export function MouldPlanningModal({
             )}
           </div>
 
-          <DialogFooter className="m-0 p-5 border-t border-[#E0E7FF] bg-[#FFFFFF] shrink-0 sm:justify-end rounded-b-2xl">
-            <Button variant="ghost" onClick={onClose} className="text-[#64748B] hover:text-[#172554] hover:bg-[#F8FAFC]">Cancel</Button>
-            <Button onClick={handleSave} className="bg-[#4F46E5] text-white hover:bg-[#4F46E5]/90 shadow-[0_4px_10px_-2px_rgba(79,70,229,0.3)] h-10 px-8 text-sm">Save Day Plan</Button>
+          <DialogFooter className={cn("m-0 p-5 border-t shrink-0 sm:justify-end rounded-b-2xl transition-colors duration-500 ease-in-out", theme.footer)}>
+            <Button variant="ghost" onClick={onClose} className={cn("transition-colors duration-500 ease-in-out", theme.cancelButton)}>Cancel</Button>
+            <Button onClick={handleSave} className={cn("shadow-[0_4px_10px_-2px_rgba(79,70,229,0.3)] h-10 px-8 text-sm transition-colors duration-500 ease-in-out", isNightShift ? "bg-orange-500 text-white hover:bg-orange-500/90" : "bg-[#4F46E5] text-white hover:bg-[#4F46E5]/90")}>Save Day Plan</Button>
           </DialogFooter>
         </div>
       </DialogContent>

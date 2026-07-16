@@ -1,10 +1,9 @@
-import { cookies } from 'next/headers'
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import { Inter, Plus_Jakarta_Sans } from 'next/font/google'
 import { AppLayout } from "@/shared/layouts/app-layout"
 import { RoleProvider } from "@/shared/context/role-context"
-import { verifyAuthToken } from '@/shared/lib/auth'
+import { getSessionUser } from '@/shared/lib/auth'
 import './globals.css'
 
 const inter = Inter({ variable: '--font-inter', subsets: ['latin'] })
@@ -45,15 +44,14 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  const cookieStore = await cookies()
-  const token = cookieStore.get('auth_token')?.value
-  const authUser = token ? await verifyAuthToken(token) : null
-  const user = authUser ? { name: authUser.name, email: authUser.email } : null
+  const authUser = await getSessionUser()
+  const user = authUser ? { name: authUser.name, username: authUser.username } : null
+  const initialRole = authUser?.role === 'admin' ? 'Admin' : 'Supervisor'
 
   return (
     <html lang="en" suppressHydrationWarning className={`${inter.variable} ${plusJakartaSans.variable} bg-background`}>
       <body className="font-sans antialiased" suppressHydrationWarning>
-        <RoleProvider>
+        <RoleProvider initialRole={initialRole}>
           <AppLayout user={user}>
             {children}
           </AppLayout>

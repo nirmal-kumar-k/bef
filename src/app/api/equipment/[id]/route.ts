@@ -11,17 +11,18 @@ export async function PUT(
     const data = await req.json()
     const { id } = await params
 
-    // Clean data before DB update
-    const safeData = {
-      name: data.name,
-      type: data.type,
-      weightCapacity: data.weightCapacity,
-      firstHeatDurationMins: data.firstHeatDurationMins,
-      regularHeatDurationMins: data.regularHeatDurationMins,
-      avgPiecesPerHour: data.avgPiecesPerHour,
-      restrictedCoreBoxes: data.restrictedCoreBoxes,
-      isActive: data.isActive,
-      updatedAt: new Date(),
+    // Partial update: only include fields the caller actually sent, so a
+    // request that only touches e.g. heatSequence can't null out the rest of
+    // the equipment record.
+    const ALLOWED_FIELDS = new Set([
+      'name', 'type', 'weightCapacity', 'firstHeatDurationMins', 'regularHeatDurationMins',
+      'avgPiecesPerHour', 'restrictedCoreBoxes', 'heatSequence', 'isActive',
+    ])
+    const safeData: Record<string, any> = { updatedAt: new Date() }
+    for (const [key, value] of Object.entries(data)) {
+      if (ALLOWED_FIELDS.has(key) && value !== undefined) {
+        safeData[key] = value
+      }
     }
 
     const [row] = await db.update(equipment).set(safeData).where(eq(equipment.id, id)).returning()

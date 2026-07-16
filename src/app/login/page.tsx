@@ -6,7 +6,7 @@ import { ConstellationParticles } from '@/shared/ui/constellation-particles'
 import { loginUser } from '@/modules/users/application/auth.actions'
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -18,7 +18,7 @@ export default function LoginPage() {
     setIsLoading(true)
 
     const formData = new FormData()
-    formData.append('email', email)
+    formData.append('username', username)
     formData.append('password', password)
 
     try {
@@ -37,76 +37,75 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative min-h-screen w-full flex flex-col items-center justify-center overflow-hidden bg-[#F8F9FA] font-sans px-4 sm:px-6 py-12">
-      
+    <div className="relative min-h-screen w-full flex flex-col items-center justify-center overflow-hidden bg-[#F4F6FB] font-sans px-4 py-10 sm:py-12">
+
       <style dangerouslySetInnerHTML={{__html: `
         /* Guaranteed Rich Card Styling (Bypassing Tailwind JIT) */
         .rich-card {
-          border-radius: 36px;
-          background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.75) 100%);
+          border-radius: 28px;
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.97) 0%, rgba(255, 255, 255, 0.85) 100%);
           backdrop-filter: blur(20px);
           -webkit-backdrop-filter: blur(20px);
-          box-shadow: 
-            0 30px 60px -15px rgba(3, 4, 94, 0.1),
+          box-shadow:
+            0 30px 60px -15px rgba(23, 37, 84, 0.12),
             inset 0 1px 1px rgba(255, 255, 255, 0.9),
             inset 0 -1px 1px rgba(0, 0, 0, 0.02);
-          border: 1px solid rgba(255, 255, 255, 0.9);
+          border: 1.5px solid rgba(79, 70, 229, 0.45);
         }
 
         /* Fixed Logo Box */
         .rich-logo {
-          border-radius: 24px;
-          background: linear-gradient(135deg, rgba(72, 202, 228, 0.2), rgba(114, 9, 183, 0.2));
-          border: 1px solid rgba(255, 255, 255, 0.9);
-          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+          border-radius: 18px;
+          background: linear-gradient(135deg, rgba(79, 70, 229, 0.12), rgba(79, 70, 229, 0.04));
+          border: 1px solid rgba(79, 70, 229, 0.18);
+          box-shadow:
+            0 6px 16px -4px rgba(79, 70, 229, 0.18),
+            inset 0 1px 0 rgba(255, 255, 255, 0.6);
         }
 
         /* Highly Visible Input Styling */
         .rich-input {
-          border-radius: 16px;
+          border-radius: 14px;
           background: rgba(255, 255, 255, 0.9);
-          border: 1px solid rgba(3, 4, 94, 0.25); /* Much darker, highly visible border */
-          color: #03045E;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.04);
+          border: 1px solid rgba(23, 37, 84, 0.16);
+          color: #172554;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.03);
         }
         .rich-input:focus {
           outline: none;
           background: #FFFFFF;
-          border-color: rgba(72, 202, 228, 0.8);
-          /* The dark, faint elegant glow */
-          box-shadow: 
-            0 10px 30px -5px rgba(3, 4, 94, 0.15), 
-            0 0 0 3px rgba(72, 202, 228, 0.25),
-            inset 0 2px 4px rgba(0, 0, 0, 0.01);
-          transform: translateY(-1px);
+          border-color: #4F46E5;
+          box-shadow: 0 0 0 1px #4F46E5;
         }
         .rich-input::placeholder {
-          color: rgba(29, 53, 87, 0.6); /* Much darker, highly visible placeholder */
+          color: rgba(100, 116, 139, 0.7);
           font-weight: 500;
         }
 
         /* Vibrant Rich Button */
         .rich-button {
-          border-radius: 16px;
-          background: linear-gradient(135deg, #48CAE4 0%, #7209B7 100%);
-          box-shadow: 
-            0 12px 25px -8px rgba(114, 9, 183, 0.5),
-            inset 0 1px 0 rgba(255, 255, 255, 0.3);
+          border-radius: 14px;
+          background: linear-gradient(135deg, #4F46E5 0%, #312E81 100%);
+          box-shadow:
+            0 12px 25px -10px rgba(79, 70, 229, 0.5),
+            inset 0 1px 0 rgba(255, 255, 255, 0.15);
           color: white;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
           border: none;
         }
-        .rich-button:hover {
-          box-shadow: 
-            0 15px 35px -8px rgba(114, 9, 183, 0.6),
-            inset 0 1px 0 rgba(255, 255, 255, 0.5);
-          transform: translateY(-2px);
+        .rich-button:hover:not(:disabled) {
+          box-shadow:
+            0 15px 30px -10px rgba(79, 70, 229, 0.55),
+            inset 0 1px 0 rgba(255, 255, 255, 0.2);
           filter: brightness(1.05);
         }
-        .rich-button:active {
-          transform: translateY(0);
+        .rich-button:active:not(:disabled) {
           filter: brightness(0.95);
+        }
+        .rich-button:disabled {
+          opacity: 0.7;
+          cursor: not-allowed;
         }
       `}} />
 
@@ -114,55 +113,58 @@ export default function LoginPage() {
       <ConstellationParticles />
 
       {/* Centered Container */}
-      <div className="relative z-10 w-full max-w-md">
-        
-        {/* Rich, Elegant, Vibrant Card */}
-        <div className="w-full p-10 sm:p-12 rich-card">
-          
-          {/* Elegant Logo & Header */}
-          <div className="flex flex-col items-center text-center mb-10">
-            <div className="w-16 h-16 rich-logo flex items-center justify-center mb-5">
-              <span className="text-sm font-black tracking-widest text-[#7209B7]">BEF</span>
+      <div className="relative z-10 w-full max-w-[400px]">
+
+        <div className="w-full p-7 sm:p-10 rich-card">
+
+          {/* Logo & Header */}
+          <div className="flex flex-col items-center text-center mb-8">
+            <div className="w-14 h-14 rich-logo flex items-center justify-center mb-4">
+              <span className="text-sm font-black tracking-[0.15em] text-[#4F46E5]">BEF</span>
             </div>
-            <h2 className="text-3xl font-semibold tracking-tight text-[#03045E] mb-2">
+            <h1 className="text-2xl sm:text-[28px] font-semibold tracking-tight text-[#172554] mb-1.5 leading-tight">
               Welcome back
-            </h2>
-            <p className="text-base font-medium text-[#1D3557]/70">
+            </h1>
+            <p className="text-sm sm:text-[15px] font-medium text-[#64748B]">
               Sign in to your dashboard
             </p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div className="flex flex-col gap-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-[#1D3557] ml-1">
-                Email Address
+          <form onSubmit={handleLogin} className="space-y-5">
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="username" className="text-[11px] font-bold uppercase tracking-wider text-[#334155] ml-0.5">
+                Username
               </label>
               <input
-                type="email"
+                id="username"
+                type="text"
+                autoComplete="username"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@company.com"
-                className="w-full h-14 px-5 rich-input text-base font-medium"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="yourusername"
+                className="w-full h-12 sm:h-14 px-4 rich-input text-[15px] font-medium"
               />
             </div>
 
-            <div className="flex flex-col gap-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-[#1D3557] ml-1">
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="password" className="text-[11px] font-bold uppercase tracking-wider text-[#334155] ml-0.5">
                 Password
               </label>
               <input
+                id="password"
                 type="password"
+                autoComplete="current-password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full h-14 px-5 rich-input text-base font-medium"
+                className="w-full h-12 sm:h-14 px-4 rich-input text-[15px] font-medium"
               />
             </div>
 
             {error && (
-              <div className="text-sm font-bold text-[#7209B7] bg-[#7209B7]/10 px-4 py-3 rounded-2xl border border-[#7209B7]/20 text-center">
+              <div className="text-sm font-semibold text-red-600 bg-red-50 px-4 py-2.5 rounded-xl border border-red-200 text-center">
                 {error}
               </div>
             )}
@@ -170,13 +172,13 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full h-14 font-bold text-base tracking-wide rich-button mt-4"
+              className="w-full h-12 sm:h-14 font-bold text-[15px] tracking-wide rich-button mt-2"
             >
-              Sign in
+              {isLoading ? 'Signing in...' : 'Sign in'}
             </button>
           </form>
         </div>
-        
+
       </div>
     </div>
   )
