@@ -763,6 +763,13 @@ export function CorePlanningModal({
                                     min="0"
                                     value={row.totalQty}
                                     onChange={e => handleTotalQtyInput(row.id, e.target.value)}
+                                    onBlur={() => autoFillRow(row.id)}
+                                    onKeyDown={e => {
+                                      if (e.key === 'Enter') {
+                                        autoFillRow(row.id)
+                                        e.currentTarget.blur()
+                                      }
+                                    }}
                                     placeholder="0"
                                     title={isMismatched ? (delta > 0 ? `${delta} not yet scheduled to a time slot` : `${-delta} more scheduled than the total qty`) : undefined}
                                     className={cn(
