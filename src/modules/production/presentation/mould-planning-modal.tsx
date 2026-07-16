@@ -241,8 +241,11 @@ export function MouldPlanningModal({
     })
     
     plannedRows.forEach(r => {
-      const target = parseInt(r.targetQty, 10) || 0
-      dayProduction += target
+      // Actual hourly-scheduled total, not the (possibly higher) Pending Qty -
+      // matches what handleSave actually records, so this preview isn't
+      // misleading about what will really get produced/saved.
+      const scheduled = Object.values(r.hourlyTargets).reduce((s, v) => s + (v || 0), 0)
+      dayProduction += scheduled
     })
     
     endOfDay = Math.max(0, beginningOfDay - dayProduction)
@@ -251,10 +254,34 @@ export function MouldPlanningModal({
   }, [backlogData, plannedRows])
 
   const handleSave = () => {
+    // Block the save entirely if any row's actual hourly-scheduled total
+    // exceeds what this machine can physically produce this shift - allocating
+    // more than the machine's capacity would silently record output that
+    // never happened, wiping backlog that should have carried to the next day.
+    const overCapacityRows = plannedRows.map(r => {
+      const scheduledSum = Object.values(r.hourlyTargets).reduce((s, v) => s + (v || 0), 0)
+      const eq = equipments.find(e => e.id === r.machineId)
+      const avgProd = resolveAvgProductionRate(undefined, eq?.avgPiecesPerHour)
+      const shiftHours = TIME_SLOTS.reduce((s, sl) => s + sl.hours, 0)
+      const possibleQty = Math.round(avgProd * shiftHours)
+      return { r, scheduledSum, possibleQty }
+    }).filter(({ scheduledSum, possibleQty }) => scheduledSum > possibleQty)
+
+    if (overCapacityRows.length > 0) {
+      const details = overCapacityRows.map(({ r, scheduledSum, possibleQty }) => `${r.patternRef}: ${scheduledSum} scheduled, max ${possibleQty}`).join('\n')
+      alert(`Cannot save - the following exceed this machine's possible capacity for the shift:\n\n${details}`)
+      return
+    }
+
     const plansToSave = plannedRows.map(r => {
-      const totalScheduled = parseInt(r.targetQty, 10) || 0
+      // Only what's actually distributed into achievable hourly slots counts
+      // as scheduled - not the (possibly higher) Pending Qty the user typed,
+      // which may include more than the machine can produce today. Using
+      // Pending Qty here would wrongly mark unachievable quantity as done,
+      // erasing backlog that should remain pending for future days.
+      const totalScheduled = Object.values(r.hourlyTargets).reduce((s, v) => s + (v || 0), 0)
       const maxWorkers = Math.max(1, ...Object.values(r.hourlyWorkers))
-      
+
       const eq = equipments.find(e => e.id === r.machineId)
       const avgProd = resolveAvgProductionRate(undefined, eq?.avgPiecesPerHour)
       const shiftHours = TIME_SLOTS.reduce((s, sl) => s + sl.hours, 0)

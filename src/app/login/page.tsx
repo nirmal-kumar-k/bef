@@ -142,7 +142,6 @@ export default function LoginPage() {
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="yourusername"
                 className="w-full h-12 sm:h-14 px-4 rich-input text-[15px] font-medium"
               />
             </div>

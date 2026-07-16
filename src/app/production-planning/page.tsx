@@ -131,25 +131,27 @@ export default function ProductionPlanningPage() {
           })
         }
 
-        // CORE - union every mapped product's core box requirements across the group
-        // (they all go into the same pour together), deduped by core box code so the
-        // same core isn't counted once per product that happens to need it.
-        const coreBoxReqs = new Map<string, number>() // code -> qty per mould
+        // CORE - sum every mapped product's core box requirements across the
+        // group by code. Summed, not deduped by max: a core is consumed per
+        // casting, so if two different products in the group happen to share
+        // the same core box design (same code), each product's units still
+        // each need their own core - 400 units of product A + 400 of product
+        // B sharing one core box code means 800 cores total, not 400.
+        const coreBoxReqs = new Map<string, number>() // code -> total cores required across the group
         let hasProductSpecificCoreBoxes = false
         groupItems.forEach(ci => {
           if (ci.mappedProduct?.selectedCoreBoxes?.length > 0) {
             hasProductSpecificCoreBoxes = true
             ci.mappedProduct.selectedCoreBoxes.forEach((cb: any) => {
               const code = cb.coreBoxCode || 'Unnamed Core Box'
-              const qty = cb.quantity || 1
-              coreBoxReqs.set(code, Math.max(coreBoxReqs.get(code) || 0, qty))
+              const qtyPerUnit = cb.quantity || 1
+              coreBoxReqs.set(code, (coreBoxReqs.get(code) || 0) + ci.item.quantity * qtyPerUnit)
             })
           }
         })
 
         if (hasProductSpecificCoreBoxes) {
-          coreBoxReqs.forEach((qtyPerUnit, codeToUse) => {
-            const totalCoreRequired = finalUnits * qtyPerUnit
+          coreBoxReqs.forEach((totalCoreRequired, codeToUse) => {
             const coreScheduled = plans.filter(p => p.stage === 'Core' && p.itemId === representativeId && p.coreBoxCode === codeToUse).reduce((sum, p) => sum + p.quantityScheduled, 0)
             coreBacklog.push({
               itemId: representativeId, orderNo: order.customerOrderNo, patternRef: pattern?.code || '-', productName, coreBoxCode: codeToUse,

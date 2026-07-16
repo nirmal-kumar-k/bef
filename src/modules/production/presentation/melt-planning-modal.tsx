@@ -290,6 +290,24 @@ export function MeltPlanningModal({
   }, [backlogData, products])
 
   const handleSave = () => {
+    // Same hard capacity guard as Core/Mould planning - a heat's charge weight
+    // already gets flagged red on screen when over capacity, but that was
+    // only a visual warning; block the actual save too so an over-capacity
+    // heat can't silently get recorded as if it were achievable.
+    const overCapacityHeats = heats.map(h => {
+      const heatPours = pours.filter(p => p.heatId === h.id)
+      const totalWeight = heatPours.reduce((sum, p) => sum + (p.mouldsScheduled * p.mouldWeight), 0)
+      const furnace = equipments.find(e => e.id === h.furnaceId)
+      const cap = furnace?.maxMeltCapacityKg || 150
+      return { h, totalWeight, cap }
+    }).filter(({ totalWeight, cap }) => totalWeight > cap)
+
+    if (overCapacityHeats.length > 0) {
+      const details = overCapacityHeats.map(({ h, totalWeight, cap }) => `Heat ${h.heatNumber} (${h.heatCode}): ${totalWeight.toFixed(1)} kg scheduled, max ${cap} kg`).join('\n')
+      alert(`Cannot save - the following heats exceed furnace capacity:\n\n${details}`)
+      return
+    }
+
     const plansToSave = pours.map(p => {
       const h = heats.find(ht => ht.id === p.heatId)
       return {
