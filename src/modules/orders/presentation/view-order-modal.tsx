@@ -19,6 +19,8 @@ import {
 } from '@/shared/ui/select'
 import { Input } from '@/shared/ui/input'
 import { useState, useEffect } from 'react'
+import { pdf } from '@react-pdf/renderer'
+import { SalesOrderPdf } from './sales-order-pdf'
 
 export function ViewOrderModal({
   order: initialOrder,
@@ -34,6 +36,7 @@ export function ViewOrderModal({
   const { role } = useRole()
   const [updating, setUpdating] = useState(false)
   const [order, setOrder] = useState<Order | null>(null)
+  const [generatingPdf, setGeneratingPdf] = useState<'download' | 'print' | null>(null)
 
   useEffect(() => {
     setOrder(initialOrder)
@@ -118,6 +121,38 @@ export function ViewOrderModal({
     }
   }
 
+  const handleDownloadPdf = async () => {
+    if (!order) return
+    setGeneratingPdf('download')
+    try {
+      const blob = await pdf(<SalesOrderPdf order={order} />).toBlob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `Sales-Order-${order.customerOrderNo}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } finally {
+      setGeneratingPdf(null)
+    }
+  }
+
+  // Opens the PDF in a new tab so the user can print via the browser's native
+  // PDF viewer (Ctrl+P there gives a clean print, no app chrome involved).
+  const handlePrintPdf = async () => {
+    if (!order) return
+    setGeneratingPdf('print')
+    try {
+      const blob = await pdf(<SalesOrderPdf order={order} />).toBlob()
+      const url = URL.createObjectURL(blob)
+      window.open(url, '_blank')
+    } finally {
+      setGeneratingPdf(null)
+    }
+  }
+
   // Determine allowed statuses
   const availableStatuses = []
   if (order.status === 'Received') {
@@ -156,11 +191,23 @@ export function ViewOrderModal({
             <p className="text-sm text-[#64748B] font-mono mt-1">Internal: {order.internalOrderNo}</p>
           </div>
           <div className="flex gap-2 mr-8">
-            <Button variant="outline" size="sm" className="bg-[#FFFFFF] border-[#E0E7FF] text-[#64748B] hover:text-[#172554] hover:bg-[#EEF2FF]">
-              <Printer weight="duotone" className="mr-2 h-4 w-4" /> Print
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePrintPdf}
+              disabled={generatingPdf !== null}
+              className="bg-[#FFFFFF] border-[#E0E7FF] text-[#64748B] hover:text-[#172554] hover:bg-[#EEF2FF]"
+            >
+              <Printer weight="duotone" className="mr-2 h-4 w-4" /> {generatingPdf === 'print' ? 'Opening...' : 'Print'}
             </Button>
-            <Button variant="outline" size="sm" className="bg-[#FFFFFF] border-[#E0E7FF] text-[#64748B] hover:text-[#172554] hover:bg-[#EEF2FF]">
-              <Download weight="duotone" className="mr-2 h-4 w-4" /> Export
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDownloadPdf}
+              disabled={generatingPdf !== null}
+              className="bg-[#FFFFFF] border-[#E0E7FF] text-[#64748B] hover:text-[#172554] hover:bg-[#EEF2FF]"
+            >
+              <Download weight="duotone" className="mr-2 h-4 w-4" /> {generatingPdf === 'download' ? 'Generating...' : 'Export'}
             </Button>
             {role === 'Admin' && onEdit && (
               <Button 
