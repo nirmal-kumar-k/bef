@@ -227,6 +227,12 @@ export default function ProductionPlanningPage() {
     try {
       for (const plan of newPlans) {
         const id = plan._id || plan.id
+        if (plan._delete) {
+          // Row was removed via the trash icon in the modal - it carries no
+          // scheduled quantity to check, just delete its existing record.
+          if (id) await fetch(`/api/production-plans/${id}`, { method: 'DELETE' })
+          continue
+        }
         if (id) {
           // Core/Mould no longer have an Actual-entry field, so `actualQuantity`
           // can never be set for them again - treating an unscheduled (0-hourly)

@@ -80,6 +80,11 @@ export function MouldPlanningModal({
   const [comboboxOpen, setComboboxOpen] = useState(false)
   const [capacityErrorLines, setCapacityErrorLines] = useState<string[] | null>(null)
 
+  // Plan ids removed from the schedule via the trash icon this session -
+  // plansToSave only ever contains rows still on screen, so a removed row's
+  // existing DB record would otherwise never be told to delete itself.
+  const [removedPlanIds, setRemovedPlanIds] = useState<string[]>([])
+
   // Snapshot of the fields that matter for saving, captured once when the
   // modal's rows are (re)initialized - compared against current state to
   // gate the Save button until something actually changes.
@@ -222,6 +227,7 @@ export function MouldPlanningModal({
         }
       })
       setPlannedRows(initRows)
+      setRemovedPlanIds([])
       initialSnapshotRef.current = JSON.stringify(initRows.map(toSnapshotRow))
     }
   }, [isOpen, dailyPlans, openOrders])
@@ -344,7 +350,12 @@ export function MouldPlanningModal({
       }
     })
 
-    onSaveDayPlan(date, plansToSave)
+    // Rows removed via the trash icon this session need an explicit delete
+    // instruction - they're not in plansToSave at all, so without this their
+    // existing DB record would just sit there untouched forever.
+    const deletions = removedPlanIds.map(id => ({ id, _id: id, _delete: true }))
+
+    onSaveDayPlan(date, [...plansToSave, ...deletions])
     onClose()
   }
 
@@ -493,7 +504,11 @@ export function MouldPlanningModal({
   }
 
   const removeRow = (rowId: string) => {
-    setPlannedRows(prev => prev.filter(r => r.id !== rowId))
+    setPlannedRows(prev => {
+      const row = prev.find(r => r.id === rowId)
+      if (row?.planId) setRemovedPlanIds(ids => [...ids, row.planId!])
+      return prev.filter(r => r.id !== rowId)
+    })
   }
 
   const dateObj = new Date(date || new Date())
