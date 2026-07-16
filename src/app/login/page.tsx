@@ -85,22 +85,37 @@ export default function LoginPage() {
 
         /* Vibrant Rich Button */
         .rich-button {
+          position: relative;
+          overflow: hidden;
           border-radius: 14px;
           background: linear-gradient(135deg, #4F46E5 0%, #312E81 100%);
           box-shadow:
             0 12px 25px -10px rgba(79, 70, 229, 0.5),
             inset 0 1px 0 rgba(255, 255, 255, 0.15);
           color: white;
-          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), filter 0.2s cubic-bezier(0.4, 0, 0.2, 1);
           border: none;
         }
+        .rich-button::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(120deg, transparent 20%, rgba(255, 255, 255, 0.16) 50%, transparent 80%);
+          transform: translateX(-100%);
+        }
+        .rich-button:hover:not(:disabled)::after {
+          transform: translateX(100%);
+          transition: transform 0.7s ease;
+        }
         .rich-button:hover:not(:disabled) {
+          transform: translateY(-2px);
           box-shadow:
             0 15px 30px -10px rgba(79, 70, 229, 0.55),
             inset 0 1px 0 rgba(255, 255, 255, 0.2);
           filter: brightness(1.05);
         }
         .rich-button:active:not(:disabled) {
+          transform: translateY(0);
           filter: brightness(0.95);
         }
         .rich-button:disabled {
