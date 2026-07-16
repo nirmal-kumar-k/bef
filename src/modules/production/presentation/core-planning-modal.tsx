@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -40,11 +40,14 @@ interface PlannedRow {
   patternRef: string
   coreBoxCode: string
   machineId: string
-  targetQty: string
+  totalQty: string
+  // Display-only possible-quantity text (PQ). Seeded from the computed
+  // capacity (avgPiecesPerHour x shift hours) but freely editable afterward -
+  // never used for capacity validation, which always uses the live
+  // equipment-computed value instead.
+  possibleQtyText: string
   hourlyTargets: Record<string, number>
   hourlyWorkers: Record<string, number>
-  hourlyActuals: Record<string, number>
-  actualQuantity?: number
   isConfirmed: boolean
   // Quantity this row already contributed to the backlog's totalScheduled when the
   // modal opened - needed to compute how much MORE this row can take without
@@ -77,6 +80,11 @@ export function CorePlanningModal({
   const [viewLabourers, setViewLabourers] = useState<boolean>(false)
   const [comboboxOpen, setComboboxOpen] = useState(false)
   const [capacityErrorLines, setCapacityErrorLines] = useState<string[] | null>(null)
+
+  // Snapshot of the fields that matter for saving, captured once when the
+  // modal's rows are (re)initialized - compared against current state to
+  // gate the Save button until something actually changes.
+  const initialSnapshotRef = useRef<string>('')
 
   // Fetch shifts & equipments
   useEffect(() => {
@@ -211,16 +219,16 @@ export function CorePlanningModal({
           patternRef: p.patternRef || '',
           coreBoxCode: p.coreBoxCode || '',
           machineId: p.equipmentId || '',
-          targetQty: p.quantityScheduled ? String(p.quantityScheduled) : '',
+          totalQty: p.quantityScheduled ? String(p.quantityScheduled) : '',
+          possibleQtyText: p.possibleQuantity !== undefined ? String(p.possibleQuantity) : '',
           hourlyTargets: p.hourlyTargets || {},
           hourlyWorkers: p.hourlyWorkers || {},
-          hourlyActuals: p.hourlyActuals || {},
-          actualQuantity: p.actualQuantity,
           isConfirmed: !!p.isConfirmed,
           originalQty: p.quantityScheduled || 0
         }
       })
       setPlannedRows(initRows)
+      initialSnapshotRef.current = JSON.stringify(initRows.map(toSnapshotRow))
     }
   }, [isOpen, dailyPlans, openOrders])
 
@@ -261,6 +269,31 @@ export function CorePlanningModal({
     return { beginningOfDay, dayProduction, endOfDay }
   }, [backlogData, plannedRows])
 
+  // Fields whose values determine what actually gets saved - used both for
+  // the dirty snapshot and its live comparison.
+  const toSnapshotRow = (r: PlannedRow) => ({
+    machineId: r.machineId,
+    coreBoxCode: r.coreBoxCode,
+    totalQty: r.totalQty,
+    possibleQtyText: r.possibleQtyText,
+    hourlyTargets: r.hourlyTargets,
+    hourlyWorkers: r.hourlyWorkers
+  })
+
+  const isDirty = useMemo(
+    () => JSON.stringify(plannedRows.map(toSnapshotRow)) !== initialSnapshotRef.current,
+    [plannedRows]
+  )
+
+  // Real, equipment-derived ceiling for a machine this shift - the only
+  // number ever used for capacity validation (PQ text is display-only).
+  const computePossibleQty = (machineId: string) => {
+    const eq = equipments.find(e => e.id === machineId)
+    const avgProd = resolveAvgProductionRate(undefined, eq?.avgPiecesPerHour)
+    const shiftHours = TIME_SLOTS.reduce((s, sl) => s + sl.hours, 0)
+    return Math.round(avgProd * shiftHours)
+  }
+
   const handleSave = () => {
     // Block the save entirely if any row's actual hourly-scheduled total
     // exceeds what this machine can physically produce this shift - allocating
@@ -268,10 +301,7 @@ export function CorePlanningModal({
     // never happened, wiping backlog that should have carried to the next day.
     const overCapacityRows = plannedRows.map(r => {
       const scheduledSum = Object.values(r.hourlyTargets).reduce((s, v) => s + (v || 0), 0)
-      const eq = equipments.find(e => e.id === r.machineId)
-      const avgProd = resolveAvgProductionRate(undefined, eq?.avgPiecesPerHour)
-      const shiftHours = TIME_SLOTS.reduce((s, sl) => s + sl.hours, 0)
-      const possibleQty = Math.round(avgProd * shiftHours)
+      const possibleQty = computePossibleQty(r.machineId)
       return { r, scheduledSum, possibleQty }
     }).filter(({ scheduledSum, possibleQty }) => scheduledSum > possibleQty)
 
@@ -282,17 +312,16 @@ export function CorePlanningModal({
 
     const plansToSave = plannedRows.map(r => {
       // Only what's actually distributed into achievable hourly slots counts
-      // as scheduled - not the (possibly higher) Pending Qty the user typed,
-      // which may include more than the machine can produce today. Using
-      // Pending Qty here would wrongly mark unachievable quantity as done,
-      // erasing backlog that should remain pending for future days.
+      // as scheduled - not the (possibly higher) TQ the user typed, which may
+      // include more than the machine can produce today. Using TQ here would
+      // wrongly mark unachievable quantity as done, erasing backlog that
+      // should remain pending for future days.
       const totalScheduled = Object.values(r.hourlyTargets).reduce((s, v) => s + (v || 0), 0)
       const maxWorkers = Math.max(1, ...Object.values(r.hourlyWorkers))
 
-      const eq = equipments.find(e => e.id === r.machineId)
-      const avgProd = resolveAvgProductionRate(undefined, eq?.avgPiecesPerHour)
-      const shiftHours = TIME_SLOTS.reduce((s, sl) => s + sl.hours, 0)
-      const possibleQty = Math.round(avgProd * shiftHours)
+      const possibleQty = computePossibleQty(r.machineId)
+      const parsedPossibleQty = parseInt(r.possibleQtyText, 10)
+      const possibleQtyToSave = isNaN(parsedPossibleQty) ? possibleQty : parsedPossibleQty
 
       const hourlyEquipments: Record<string, string> = {}
       TIME_SLOTS.forEach(slot => {
@@ -317,10 +346,8 @@ export function CorePlanningModal({
         hourlyEquipments,
         hourlyTargets: r.hourlyTargets,
         hourlyWorkers: r.hourlyWorkers,
-        hourlyActuals: r.hourlyActuals,
-        actualQuantity: r.actualQuantity,
         isConfirmed: r.isConfirmed,
-        possibleQuantity: possibleQty
+        possibleQuantity: possibleQtyToSave
       }
     })
 
@@ -330,13 +357,25 @@ export function CorePlanningModal({
 
   // Value change only - freely editable, not capped to the pending backlog
   // quantity, so users can schedule ahead or correct a miscount when needed.
-  const handleTargetQtyInput = (rowId: string, value: string) => {
+  const handleTotalQtyInput = (rowId: string, value: string) => {
     setPlannedRows(prev => prev.map(r => {
       if (r.id !== rowId) return r
-      if (value === '') return { ...r, targetQty: value }
+      if (value === '') return { ...r, totalQty: value }
       const num = parseInt(value, 10)
-      if (isNaN(num)) return { ...r, targetQty: value }
-      return { ...r, targetQty: String(Math.max(0, num)) }
+      if (isNaN(num)) return { ...r, totalQty: value }
+      return { ...r, totalQty: String(Math.max(0, num)) }
+    }))
+  }
+
+  // Display-only PQ text - never clamped/validated against machine capacity,
+  // since it does not feed the over-capacity check.
+  const handlePossibleQtyInput = (rowId: string, value: string) => {
+    setPlannedRows(prev => prev.map(r => {
+      if (r.id !== rowId) return r
+      if (value === '') return { ...r, possibleQtyText: value }
+      const num = parseInt(value, 10)
+      if (isNaN(num)) return { ...r, possibleQtyText: value }
+      return { ...r, possibleQtyText: String(Math.max(0, num)) }
     }))
   }
 
@@ -388,7 +427,7 @@ export function CorePlanningModal({
       const row = prev.find(r => r.id === rowId)
       if (!row) return prev
 
-      const target = parseInt(row.targetQty, 10)
+      const target = parseInt(row.totalQty, 10)
       if (isNaN(target) || target <= 0) return prev
 
       const { hourlyTargets, hourlyWorkers } = distributeQty(target, row.machineId, row.id, prev)
@@ -396,21 +435,27 @@ export function CorePlanningModal({
     })
   }
 
-  const handleActualChange = (rowId: string, value: string) => {
-    const num = value === '' ? undefined : parseInt(value, 10)
-    setPlannedRows(prev => prev.map(r => r.id === rowId ? { ...r, actualQuantity: num } : r))
-  }
-
-  // Editing an hourly cell no longer re-syncs Pending Qty to match - the two
-  // are tracked independently now, so the mismatch indicator on Pending Qty
-  // fires whichever side you edit, instead of always being satisfied because
-  // the other side silently followed along.
+  // Editing an hourly cell no longer re-syncs TQ to match - the two are
+  // tracked independently, so the mismatch indicator on TQ fires whichever
+  // side you edit, instead of always being satisfied because the other side
+  // silently followed along.
   const handleHourlyChange = (rowId: string, timeSlot: string, value: string) => {
     const num = value === '' ? undefined : parseInt(value, 10)
     setPlannedRows(prev => prev.map(r => {
       if (r.id !== rowId) return r
       const newValue = Math.max(0, num || 0)
       const newTargets = { ...r.hourlyTargets, [timeSlot]: newValue }
+
+      // Live over-capacity warning: fire only on the crossing (previous
+      // total within capacity, new total over it), not on every keystroke
+      // made while already over - Save's own hard block stays authoritative.
+      const prevTotal = Object.values(r.hourlyTargets).reduce((s, v) => s + (v || 0), 0)
+      const newTotal = Object.values(newTargets).reduce((s, v) => s + (v || 0), 0)
+      const possibleQty = computePossibleQty(r.machineId)
+      if (prevTotal <= possibleQty && newTotal > possibleQty) {
+        setCapacityErrorLines([`${r.coreBoxCode}: ${newTotal} scheduled, max ${possibleQty}`])
+      }
+
       return { ...r, hourlyTargets: newTargets }
     }))
   }
@@ -447,10 +492,10 @@ export function CorePlanningModal({
         patternRef,
         coreBoxCode: coreBoxCode,
         machineId: activeMachineId,
-        targetQty: remaining > 0 ? String(remaining) : '',
+        totalQty: remaining > 0 ? String(remaining) : '',
+        possibleQtyText: String(computePossibleQty(activeMachineId)),
         hourlyTargets,
         hourlyWorkers,
-        hourlyActuals: {},
         isConfirmed: false,
         originalQty: 0
       }]
@@ -491,13 +536,7 @@ export function CorePlanningModal({
 
   // Per-row derived metrics, shared between the column header and the blocking check below
   const rowMeta = useMemo(() => {
-    const shiftHours = TIME_SLOTS.reduce((acc, sl) => acc + sl.hours, 0)
-    return activeRows.map(row => {
-      const eq = equipments.find(e => e.id === row.machineId)
-      const avgProd = resolveAvgProductionRate(undefined, eq?.avgPiecesPerHour)
-      const possibleQty = Math.round(avgProd * shiftHours)
-      return { row, possibleQty }
-    })
+    return activeRows.map(row => ({ row, possibleQty: computePossibleQty(row.machineId) }))
   }, [activeRows, equipments, TIME_SLOTS])
 
   return (
@@ -671,7 +710,7 @@ export function CorePlanningModal({
                       <thead className={cn("border-b uppercase tracking-wider font-bold text-[11px] transition-colors duration-500 ease-in-out", theme.tableHead)}>
                         <tr>
                           <th className="px-3 py-3 w-[150px]">Core Box Details</th>
-                          <th className={cn("px-1.5 py-3 text-center border-x w-[68px] transition-colors duration-500 ease-in-out", theme.tableBorder)}>Pending Qty</th>
+                          <th className={cn("px-1.5 py-3 text-center border-x w-[120px] transition-colors duration-500 ease-in-out", theme.tableBorder)}>Quantity Info</th>
                           {TIME_SLOTS.map(slot => (
                             <th key={slot.time} className={cn("px-1 py-3 text-center border-r leading-tight transition-colors duration-500 ease-in-out", theme.tableBorder)}>
                               <div>{slot.time}</div>
@@ -683,9 +722,9 @@ export function CorePlanningModal({
                       <tbody className={cn("divide-y transition-colors duration-500 ease-in-out", theme.tableDivide)}>
                         {rowMeta.map(({ row, possibleQty }) => {
                           const scheduledSum = Object.values(row.hourlyTargets).reduce((s, v) => s + (v || 0), 0)
-                          const target = parseInt(row.targetQty, 10) || 0
+                          const target = parseInt(row.totalQty, 10) || 0
                           const delta = target - scheduledSum
-                          const isMismatched = delta !== 0 && row.targetQty !== ''
+                          const isMismatched = delta !== 0 && row.totalQty !== ''
                           return (
                           <tr key={row.id} className={cn("transition-colors duration-500 ease-in-out group", theme.rowHover)}>
                             <td className="px-3 py-3">
@@ -701,26 +740,40 @@ export function CorePlanningModal({
                                   </button>
                                 </div>
                                 <span className={cn("text-[10px] truncate transition-colors duration-500 ease-in-out", theme.rowMuted)}>{row.orderNo} | {row.productName}</span>
-                                <span className="text-[10px] text-[#10B981] font-semibold">QTY: {possibleQty}</span>
                               </div>
                             </td>
-                            <td className={cn("px-1.5 py-3 text-center border-x transition-colors duration-500 ease-in-out", theme.pendingQtyCell)}>
-                              <div className="flex flex-col items-center justify-center gap-1">
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  value={row.targetQty}
-                                  onChange={e => handleTargetQtyInput(row.id, e.target.value)}
-                                  placeholder="0"
-                                  title={isMismatched ? (delta > 0 ? `${delta} not yet scheduled to a time slot` : `${-delta} more scheduled than the pending qty`) : undefined}
-                                  className={cn(
-                                    "w-full max-w-[56px] mx-auto h-8 font-mono text-center font-bold text-sm px-1 transition-colors duration-500 ease-in-out focus-visible:ring-1",
-                                    isMismatched ? theme.mismatch : theme.pendingQtyDefault,
-                                    !isMismatched && theme.pendingQtyRing
-                                  )}
-                                />
+                            <td className={cn("px-2 py-3 text-center border-x transition-colors duration-500 ease-in-out", theme.pendingQtyCell)}>
+                              <div className="flex flex-col items-stretch justify-center gap-1.5 w-full max-w-[100px] mx-auto">
+                                <div className="flex items-center gap-1">
+                                  <span className={cn("text-[9px] font-bold w-5 shrink-0 text-left transition-colors duration-500 ease-in-out", theme.rowMuted)}>PQ</span>
+                                  <Input
+                                    type="number"
+                                    min="0"
+                                    value={row.possibleQtyText}
+                                    onChange={e => handlePossibleQtyInput(row.id, e.target.value)}
+                                    placeholder="0"
+                                    title="Possible quantity (display only, not enforced)"
+                                    className={cn("flex-1 h-7 font-mono text-center font-semibold text-xs px-1 transition-colors duration-500 ease-in-out", theme.pendingQtyDefault)}
+                                  />
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <span className={cn("text-[9px] font-bold w-5 shrink-0 text-left transition-colors duration-500 ease-in-out", theme.rowMuted)}>TQ</span>
+                                  <Input
+                                    type="number"
+                                    min="0"
+                                    value={row.totalQty}
+                                    onChange={e => handleTotalQtyInput(row.id, e.target.value)}
+                                    placeholder="0"
+                                    title={isMismatched ? (delta > 0 ? `${delta} not yet scheduled to a time slot` : `${-delta} more scheduled than the total qty`) : undefined}
+                                    className={cn(
+                                      "flex-1 h-7 font-mono text-center font-bold text-xs px-1 transition-colors duration-500 ease-in-out focus-visible:ring-1",
+                                      isMismatched ? theme.mismatch : theme.pendingQtyDefault,
+                                      !isMismatched && theme.pendingQtyRing
+                                    )}
+                                  />
+                                </div>
                                 {isMismatched && (
-                                  <span className={cn("text-[9px] font-bold leading-none whitespace-nowrap transition-colors duration-500 ease-in-out", theme.mismatchLabel)}>
+                                  <span className={cn("text-[9px] font-bold leading-none whitespace-nowrap text-center transition-colors duration-500 ease-in-out", theme.mismatchLabel)}>
                                     {delta > 0 ? `+${delta} unscheduled` : `${-delta} over`}
                                   </span>
                                 )}
@@ -729,7 +782,7 @@ export function CorePlanningModal({
                                   size="icon"
                                   variant="outline"
                                   title="Auto-fill time slots"
-                                  className={cn("h-6 w-full max-w-[56px] shrink-0 transition-colors duration-500 ease-in-out", theme.autoFillButton)}
+                                  className={cn("h-6 w-full shrink-0 transition-colors duration-500 ease-in-out", theme.autoFillButton)}
                                 >
                                   <MagicWand weight="fill" className="w-3.5 h-3.5" />
                                 </Button>
@@ -786,74 +839,22 @@ export function CorePlanningModal({
                   </div>
                 )}
               </div>
-
-              <div className={cn("border rounded-xl overflow-hidden mt-8 transition-colors duration-500 ease-in-out", theme.tableBorder)}>
-                <div className={cn("w-full flex items-center justify-between p-4 transition-colors duration-500 ease-in-out", isNightShift ? "bg-orange-100 text-stone-800" : "bg-[#EEF2FF] text-[#172554]")}>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-bold text-sm">End of Day - Actual Entry ({activeMachine?.name})</h3>
-                    <span className={cn("text-xs transition-colors duration-500 ease-in-out", theme.label)}>Enter produced quantities</span>
-                  </div>
-                </div>
-                <div className={cn("p-4 space-y-3 transition-colors duration-500 ease-in-out", isNightShift ? "bg-orange-50" : "bg-[#F4F6FB]")}>
-                  {activeRows.map(row => {
-                    const planned = parseInt(row.targetQty, 10) || 0
-                    const act = row.actualQuantity
-                    const hasAct = act !== undefined && act !== null
-                    const variance = hasAct ? act - planned : 0
-
-                    return (
-                      <div key={row.id} className={cn("flex items-center gap-4 p-3 border rounded-lg transition-colors duration-500 ease-in-out", isNightShift ? "bg-white border-orange-200" : "bg-[#FFFFFF] border-[#E0E7FF]")}>
-                        <div className="w-48 flex flex-col">
-                          <h4 className={cn("font-mono font-bold text-sm transition-colors duration-500 ease-in-out", theme.rowText)}>{row.coreBoxCode}</h4>
-                          <span className={cn("text-[10px] truncate transition-colors duration-500 ease-in-out", theme.rowMuted)}>{row.orderNo} | {row.productName}</span>
-                        </div>
-                        <div className="w-24">
-                          <span className={cn("text-[10px] block uppercase font-bold mb-1 transition-colors duration-500 ease-in-out", theme.label)}>Planned</span>
-                          <span className={cn("font-mono transition-colors duration-500 ease-in-out", theme.rowText)}>{planned}</span>
-                        </div>
-                        <div className="w-32">
-                          <span className="text-[10px] text-[#4285F4] block uppercase font-bold mb-1">Actual</span>
-                          <Input
-                            type="number"
-                            min="0"
-                            value={hasAct ? act : ''}
-                            onChange={e => handleActualChange(row.id, e.target.value)}
-                            className={cn(
-                              "h-8 font-mono px-2 text-sm w-full transition-colors duration-500 ease-in-out",
-                              isNightShift ? "bg-orange-50 text-stone-800" : "bg-[#F4F6FB] text-[#172554]",
-                              !hasAct ? "border-red-500/50 focus:border-red-500" : theme.tableBorder
-                            )}
-                            placeholder="Required"
-                          />
-                        </div>
-                        <div className="w-24 text-right ml-auto">
-                          <span className={cn("text-[10px] block uppercase font-bold mb-1 transition-colors duration-500 ease-in-out", theme.label)}>Variance</span>
-                          {hasAct ? (
-                            <span className={cn(
-                              "font-mono font-bold text-lg",
-                              variance > 0 ? "text-green-500" : variance < 0 ? "text-red-500" : theme.label
-                            )}>
-                              {variance > 0 ? '+' : ''}{variance}
-                            </span>
-                          ) : (
-                            <span className={theme.rowMuted}>-</span>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  })}
-                  {activeRows.length === 0 && (
-                     <div className={cn("text-center py-4 text-sm transition-colors duration-500 ease-in-out", theme.rowMuted)}>No items scheduled yet.</div>
-                  )}
-                </div>
-              </div>
               </>
             )}
           </div>
 
           <DialogFooter className={cn("m-0 p-6 border-t shrink-0 sm:justify-end rounded-b-2xl transition-colors duration-500 ease-in-out", theme.footer)}>
             <Button variant="ghost" onClick={onClose} className={cn("transition-colors duration-500 ease-in-out", theme.cancelButton)}>Cancel</Button>
-            <Button onClick={handleSave} className={cn("shadow-[0_4px_10px_-2px_rgba(79,70,229,0.3)] h-10 px-8 text-sm transition-colors duration-500 ease-in-out", isNightShift ? "bg-orange-500 text-white hover:bg-orange-500/90" : "bg-[#4F46E5] text-white hover:bg-[#4F46E5]/90")}>Save Day Plan</Button>
+            <Button
+              onClick={handleSave}
+              disabled={!isDirty}
+              className={cn(
+                "shadow-[0_4px_10px_-2px_rgba(79,70,229,0.3)] h-10 px-8 text-sm transition-colors duration-500 ease-in-out disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none",
+                isNightShift ? "bg-orange-500 text-white hover:bg-orange-500/90" : "bg-[#4F46E5] text-white hover:bg-[#4F46E5]/90"
+              )}
+            >
+              Save Day Plan
+            </Button>
           </DialogFooter>
         </div>
       </DialogContent>
