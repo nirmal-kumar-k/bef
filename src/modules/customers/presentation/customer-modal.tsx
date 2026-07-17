@@ -90,7 +90,7 @@ export function CustomerModal({ isOpen, onClose, initialData, onSaved }: Custome
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="bg-[#FFFFFF] border-[#E0E7FF] text-[#172554] max-w-lg">
+      <DialogContent className="bg-[#FFFFFF] border-[#E0E7FF] text-[#172554] max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#EEF2FF] flex items-center justify-center shrink-0">

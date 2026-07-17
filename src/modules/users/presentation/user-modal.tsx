@@ -84,7 +84,7 @@ export function UserModal({ isOpen, onClose, initialData }: UserModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="bg-[#FFFFFF] border-[#E0E7FF] text-[#172554] max-w-md">
+      <DialogContent className="bg-[#FFFFFF] border-[#E0E7FF] text-[#172554] max-w-md max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-heading font-bold text-[#172554]">
             {initialData ? 'Edit User' : 'Add New User'}

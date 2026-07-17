@@ -214,7 +214,7 @@ export function PlanningPopupCard({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="w-full sm:max-w-md bg-[#F4F6FB] border-[#E0E7FF] text-foreground">
+      <DialogContent className="w-full sm:max-w-md bg-[#F4F6FB] border-[#E0E7FF] text-foreground max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center justify-between pr-4">
             <div>

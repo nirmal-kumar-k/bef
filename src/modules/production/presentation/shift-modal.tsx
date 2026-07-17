@@ -72,7 +72,7 @@ export function ShiftModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[425px] bg-[#FFFFFF] border-[#E0E7FF] text-foreground">
+      <DialogContent className="sm:max-w-[425px] bg-[#FFFFFF] border-[#E0E7FF] text-foreground max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-heading text-[#172554]">
             {shift ? 'Edit Shift' : 'New Shift'}
