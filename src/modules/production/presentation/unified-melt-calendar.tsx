@@ -7,7 +7,7 @@ import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { Badge } from '@/shared/ui/badge'
-import { cn } from '@/shared/lib/utils'
+import { cn, toLocalDateString } from '@/shared/lib/utils'
 
 const RECIPES: Record<string, { pigIron: number, scrap: number, feMn: number, carburizer: number }> = {
   'FC 200': { pigIron: 35, scrap: 60, feMn: 2, carburizer: 3 },
@@ -309,7 +309,7 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, products, patterns,
       {activeTab === 'planning' && (
         <div className="flex justify-end">
           <button
-            onClick={() => handleOpenPlanning(new Date().toISOString().split('T')[0])}
+            onClick={() => handleOpenPlanning(toLocalDateString(new Date()))}
             className="bg-[#4F46E5] hover:bg-[#4F46E5]/90 text-white px-5 py-2.5 rounded-lg font-bold shadow-sm flex items-center gap-2 transition-transform hover:scale-105"
           >
             <Plus weight="bold" className="w-4 h-4" />
@@ -327,8 +327,8 @@ export function UnifiedMeltCalendar({ activeTab, openOrders, products, patterns,
         </div>
         <div className="grid grid-cols-7 gap-3 flex-1 min-w-[800px]">
           {days.map((date, i) => {
-            const dateStr = date.toISOString().split('T')[0]
-            const isToday = new Date().toISOString().split('T')[0] === dateStr
+            const dateStr = toLocalDateString(date)
+            const isToday = toLocalDateString(new Date()) === dateStr
             const isCurrentMonth = date.getMonth() === new Date().getMonth()
             const dayHeats = meltPlansByDate.get(dateStr) || []
             

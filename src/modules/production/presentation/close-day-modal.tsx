@@ -4,7 +4,7 @@ import { CalendarCheck } from '@phosphor-icons/react'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
-import { cn } from '@/shared/lib/utils'
+import { cn, toLocalDateString } from '@/shared/lib/utils'
 
 export interface CloseDayModalProps {
   isOpen: boolean;
@@ -59,7 +59,7 @@ export function CloseDayModal({ isOpen, schedules, date, onClose, onRefresh }: C
       // 2. Handle Carry-Forward (Shortfall) and Over-Production
       const tomorrow = new Date(date)
       tomorrow.setDate(tomorrow.getDate() + 1)
-      const tomorrowStr = tomorrow.toISOString().split('T')[0]
+      const tomorrowStr = toLocalDateString(tomorrow)
       
       const newSchedules = []
       

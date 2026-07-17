@@ -34,7 +34,7 @@ import {
   PopoverTrigger,
 } from '@/shared/ui/popover'
 import { Check, CaretUpDown } from '@phosphor-icons/react'
-import { cn, handleEnterToTab } from '@/shared/lib/utils'
+import { cn, handleEnterToTab, toLocalDateString } from '@/shared/lib/utils'
 import { type Order } from '@/modules/orders/domain/order.types'
 import { useRole } from '@/shared/context/role-context'
 
@@ -148,7 +148,7 @@ export function NewOrderModal({
       internalOrderNo: internalOrderNo.trim(),
       customer: customerLabel,
       product: cart[0]?.productName || '',
-      orderDate: orderDate || new Date().toISOString().split('T')[0],
+      orderDate: orderDate || toLocalDateString(new Date()),
       deliveryDate: deliveryDate || '',
       status: initialData ? initialData.status : 'Received',
       gstPercent: Number(gstPercent) || 0,

@@ -5,7 +5,7 @@ import { Card } from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
 import { Button } from '@/shared/ui/button'
 import { Badge } from '@/shared/ui/badge'
-import { cn } from '@/shared/lib/utils'
+import { cn, toLocalDateString } from '@/shared/lib/utils'
 import { CheckCircle, ClockCounterClockwise, ArrowRight, MagnifyingGlass, Funnel, CalendarCheck } from '@phosphor-icons/react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CloseDayModal } from '@/modules/production/presentation/close-day-modal'
@@ -71,7 +71,7 @@ export default function ProductionTrackingPage() {
   
   // Filters
   const [search, setSearch] = useState('')
-  const [dateFilter, setDateFilter] = useState(() => new Date().toISOString().split('T')[0])
+  const [dateFilter, setDateFilter] = useState(() => toLocalDateString(new Date()))
   
   // Modals
   const [isCloseDayOpen, setIsCloseDayOpen] = useState(false)

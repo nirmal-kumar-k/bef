@@ -5,7 +5,7 @@ import { KnockoutPlanningModal } from './knockout-planning-modal'
 import { KnockoutConfirmModal } from './knockout-confirm-modal'
 import { Button } from '@/shared/ui/button'
 import { CheckCircle } from '@phosphor-icons/react'
-import { cn } from '@/shared/lib/utils'
+import { cn, toLocalDateString } from '@/shared/lib/utils'
 
 interface KnockoutPlanningTabProps {
   knockoutBacklog: BacklogItem[]
@@ -94,8 +94,8 @@ export function KnockoutPlanningTab({ knockoutBacklog, patterns, openOrders, dai
           </div>
           <div className="grid grid-cols-7 gap-3 flex-1 min-w-[800px]">
             {days.map((date, i) => {
-              const dateStr = date.toISOString().split('T')[0]
-              const isToday = new Date().toISOString().split('T')[0] === dateStr
+              const dateStr = toLocalDateString(date)
+              const isToday = toLocalDateString(new Date()) === dateStr
               const isCurrentMonth = date.getMonth() === new Date().getMonth()
               
               const dayPlans = dailyPlans.filter(p => p.date === dateStr && p.stage === 'Knockout')

@@ -5,6 +5,20 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+// Formats a Date's LOCAL calendar day as YYYY-MM-DD. Deliberately not
+// `date.toISOString().split('T')[0]` - toISOString renders in UTC, so for any
+// timezone ahead of UTC (e.g. IST, UTC+5:30) a local midnight Date converts to
+// the PREVIOUS day in UTC, silently shifting every calendar-day string back by
+// one day. Use this wherever a Date represents "which calendar day is this",
+// e.g. building calendar grids, "is this today" checks, or the date a plan
+// gets saved against.
+export function toLocalDateString(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 export function handleEnterToTab(e: React.KeyboardEvent) {
   if (e.key === 'Enter') {
     const target = e.target as HTMLElement;

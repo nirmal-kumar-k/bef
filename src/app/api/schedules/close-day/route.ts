@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
 import { schedules as schedulesTable } from '@/infrastructure/database/schema'
 import { replaceStages } from '../_stage-helpers'
+import { toLocalDateString } from '@/shared/lib/utils'
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,7 +24,7 @@ export async function POST(request: NextRequest) {
     // 2. Generate Carry Forward Schedules
     const tomorrow = new Date(date)
     tomorrow.setDate(tomorrow.getDate() + 1)
-    const tomorrowStr = tomorrow.toISOString().split('T')[0]
+    const tomorrowStr = toLocalDateString(tomorrow)
     
     const displayDate = new Date(date).toLocaleDateString(undefined, { 
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 

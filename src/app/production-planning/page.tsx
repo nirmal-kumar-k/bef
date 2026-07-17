@@ -6,7 +6,7 @@ import { Cube, CubeTransparent, Fire } from '@phosphor-icons/react'
 import { Button } from '@/shared/ui/button'
 import { Label } from '@/shared/ui/label'
 import { useRole } from '@/shared/context/role-context'
-import { cn } from '@/shared/lib/utils'
+import { cn, toLocalDateString } from '@/shared/lib/utils'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
 
 import { BacklogItem } from '@/modules/production/presentation/daily-planning-modal'
@@ -392,8 +392,8 @@ export default function ProductionPlanningPage() {
                     </div>
                     <div className="grid grid-cols-7 gap-3 min-w-[800px]">
                       {calendarDays.map((date, i) => {
-                        const dateStr = date.toISOString().split('T')[0]
-                        const isToday = new Date().toISOString().split('T')[0] === dateStr
+                        const dateStr = toLocalDateString(date)
+                        const isToday = toLocalDateString(new Date()) === dateStr
                         const isCurrentMonth = date.getMonth() === new Date().getMonth()
                         const counts = planningByDate.get(dateStr)
 

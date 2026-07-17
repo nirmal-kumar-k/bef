@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { BacklogItem } from './daily-planning-modal'
 import { MeltPlanningModal } from './melt-planning-modal'
-import { cn } from '@/shared/lib/utils'
+import { cn, toLocalDateString } from '@/shared/lib/utils'
 
 interface MeltPlanningTabProps {
   defaultMetalQty: number
@@ -111,8 +111,8 @@ export function MeltPlanningTab({ defaultMetalQty, openOrders, products, pattern
         </div>
         <div className="grid grid-cols-7 gap-3 flex-1 min-w-[800px]">
           {days.map((date, i) => {
-            const dateStr = date.toISOString().split('T')[0]
-            const isToday = new Date().toISOString().split('T')[0] === dateStr
+            const dateStr = toLocalDateString(date)
+            const isToday = toLocalDateString(new Date()) === dateStr
             const isCurrentMonth = date.getMonth() === new Date().getMonth()
             
             const dayPlans = dailyPlans.filter(p => p.date === dateStr && p.stage === 'Melt')

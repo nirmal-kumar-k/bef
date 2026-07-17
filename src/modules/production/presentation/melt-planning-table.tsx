@@ -7,7 +7,7 @@ import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { Badge } from '@/shared/ui/badge'
-import { cn } from '@/shared/lib/utils'
+import { cn, toLocalDateString } from '@/shared/lib/utils'
 
 // Configuration
 const RECIPES: Record<string, { pigIron: number, scrap: number, feMn: number, carburizer: number }> = {
@@ -55,7 +55,7 @@ export function MeltPlanningTable({ defaultMetalQty, defaultGrade }: { defaultMe
   // Section 1 Inputs
   const [s1Grade, setS1Grade] = useState<string>(defaultGrade && RECIPES[defaultGrade] ? defaultGrade : 'FC 200')
   const [s1Qty, setS1Qty] = useState<number>(defaultMetalQty || 600)
-  const [s1StartDate, setS1StartDate] = useState<string>(new Date().toISOString().split('T')[0])
+  const [s1StartDate, setS1StartDate] = useState<string>(toLocalDateString(new Date()))
   const [s1Prefix, setS1Prefix] = useState<string>('H')
   const [s1StartNo, setS1StartNo] = useState<number>(1)
   const [s1Capacity, setS1Capacity] = useState<number>(150)
@@ -102,7 +102,7 @@ export function MeltPlanningTable({ defaultMetalQty, defaultGrade }: { defaultMe
       
       newHeats.push({
         heatNo,
-        date: heatDate.toISOString().split('T')[0],
+        date: toLocalDateString(heatDate),
         day: currentDay,
         slot,
         grade: s1Grade,

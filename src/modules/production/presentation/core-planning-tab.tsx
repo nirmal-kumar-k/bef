@@ -4,7 +4,7 @@ import { Input } from '@/shared/ui/input'
 import { Button } from '@/shared/ui/button'
 import { Label } from '@/shared/ui/label'
 import { CorePlanningModal } from './core-planning-modal'
-import { cn } from '@/shared/lib/utils'
+import { cn, toLocalDateString } from '@/shared/lib/utils'
 
 interface CorePlanningTabProps {
   coreBacklog: BacklogItem[]
@@ -123,8 +123,8 @@ export function CorePlanningTab({ coreBacklog, patterns, openOrders, dailyPlans,
           </div>
           <div className="grid grid-cols-7 gap-3 flex-1 min-w-[800px]">
             {days.map((date, i) => {
-              const dateStr = date.toISOString().split('T')[0]
-              const isToday = new Date().toISOString().split('T')[0] === dateStr
+              const dateStr = toLocalDateString(date)
+              const isToday = toLocalDateString(new Date()) === dateStr
               const isCurrentMonth = date.getMonth() === new Date().getMonth()
               
               const dayPlans = dailyPlans.filter(p => p.date === dateStr && p.stage === 'Core')
@@ -169,7 +169,7 @@ export function CorePlanningTab({ coreBacklog, patterns, openOrders, dailyPlans,
 
               const prevDate = new Date(date)
               prevDate.setDate(date.getDate() - 1)
-              const prevDateStr = prevDate.toISOString().split('T')[0]
+              const prevDateStr = toLocalDateString(prevDate)
               const prevDayPlans = dailyPlans.filter(p => p.date === prevDateStr && p.stage === 'Core')
               // With no Actual entry to compare against, we can't know what was
               // actually produced, so we conservatively carry the full
