@@ -721,7 +721,7 @@ export function MouldPlanningModal({
                                       placeholder="0"
                                       title={isMismatched ? (delta > 0 ? `${delta} not yet scheduled to a time slot` : `${-delta} more scheduled than the total qty`) : undefined}
                                       className={cn(
-                                        "h-7 font-mono text-center font-bold text-xs px-1 transition-colors duration-500 ease-in-out focus-visible:ring-1",
+                                        "h-7 font-mono text-center font-bold text-xs px-1 transition-colors duration-500 ease-in-out focus-visible:ring-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
                                         isMismatched ? theme.mismatch : theme.pendingQtyDefault,
                                         !isMismatched && theme.pendingQtyRing
                                       )}
@@ -738,7 +738,7 @@ export function MouldPlanningModal({
                                     </Button>
                                   </div>
                                   {isMismatched && (
-                                    <span className={cn("text-[9px] font-bold leading-none whitespace-nowrap text-center transition-colors duration-500 ease-in-out", theme.mismatchLabel)}>
+                                    <span className={cn("block w-full text-[9px] font-bold leading-none whitespace-nowrap text-center transition-colors duration-500 ease-in-out", theme.mismatchLabel)}>
                                       {delta > 0 ? `+${delta} unscheduled` : `${-delta} over`}
                                     </span>
                                   )}
