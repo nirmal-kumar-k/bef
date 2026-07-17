@@ -378,18 +378,6 @@ export function CorePlanningModal({
     }))
   }
 
-  // Display-only PQ text - never clamped/validated against machine capacity,
-  // since it does not feed the over-capacity check.
-  const handlePossibleQtyInput = (rowId: string, value: string) => {
-    setPlannedRows(prev => prev.map(r => {
-      if (r.id !== rowId) return r
-      if (value === '') return { ...r, possibleQtyText: value }
-      const num = parseInt(value, 10)
-      if (isNaN(num)) return { ...r, possibleQtyText: value }
-      return { ...r, possibleQtyText: String(Math.max(0, num)) }
-    }))
-  }
-
   // How much of this machine's per-slot capacity is already claimed by OTHER
   // rows scheduled on it (excludeRowId lets a row re-fill around its own prior
   // allocation instead of double-counting it).
@@ -761,15 +749,12 @@ export function CorePlanningModal({
                               <div className="flex flex-col items-stretch justify-center gap-1.5 w-full max-w-[100px] mx-auto">
                                 <div className="flex items-center gap-1">
                                   <span className={cn("text-[9px] font-bold w-5 shrink-0 text-left transition-colors duration-500 ease-in-out", theme.rowMuted)}>PQ</span>
-                                  <Input
-                                    type="number"
-                                    min="0"
-                                    value={row.possibleQtyText}
-                                    onChange={e => handlePossibleQtyInput(row.id, e.target.value)}
-                                    placeholder="0"
-                                    title="Possible quantity (display only, not enforced)"
-                                    className={cn("flex-1 h-7 font-mono text-center font-semibold text-xs px-1 transition-colors duration-500 ease-in-out", theme.pendingQtyDefault)}
-                                  />
+                                  <div
+                                    title="Possible quantity - equipment-derived capacity, view only"
+                                    className={cn("flex-1 h-7 flex items-center justify-center font-mono font-semibold text-xs px-1 rounded-md border transition-colors duration-500 ease-in-out", theme.pendingQtyDefault)}
+                                  >
+                                    {row.possibleQtyText || 0}
+                                  </div>
                                 </div>
                                 <div className="flex items-center gap-1">
                                   <span className={cn("text-[9px] font-bold w-5 shrink-0 text-left transition-colors duration-500 ease-in-out", theme.rowMuted)}>TQ</span>
