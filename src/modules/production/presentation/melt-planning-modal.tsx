@@ -126,10 +126,9 @@ export function MeltPlanningModal({
   const [grades, setGrades] = useState<{ id: string; code: string; name: string }[]>([])
 
   const [allocationHeatId, setAllocationHeatId] = useState<string | null>(null)
-  // Which heat's full detail card is showing below the compact chip grid -
-  // falls back to the furnace's first heat whenever this doesn't point at one
-  // of its heats (furnace switch, or the selected heat got deleted).
-  const [selectedHeatId, setSelectedHeatId] = useState<string | null>(null)
+  // Which heat's full detail card is open in the popup - null means the popup
+  // is closed and only the compact chip grid shows.
+  const [detailHeatId, setDetailHeatId] = useState<string | null>(null)
 
   // Add Heat flow: pick a grade first, then a heat code field appears
   const [addHeatOpen, setAddHeatOpen] = useState(false)
@@ -407,7 +406,7 @@ export function MeltPlanningModal({
   const maxCapacity = furnace?.maxMeltCapacityKg || 150
 
   const activeHeats = heats.filter(h => h.furnaceId === activeFurnaceId).sort((a, b) => a.heatNumber - b.heatNumber)
-  const selectedHeat = activeHeats.find(h => h.id === selectedHeatId) || activeHeats[0]
+  const selectedHeat = activeHeats.find(h => h.id === detailHeatId) || null
   const selectedHeatPours = selectedHeat ? pours.filter(p => p.heatId === selectedHeat.id) : []
   const selectedHeatWeight = selectedHeatPours.reduce((sum, p) => sum + (p.mouldsScheduled * p.mouldWeight), 0)
   const selectedHeatOverCapacity = selectedHeatWeight > maxCapacity
@@ -555,37 +554,34 @@ export function MeltPlanningModal({
                   </div>
                 )}
 
-                {/* Compact chip grid - one small box per heat, click to view its full card below */}
-                <div className="flex flex-wrap gap-2">
+                {/* Compact chip grid - one small box per heat, click opens its full card in a popup */}
+                <div className="flex flex-wrap gap-3">
                   {activeHeats.map(heat => {
                     const heatPours = pours.filter(p => p.heatId === heat.id)
                     const totalWeight = heatPours.reduce((sum, p) => sum + (p.mouldsScheduled * p.mouldWeight), 0)
                     const isOverCapacity = totalWeight > maxCapacity
-                    const isSelected = selectedHeat?.id === heat.id
 
                     return (
                       <button
                         key={heat.id}
-                        onClick={() => setSelectedHeatId(heat.id)}
-                        title={heat.grade}
+                        onClick={() => setDetailHeatId(heat.id)}
                         className={cn(
-                          "w-[108px] shrink-0 text-left bg-white rounded-lg border border-l-4 px-2.5 py-2 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md",
-                          isOverCapacity ? "border-l-red-400" : "border-l-amber-300",
-                          isSelected ? "border-amber-400 ring-2 ring-amber-200" : warmBorder
+                          "min-w-[112px] shrink-0 text-left bg-white p-3 rounded-[12px] border shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:-translate-y-[2px] hover:shadow-[0_4px_14px_rgba(79,70,229,0.08)] transition-all duration-300 ease-out",
+                          isOverCapacity ? "border-red-300 hover:border-red-400" : cn(warmBorder, "hover:border-amber-400")
                         )}
                       >
-                        <div className="flex items-start justify-between gap-1">
-                          <span className="font-mono font-bold text-xs text-[#172554] truncate">{heat.heatCode || `Heat ${heat.heatNumber}`}</span>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-mono font-bold text-xs text-[#172554]">{heat.heatCode || `Heat ${heat.heatNumber}`}</span>
                           <span
                             title="Furnace's running heat count - never resets on its own (reset in Equipment Master)"
-                            className="font-mono text-[9px] font-bold text-amber-700 bg-amber-100 px-1 py-0.5 rounded shrink-0"
+                            className="font-mono text-[9px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded shrink-0"
                           >
                             #{heat.sequenceNumber ?? heat.heatNumber}
                           </span>
                         </div>
-                        <div className="text-[10px] font-semibold text-[#64748B] truncate mt-0.5">{heat.grade}</div>
+                        <div className="text-[10px] font-semibold text-[#64748B] mt-1">{heat.grade}</div>
                         {isOverCapacity && (
-                          <div className="text-[9px] font-bold text-red-600 mt-1 flex items-center gap-0.5">
+                          <div className="text-[9px] font-bold text-red-600 mt-1.5 flex items-center gap-0.5">
                             <WarningCircle weight="fill" className="w-2.5 h-2.5" /> Over
                           </div>
                         )}
@@ -594,12 +590,15 @@ export function MeltPlanningModal({
                   })}
                 </div>
 
-                {/* Selected heat's full detail card */}
-                {selectedHeat && (
+                {/* Selected heat's full detail card - opens as its own popup, closing returns to the chip grid */}
+                <Dialog open={!!selectedHeat} onOpenChange={(open) => !open && setDetailHeatId(null)}>
+                  <DialogContent className={cn("max-w-lg p-0 text-foreground shadow-2xl rounded-2xl overflow-hidden", warmBg, warmBorder)}>
+                  {selectedHeat && (
                   <div className={cn(
-                    "bg-white rounded-xl border shadow-sm flex flex-col overflow-hidden transition-all max-w-2xl",
-                    selectedHeatOverCapacity ? "border-red-300 ring-1 ring-red-300" : warmBorder
+                    "bg-white flex flex-col overflow-hidden transition-all",
+                    selectedHeatOverCapacity && "ring-1 ring-red-300"
                   )}>
+                    <DialogTitle className="sr-only">{selectedHeat.heatCode || `Heat ${selectedHeat.heatNumber}`} details</DialogTitle>
                     {/* Heat Header - identity row */}
                     <div className={cn(
                       "px-4 py-3 border-b flex items-center gap-2.5 transition-colors duration-500 ease-in-out",
@@ -750,7 +749,9 @@ export function MeltPlanningModal({
 
                     </div>
                   </div>
-                )}
+                  )}
+                  </DialogContent>
+                </Dialog>
               </div>
             )}
           </div>
