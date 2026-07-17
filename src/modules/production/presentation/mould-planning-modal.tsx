@@ -697,17 +697,15 @@ export function MouldPlanningModal({
                               </td>
                               <td className={cn("px-2 py-4 text-center border-x transition-colors duration-500 ease-in-out", theme.pendingQtyCell)}>
                                 <div className="flex flex-col items-stretch justify-center gap-1.5 w-full max-w-[100px] mx-auto">
-                                  <div className="flex items-center gap-1">
-                                    <span className={cn("text-[9px] font-bold w-5 shrink-0 text-left transition-colors duration-500 ease-in-out", theme.rowMuted)}>PQ</span>
+                                  <div className="grid grid-cols-[20px_1fr] gap-1 items-center">
+                                    <span className={cn("text-[9px] font-bold leading-none text-left transition-colors duration-500 ease-in-out", theme.rowMuted)}>PQ</span>
                                     <div
                                       title="Possible quantity - equipment-derived capacity, view only"
-                                      className={cn("flex-1 h-7 flex items-center justify-center font-mono font-semibold text-xs px-1 rounded-md border transition-colors duration-500 ease-in-out", theme.pendingQtyDefault)}
+                                      className={cn("h-7 flex items-center justify-center font-mono font-semibold text-xs px-1 rounded-md border transition-colors duration-500 ease-in-out", theme.pendingQtyDefault)}
                                     >
                                       {row.possibleQtyText || 0}
                                     </div>
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    <span className={cn("text-[9px] font-bold w-5 shrink-0 text-left transition-colors duration-500 ease-in-out", theme.rowMuted)}>TQ</span>
+                                    <span className={cn("text-[9px] font-bold leading-none text-left transition-colors duration-500 ease-in-out", theme.rowMuted)}>TQ</span>
                                     <Input
                                       type="number"
                                       min="0"
@@ -723,7 +721,7 @@ export function MouldPlanningModal({
                                       placeholder="0"
                                       title={isMismatched ? (delta > 0 ? `${delta} not yet scheduled to a time slot` : `${-delta} more scheduled than the total qty`) : undefined}
                                       className={cn(
-                                        "flex-1 h-7 font-mono text-center font-bold text-xs px-1 transition-colors duration-500 ease-in-out focus-visible:ring-1",
+                                        "h-7 font-mono text-center font-bold text-xs px-1 transition-colors duration-500 ease-in-out focus-visible:ring-1",
                                         isMismatched ? theme.mismatch : theme.pendingQtyDefault,
                                         !isMismatched && theme.pendingQtyRing
                                       )}
