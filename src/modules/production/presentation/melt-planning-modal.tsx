@@ -423,7 +423,7 @@ export function MeltPlanningModal({
   return (
     <>
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className={cn("w-[95vw] sm:max-w-[1200px] min-h-[60vh] max-h-[90vh] text-foreground p-0 shadow-2xl flex flex-col transition-colors duration-500 ease-in-out", warmBg, warmBorder)}>
+      <DialogContent className={cn("w-[95vw] sm:max-w-[1200px] h-[90vh] text-foreground p-0 shadow-2xl flex flex-col transition-colors duration-500 ease-in-out", warmBg, warmBorder)}>
         <div className="flex flex-col w-full h-full">
           {/* Header */}
           <DialogHeader className={cn("p-6 pb-4 border-b shrink-0 bg-white transition-colors duration-500 ease-in-out", warmBorder)}>

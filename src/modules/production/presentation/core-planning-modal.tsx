@@ -557,8 +557,8 @@ export function CorePlanningModal({
   return (
     <>
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className={cn("w-[98vw] sm:max-w-[98vw] min-h-[60vh] max-h-[95vh] text-foreground p-0 shadow-2xl flex flex-col overflow-hidden transition-colors duration-500 ease-in-out", theme.dialog)}>
-        <div className="flex flex-col w-full h-full max-h-[95vh]">
+      <DialogContent className={cn("w-[98vw] sm:max-w-[98vw] h-[95vh] text-foreground p-0 shadow-2xl flex flex-col overflow-hidden transition-colors duration-500 ease-in-out", theme.dialog)}>
+        <div className="flex flex-col w-full h-full">
           <DialogHeader className={cn("p-8 pb-6 border-b shrink-0 transition-colors duration-500 ease-in-out", theme.header)}>
             <div className="flex items-start justify-between gap-6">
               <div className="space-y-4">
