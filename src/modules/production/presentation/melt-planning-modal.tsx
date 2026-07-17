@@ -406,7 +406,7 @@ export function MeltPlanningModal({
   const maxCapacity = furnace?.maxMeltCapacityKg || 150
 
   const activeHeats = heats.filter(h => h.furnaceId === activeFurnaceId).sort((a, b) => a.heatNumber - b.heatNumber)
-  const selectedHeat = activeHeats.find(h => h.id === detailHeatId) || null
+  const selectedHeat = activeHeats.find(h => h.id === detailHeatId) || activeHeats[0]
   const selectedHeatPours = selectedHeat ? pours.filter(p => p.heatId === selectedHeat.id) : []
   const selectedHeatWeight = selectedHeatPours.reduce((sum, p) => sum + (p.mouldsScheduled * p.mouldWeight), 0)
   const selectedHeatOverCapacity = selectedHeatWeight > maxCapacity
@@ -554,12 +554,13 @@ export function MeltPlanningModal({
                   </div>
                 )}
 
-                {/* Compact chip grid - one small box per heat, click opens its full card in a popup */}
+                {/* Compact chip grid - one small box per heat, click shows its full card in the panel below */}
                 <div className="flex flex-wrap gap-3">
                   {activeHeats.map(heat => {
                     const heatPours = pours.filter(p => p.heatId === heat.id)
                     const totalWeight = heatPours.reduce((sum, p) => sum + (p.mouldsScheduled * p.mouldWeight), 0)
                     const isOverCapacity = totalWeight > maxCapacity
+                    const isSelected = selectedHeat?.id === heat.id
 
                     return (
                       <button
@@ -567,7 +568,8 @@ export function MeltPlanningModal({
                         onClick={() => setDetailHeatId(heat.id)}
                         className={cn(
                           "min-w-[112px] shrink-0 text-left bg-white p-3 rounded-[12px] border shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:-translate-y-[2px] hover:shadow-[0_4px_14px_rgba(79,70,229,0.08)] transition-all duration-300 ease-out",
-                          isOverCapacity ? "border-red-300 hover:border-red-400" : cn(warmBorder, "hover:border-amber-400")
+                          isOverCapacity ? "border-red-300 hover:border-red-400" : cn(warmBorder, "hover:border-amber-400"),
+                          isSelected && "ring-2 ring-amber-300 border-amber-400"
                         )}
                       >
                         <div className="flex items-center justify-between gap-2">
@@ -590,15 +592,12 @@ export function MeltPlanningModal({
                   })}
                 </div>
 
-                {/* Selected heat's full detail card - opens as its own popup, closing returns to the chip grid */}
-                <Dialog open={!!selectedHeat} onOpenChange={(open) => !open && setDetailHeatId(null)}>
-                  <DialogContent className={cn("max-w-lg p-0 text-foreground shadow-2xl rounded-2xl overflow-hidden", warmBg, warmBorder)}>
-                  {selectedHeat && (
+                {/* Selected heat's full detail card, shown inline below the chip grid */}
+                {selectedHeat && (
                   <div className={cn(
-                    "bg-white flex flex-col overflow-hidden transition-all",
-                    selectedHeatOverCapacity && "ring-1 ring-red-300"
+                    "bg-white rounded-xl border shadow-sm flex flex-col overflow-hidden transition-all max-w-2xl",
+                    selectedHeatOverCapacity ? "border-red-300 ring-1 ring-red-300" : warmBorder
                   )}>
-                    <DialogTitle className="sr-only">{selectedHeat.heatCode || `Heat ${selectedHeat.heatNumber}`} details</DialogTitle>
                     {/* Heat Header - identity row */}
                     <div className={cn(
                       "px-4 py-3 border-b flex items-center gap-2.5 transition-colors duration-500 ease-in-out",
@@ -749,9 +748,7 @@ export function MeltPlanningModal({
 
                     </div>
                   </div>
-                  )}
-                  </DialogContent>
-                </Dialog>
+                )}
               </div>
             )}
           </div>
