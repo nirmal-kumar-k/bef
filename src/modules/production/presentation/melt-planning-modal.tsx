@@ -126,6 +126,10 @@ export function MeltPlanningModal({
   const [grades, setGrades] = useState<{ id: string; code: string; name: string }[]>([])
 
   const [allocationHeatId, setAllocationHeatId] = useState<string | null>(null)
+  // Which heat's full detail card is showing below the compact chip grid -
+  // falls back to the furnace's first heat whenever this doesn't point at one
+  // of its heats (furnace switch, or the selected heat got deleted).
+  const [selectedHeatId, setSelectedHeatId] = useState<string | null>(null)
 
   // Add Heat flow: pick a grade first, then a heat code field appears
   const [addHeatOpen, setAddHeatOpen] = useState(false)
@@ -403,6 +407,10 @@ export function MeltPlanningModal({
   const maxCapacity = furnace?.maxMeltCapacityKg || 150
 
   const activeHeats = heats.filter(h => h.furnaceId === activeFurnaceId).sort((a, b) => a.heatNumber - b.heatNumber)
+  const selectedHeat = activeHeats.find(h => h.id === selectedHeatId) || activeHeats[0]
+  const selectedHeatPours = selectedHeat ? pours.filter(p => p.heatId === selectedHeat.id) : []
+  const selectedHeatWeight = selectedHeatPours.reduce((sum, p) => sum + (p.mouldsScheduled * p.mouldWeight), 0)
+  const selectedHeatOverCapacity = selectedHeatWeight > maxCapacity
 
   // Melt Planning is amber-branded by default (Furnace/heat cards), so Night
   // Shift doesn't need a new accent color like Core/Mould do - it just gets
@@ -547,170 +555,202 @@ export function MeltPlanningModal({
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Compact chip grid - one small box per heat, click to view its full card below */}
+                <div className="flex flex-wrap gap-2">
                   {activeHeats.map(heat => {
                     const heatPours = pours.filter(p => p.heatId === heat.id)
                     const totalWeight = heatPours.reduce((sum, p) => sum + (p.mouldsScheduled * p.mouldWeight), 0)
                     const isOverCapacity = totalWeight > maxCapacity
+                    const isSelected = selectedHeat?.id === heat.id
 
                     return (
-                      <div key={heat.id} className={cn(
-                        "bg-white rounded-xl border shadow-sm flex flex-col overflow-hidden transition-all",
-                        isOverCapacity ? "border-red-300 ring-1 ring-red-300" : warmBorder
-                      )}>
-                        {/* Heat Header - identity row */}
-                        <div className={cn(
-                          "px-4 py-3 border-b flex items-center gap-2.5 transition-colors duration-500 ease-in-out",
-                          isOverCapacity ? "bg-red-50 border-red-200" : cn("bg-gradient-to-r from-amber-50/70 to-white", warmBorder)
-                        )}>
-                          <div className={cn(
-                            "w-9 h-9 rounded-lg flex items-center justify-center shrink-0",
-                            isOverCapacity ? "bg-red-100" : "bg-amber-100"
-                          )}>
-                            <Fire weight="fill" className={cn("w-5 h-5", isOverCapacity ? "text-red-500" : "text-amber-600")} />
-                          </div>
-                          <div className="flex flex-col min-w-0 flex-1">
-                            <span className="font-mono font-black text-base text-[#172554] leading-tight truncate">{heat.heatCode || `Heat ${heat.heatNumber}`}</span>
-                            <span className="text-[11px] font-semibold text-[#64748B] truncate mt-0.5">{heat.grade}</span>
-                          </div>
+                      <button
+                        key={heat.id}
+                        onClick={() => setSelectedHeatId(heat.id)}
+                        title={heat.grade}
+                        className={cn(
+                          "w-[108px] shrink-0 text-left bg-white rounded-lg border border-l-4 px-2.5 py-2 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md",
+                          isOverCapacity ? "border-l-red-400" : "border-l-amber-300",
+                          isSelected ? "border-amber-400 ring-2 ring-amber-200" : warmBorder
+                        )}
+                      >
+                        <div className="flex items-start justify-between gap-1">
+                          <span className="font-mono font-bold text-xs text-[#172554] truncate">{heat.heatCode || `Heat ${heat.heatNumber}`}</span>
                           <span
                             title="Furnace's running heat count - never resets on its own (reset in Equipment Master)"
-                            className="font-mono text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded shrink-0"
+                            className="font-mono text-[9px] font-bold text-amber-700 bg-amber-100 px-1 py-0.5 rounded shrink-0"
                           >
                             #{heat.sequenceNumber ?? heat.heatNumber}
                           </span>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removeHeat(heat.id)}
-                            title="Delete heat"
-                            className="h-7 w-7 shrink-0 text-[#94A3B8] hover:text-red-600 hover:bg-red-50"
-                          >
-                            <Trash className="w-4 h-4" />
-                          </Button>
                         </div>
-
-                        {/* Heat Header - metrics strip (fixed 3-column grid so values never wrap/orphan) */}
-                        <div className={cn(
-                          "grid grid-cols-3 divide-x border-b transition-colors duration-500 ease-in-out",
-                          isOverCapacity ? "divide-red-200 bg-red-50/50 border-red-200" : cn("bg-[#F8FAFC]", warmBorder, isNightShift ? "divide-orange-200" : "divide-[#E0E7FF]")
-                        )}>
-                          <div className="px-2 py-2.5 flex flex-col items-center gap-1">
-                            <span className="text-[9px] font-bold uppercase tracking-wider text-[#94A3B8] flex items-center gap-1">
-                              <Clock className="w-3 h-3" /> Pour Window
-                            </span>
-                            <div className="flex items-center gap-1">
-                              <Input
-                                value={heat.startTime}
-                                onChange={e => handleHeatTimeChange(heat.id, e.target.value)}
-                                className="w-[62px] h-6 px-1 py-0 text-[11px] font-mono border-none bg-transparent text-center shadow-none focus-visible:ring-1 focus-visible:ring-amber-500"
-                              />
-                              <span className="text-[#CBD5E1] text-xs shrink-0">→</span>
-                              <span className="w-[62px] text-center text-[11px] font-mono text-[#64748B] shrink-0">{heat.endTime}</span>
-                            </div>
+                        <div className="text-[10px] font-semibold text-[#64748B] truncate mt-0.5">{heat.grade}</div>
+                        {isOverCapacity && (
+                          <div className="text-[9px] font-bold text-red-600 mt-1 flex items-center gap-0.5">
+                            <WarningCircle weight="fill" className="w-2.5 h-2.5" /> Over
                           </div>
-
-                          <div className="px-2 py-2.5 flex flex-col items-center gap-1">
-                            <span className="text-[9px] font-bold uppercase tracking-wider text-[#94A3B8]">Charge Weight</span>
-                            <span className={cn("font-mono font-bold text-xs whitespace-nowrap", isOverCapacity ? "text-red-600" : "text-[#172554]")}>
-                              {totalWeight.toFixed(1)} <span className="text-[#94A3B8] font-normal">/ {maxCapacity} kg</span>
-                            </span>
-                            <div className="w-full max-w-[84px] h-1 rounded-full bg-[#E2E8F0] overflow-hidden">
-                              <div
-                                className={cn("h-full rounded-full transition-all", isOverCapacity ? "bg-red-500" : "bg-emerald-500")}
-                                style={{ width: `${Math.min(100, (totalWeight / (maxCapacity || 1)) * 100)}%` }}
-                              />
-                            </div>
-                          </div>
-
-                          <div className="px-2 py-2.5 flex flex-col items-center gap-1">
-                            <span className="text-[9px] font-bold uppercase tracking-wider text-[#4285F4]">Actual Melt</span>
-                            <Input
-                              type="number"
-                              min="0"
-                              value={heat.actualMeltWeight ?? ''}
-                              onChange={e => handleActualMeltChange(heat.id, e.target.value)}
-                              className="w-20 h-6 text-[11px] font-mono text-center px-1 bg-white border-[#C7D2FE] focus-visible:ring-1 focus-visible:ring-[#4285F4]"
-                              placeholder="kg"
-                            />
-                          </div>
-                        </div>
-
-                        {/* Heat Body */}
-                        <div className="p-4 flex-1 flex flex-col gap-3">
-                          {heatPours.length === 0 ? (
-                            <div className="flex-1 flex items-center justify-center text-[#94A3B8] text-sm italic py-4">
-                              No moulds allocated to this heat yet.
-                            </div>
-                          ) : (
-                            <div className="space-y-2">
-                              {heatPours.map(pour => (
-                                <div key={pour.id} className={cn("flex items-center justify-between p-2 rounded-lg border transition-colors duration-500 ease-in-out", warmBg, warmBorder)}>
-                                  <div className="flex flex-col">
-                                    <span className="font-bold text-sm text-[#172554]">{pour.patternRef} <span className="text-xs font-normal text-[#64748B]">({pour.grade})</span></span>
-                                    <span className="text-[10px] text-[#94A3B8]">{pour.orderNo} | {pour.mouldWeight} kg/mould</span>
-                                  </div>
-                                  <div className="flex items-center gap-4">
-                                    <span className="font-mono font-bold text-amber-600">{pour.mouldsScheduled} moulds</span>
-                                    <Button variant="ghost" size="icon" onClick={() => removePour(pour.id)} className="h-6 w-6 text-red-400 hover:text-red-600 hover:bg-red-50">
-                                      <Trash className="w-4 h-4" />
-                                    </Button>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                          
-                          {/* Add Pour Button / Popover - locked to this heat's own grade */}
-                          <Popover open={allocationHeatId === heat.id} onOpenChange={(open) => {
-                            setAllocationHeatId(open ? heat.id : null)
-                          }}>
-                            <PopoverTrigger className={cn(buttonVariants({ variant: "outline" }), "w-full mt-auto border-dashed border-amber-300 text-amber-600 hover:bg-amber-50 hover:text-amber-700 font-semibold h-9")}>
-                              <Plus className="w-4 h-4 mr-2" /> Add Pouring Allocation
-                            </PopoverTrigger>
-                            <PopoverContent className="w-[340px] p-0 shadow-2xl border-[#E0E7FF] rounded-xl" side="bottom" align="center">
-                              <div className="flex flex-col bg-white rounded-xl overflow-hidden">
-                                <div className="p-3 bg-gradient-to-r from-amber-50 to-white border-b border-[#E0E7FF]">
-                                  <h4 className="font-bold text-[#172554] text-sm flex items-center gap-2">
-                                    <Fire className="w-4 h-4 text-amber-500" /> Allocate to Heat {heat.heatNumber}
-                                  </h4>
-                                  <p className="text-[10px] text-[#94A3B8] mt-0.5">Grade: <span className="font-bold text-amber-600">{heat.grade}</span> - only matching moulds shown</p>
-                                </div>
-                                <div className="h-[300px] overflow-y-auto p-3 space-y-3 bg-white">
-                                  {(backlogByGrade.get(heat.grade) || []).length === 0 ? (
-                                    <div className="h-full flex items-center justify-center text-xs text-[#94A3B8] italic">
-                                      No pending moulds for grade {heat.grade}.
-                                    </div>
-                                  ) : (
-                                    backlogByGrade.get(heat.grade)?.map(b => {
-                                        const pattern = patterns.find(p => p.code === b.patternRef)
-                                        const boxWeight = pattern?.totalWeight || 20
-                                        const remainingMoulds = Math.ceil((b.totalRequired - b.totalScheduled) / boxWeight)
-                                        const remainingHeatCapacity = Math.max(0, maxCapacity - totalWeight)
-                                        const possibleMoulds = Math.floor(remainingHeatCapacity / boxWeight)
-                                        const maxAllowed = Math.min(remainingMoulds, possibleMoulds)
-
-                                        return (
-                                          <PourAllocationRow
-                                            key={b.itemId}
-                                            backlogItem={b}
-                                            boxWeight={boxWeight}
-                                            maxAllowed={maxAllowed}
-                                            onAdd={(qty) => addPour(heat.id, b, qty)}
-                                          />
-                                        )
-                                      })
-                                    )}
-                                  </div>
-                                </div>
-                            </PopoverContent>
-                          </Popover>
-
-                        </div>
-                      </div>
+                        )}
+                      </button>
                     )
                   })}
                 </div>
+
+                {/* Selected heat's full detail card */}
+                {selectedHeat && (
+                  <div className={cn(
+                    "bg-white rounded-xl border shadow-sm flex flex-col overflow-hidden transition-all max-w-2xl",
+                    selectedHeatOverCapacity ? "border-red-300 ring-1 ring-red-300" : warmBorder
+                  )}>
+                    {/* Heat Header - identity row */}
+                    <div className={cn(
+                      "px-4 py-3 border-b flex items-center gap-2.5 transition-colors duration-500 ease-in-out",
+                      selectedHeatOverCapacity ? "bg-red-50 border-red-200" : cn("bg-gradient-to-r from-amber-50/70 to-white", warmBorder)
+                    )}>
+                      <div className={cn(
+                        "w-9 h-9 rounded-lg flex items-center justify-center shrink-0",
+                        selectedHeatOverCapacity ? "bg-red-100" : "bg-amber-100"
+                      )}>
+                        <Fire weight="fill" className={cn("w-5 h-5", selectedHeatOverCapacity ? "text-red-500" : "text-amber-600")} />
+                      </div>
+                      <div className="flex flex-col min-w-0 flex-1">
+                        <span className="font-mono font-black text-base text-[#172554] leading-tight truncate">{selectedHeat.heatCode || `Heat ${selectedHeat.heatNumber}`}</span>
+                        <span className="text-[11px] font-semibold text-[#64748B] truncate mt-0.5">{selectedHeat.grade}</span>
+                      </div>
+                      <span
+                        title="Furnace's running heat count - never resets on its own (reset in Equipment Master)"
+                        className="font-mono text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded shrink-0"
+                      >
+                        #{selectedHeat.sequenceNumber ?? selectedHeat.heatNumber}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeHeat(selectedHeat.id)}
+                        title="Delete heat"
+                        className="h-7 w-7 shrink-0 text-[#94A3B8] hover:text-red-600 hover:bg-red-50"
+                      >
+                        <Trash className="w-4 h-4" />
+                      </Button>
+                    </div>
+
+                    {/* Heat Header - metrics strip (fixed 3-column grid so values never wrap/orphan) */}
+                    <div className={cn(
+                      "grid grid-cols-3 divide-x border-b transition-colors duration-500 ease-in-out",
+                      selectedHeatOverCapacity ? "divide-red-200 bg-red-50/50 border-red-200" : cn("bg-[#F8FAFC]", warmBorder, isNightShift ? "divide-orange-200" : "divide-[#E0E7FF]")
+                    )}>
+                      <div className="px-2 py-2.5 flex flex-col items-center gap-1">
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-[#94A3B8] flex items-center gap-1">
+                          <Clock className="w-3 h-3" /> Pour Window
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <Input
+                            value={selectedHeat.startTime}
+                            onChange={e => handleHeatTimeChange(selectedHeat.id, e.target.value)}
+                            className="w-[62px] h-6 px-1 py-0 text-[11px] font-mono border-none bg-transparent text-center shadow-none focus-visible:ring-1 focus-visible:ring-amber-500"
+                          />
+                          <span className="text-[#CBD5E1] text-xs shrink-0">→</span>
+                          <span className="w-[62px] text-center text-[11px] font-mono text-[#64748B] shrink-0">{selectedHeat.endTime}</span>
+                        </div>
+                      </div>
+
+                      <div className="px-2 py-2.5 flex flex-col items-center gap-1">
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-[#94A3B8]">Charge Weight</span>
+                        <span className={cn("font-mono font-bold text-xs whitespace-nowrap", selectedHeatOverCapacity ? "text-red-600" : "text-[#172554]")}>
+                          {selectedHeatWeight.toFixed(1)} <span className="text-[#94A3B8] font-normal">/ {maxCapacity} kg</span>
+                        </span>
+                        <div className="w-full max-w-[84px] h-1 rounded-full bg-[#E2E8F0] overflow-hidden">
+                          <div
+                            className={cn("h-full rounded-full transition-all", selectedHeatOverCapacity ? "bg-red-500" : "bg-emerald-500")}
+                            style={{ width: `${Math.min(100, (selectedHeatWeight / (maxCapacity || 1)) * 100)}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="px-2 py-2.5 flex flex-col items-center gap-1">
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-[#4285F4]">Actual Melt</span>
+                        <Input
+                          type="number"
+                          min="0"
+                          value={selectedHeat.actualMeltWeight ?? ''}
+                          onChange={e => handleActualMeltChange(selectedHeat.id, e.target.value)}
+                          className="w-20 h-6 text-[11px] font-mono text-center px-1 bg-white border-[#C7D2FE] focus-visible:ring-1 focus-visible:ring-[#4285F4]"
+                          placeholder="kg"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Heat Body */}
+                    <div className="p-4 flex-1 flex flex-col gap-3">
+                      {selectedHeatPours.length === 0 ? (
+                        <div className="flex-1 flex items-center justify-center text-[#94A3B8] text-sm italic py-4">
+                          No moulds allocated to this heat yet.
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {selectedHeatPours.map(pour => (
+                            <div key={pour.id} className={cn("flex items-center justify-between p-2 rounded-lg border transition-colors duration-500 ease-in-out", warmBg, warmBorder)}>
+                              <div className="flex flex-col">
+                                <span className="font-bold text-sm text-[#172554]">{pour.patternRef} <span className="text-xs font-normal text-[#64748B]">({pour.grade})</span></span>
+                                <span className="text-[10px] text-[#94A3B8]">{pour.orderNo} | {pour.mouldWeight} kg/mould</span>
+                              </div>
+                              <div className="flex items-center gap-4">
+                                <span className="font-mono font-bold text-amber-600">{pour.mouldsScheduled} moulds</span>
+                                <Button variant="ghost" size="icon" onClick={() => removePour(pour.id)} className="h-6 w-6 text-red-400 hover:text-red-600 hover:bg-red-50">
+                                  <Trash className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Add Pour Button / Popover - locked to this heat's own grade */}
+                      <Popover open={allocationHeatId === selectedHeat.id} onOpenChange={(open) => {
+                        setAllocationHeatId(open ? selectedHeat.id : null)
+                      }}>
+                        <PopoverTrigger className={cn(buttonVariants({ variant: "outline" }), "w-full mt-auto border-dashed border-amber-300 text-amber-600 hover:bg-amber-50 hover:text-amber-700 font-semibold h-9")}>
+                          <Plus className="w-4 h-4 mr-2" /> Add Pouring Allocation
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[340px] p-0 shadow-2xl border-[#E0E7FF] rounded-xl" side="bottom" align="center">
+                          <div className="flex flex-col bg-white rounded-xl overflow-hidden">
+                            <div className="p-3 bg-gradient-to-r from-amber-50 to-white border-b border-[#E0E7FF]">
+                              <h4 className="font-bold text-[#172554] text-sm flex items-center gap-2">
+                                <Fire className="w-4 h-4 text-amber-500" /> Allocate to Heat {selectedHeat.heatNumber}
+                              </h4>
+                              <p className="text-[10px] text-[#94A3B8] mt-0.5">Grade: <span className="font-bold text-amber-600">{selectedHeat.grade}</span> - only matching moulds shown</p>
+                            </div>
+                            <div className="h-[300px] overflow-y-auto p-3 space-y-3 bg-white">
+                              {(backlogByGrade.get(selectedHeat.grade) || []).length === 0 ? (
+                                <div className="h-full flex items-center justify-center text-xs text-[#94A3B8] italic">
+                                  No pending moulds for grade {selectedHeat.grade}.
+                                </div>
+                              ) : (
+                                backlogByGrade.get(selectedHeat.grade)?.map(b => {
+                                    const pattern = patterns.find(p => p.code === b.patternRef)
+                                    const boxWeight = pattern?.totalWeight || 20
+                                    const remainingMoulds = Math.ceil((b.totalRequired - b.totalScheduled) / boxWeight)
+                                    const remainingHeatCapacity = Math.max(0, maxCapacity - selectedHeatWeight)
+                                    const possibleMoulds = Math.floor(remainingHeatCapacity / boxWeight)
+                                    const maxAllowed = Math.min(remainingMoulds, possibleMoulds)
+
+                                    return (
+                                      <PourAllocationRow
+                                        key={b.itemId}
+                                        backlogItem={b}
+                                        boxWeight={boxWeight}
+                                        maxAllowed={maxAllowed}
+                                        onAdd={(qty) => addPour(selectedHeat.id, b, qty)}
+                                      />
+                                    )
+                                  })
+                                )}
+                              </div>
+                            </div>
+                        </PopoverContent>
+                      </Popover>
+
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
