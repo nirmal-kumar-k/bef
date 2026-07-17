@@ -200,9 +200,9 @@ export function CorePlanningModal({
     pendingQtyCell: 'bg-[#EEF2FF] border-[#E0E7FF]',
     pendingQtyDefault: 'bg-[#FFFFFF] border-[#C7D2FE] text-[#4F46E5]',
     pendingQtyRing: 'focus-visible:ring-[#4F46E5]',
-    mismatch: 'bg-orange-50 border-orange-400 text-orange-700 focus-visible:ring-orange-400',
-    mismatchCell: 'bg-orange-50 border-orange-400 text-orange-700',
-    mismatchLabel: 'text-orange-600',
+    mismatch: 'bg-rose-50 border-rose-400 text-rose-700 focus-visible:ring-rose-400',
+    mismatchCell: 'bg-rose-50 border-rose-400 text-rose-700',
+    mismatchLabel: 'text-rose-600',
     autoFillButton: 'text-[#4F46E5] border-[#C7D2FE] hover:bg-[#EEF2FF] hover:border-[#4F46E5]',
     hourlyFilled: 'bg-[#F4F6FB] border-[#E0E7FF] text-[#172554]',
     footer: 'bg-[#FFFFFF] border-[#E0E7FF]',
@@ -748,14 +748,14 @@ export function CorePlanningModal({
                             <td className={cn("px-2 py-3 text-center border-x transition-colors duration-500 ease-in-out", theme.pendingQtyCell)}>
                               <div className="flex flex-col items-stretch justify-center gap-1.5 w-full max-w-[100px] mx-auto">
                                 <div className="grid grid-cols-[20px_1fr] gap-1 items-center">
-                                  <span className={cn("text-[9px] font-bold leading-none text-left transition-colors duration-500 ease-in-out", theme.rowMuted)}>PQ</span>
+                                  <span className={cn("h-7 flex items-center text-[9px] font-bold leading-none text-left transition-colors duration-500 ease-in-out", theme.rowMuted)}>PQ</span>
                                   <div
                                     title="Possible quantity - equipment-derived capacity, view only"
                                     className={cn("h-7 flex items-center justify-center font-mono font-semibold text-xs px-1 rounded-md border transition-colors duration-500 ease-in-out", theme.pendingQtyDefault)}
                                   >
                                     {row.possibleQtyText || 0}
                                   </div>
-                                  <span className={cn("text-[9px] font-bold leading-none text-left transition-colors duration-500 ease-in-out", theme.rowMuted)}>TQ</span>
+                                  <span className={cn("h-7 flex items-center text-[9px] font-bold leading-none text-left transition-colors duration-500 ease-in-out", theme.rowMuted)}>TQ</span>
                                   <Input
                                     type="number"
                                     min="0"
