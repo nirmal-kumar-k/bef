@@ -158,8 +158,8 @@ export function MouldPlanningModal({
     rowMuted: 'text-stone-400',
     pendingQtyCell: 'bg-orange-100 border-orange-200',
     pendingQtyDefault: 'bg-white border-orange-300 text-orange-700',
-    pendingQtyRing: 'focus-visible:ring-orange-400',
-    mismatch: 'bg-rose-50 border-rose-400 text-rose-700 focus-visible:ring-rose-400',
+    pendingQtyRing: 'focus-visible:ring-orange-400 focus-visible:border-orange-400',
+    mismatch: 'bg-rose-50 border-rose-400 text-rose-700 focus-visible:ring-rose-400 focus-visible:border-rose-400',
     mismatchCell: 'bg-rose-50 border-rose-400 text-rose-700',
     mismatchLabel: 'text-rose-600',
     autoFillButton: 'bg-white text-orange-600 border-orange-300 hover:bg-orange-50 hover:border-orange-500',
@@ -194,8 +194,8 @@ export function MouldPlanningModal({
     rowMuted: 'text-[#94A3B8]',
     pendingQtyCell: 'bg-[#EEF2FF] border-[#E0E7FF]',
     pendingQtyDefault: 'bg-[#FFFFFF] border-[#C7D2FE] text-[#4F46E5]',
-    pendingQtyRing: 'focus-visible:ring-[#4F46E5]',
-    mismatch: 'bg-rose-50 border-rose-400 text-rose-700 focus-visible:ring-rose-400',
+    pendingQtyRing: 'focus-visible:ring-[#4F46E5] focus-visible:border-[#4F46E5]',
+    mismatch: 'bg-rose-50 border-rose-400 text-rose-700 focus-visible:ring-rose-400 focus-visible:border-rose-400',
     mismatchCell: 'bg-rose-50 border-rose-400 text-rose-700',
     mismatchLabel: 'text-rose-600',
     autoFillButton: 'text-[#4F46E5] border-[#C7D2FE] hover:bg-[#EEF2FF] hover:border-[#4F46E5]',
@@ -726,21 +726,22 @@ export function MouldPlanningModal({
                                         !isMismatched && theme.pendingQtyRing
                                       )}
                                     />
+                                    <span />
+                                    <Button
+                                      onClick={() => autoFillRow(row.id)}
+                                      size="icon"
+                                      variant="outline"
+                                      title="Auto-fill time slots"
+                                      className={cn("h-6 w-full shrink-0 transition-colors duration-500 ease-in-out", theme.autoFillButton)}
+                                    >
+                                      <MagicWand weight="fill" className="w-3.5 h-3.5" />
+                                    </Button>
                                   </div>
                                   {isMismatched && (
                                     <span className={cn("text-[9px] font-bold leading-none whitespace-nowrap text-center transition-colors duration-500 ease-in-out", theme.mismatchLabel)}>
                                       {delta > 0 ? `+${delta} unscheduled` : `${-delta} over`}
                                     </span>
                                   )}
-                                  <Button
-                                    onClick={() => autoFillRow(row.id)}
-                                    size="icon"
-                                    variant="outline"
-                                    title="Auto-fill time slots"
-                                    className={cn("h-6 w-full shrink-0 transition-colors duration-500 ease-in-out", theme.autoFillButton)}
-                                  >
-                                    <MagicWand weight="fill" className="w-3.5 h-3.5" />
-                                  </Button>
                                 </div>
                               </td>
                               {TIME_SLOTS.map(slot => {
