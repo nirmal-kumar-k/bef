@@ -576,7 +576,7 @@ export function MeltPlanningModal({
                           <span className="font-mono font-bold text-xs text-[#172554]">{heat.heatCode || `Heat ${heat.heatNumber}`}</span>
                           <span
                             title="Furnace's running heat count - never resets on its own (reset in Equipment Master)"
-                            className="font-mono text-[9px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded shrink-0"
+                            className="font-mono text-xs font-bold text-amber-700 bg-amber-100 px-2 py-1 rounded shrink-0"
                           >
                             #{heat.sequenceNumber ?? heat.heatNumber}
                           </span>
