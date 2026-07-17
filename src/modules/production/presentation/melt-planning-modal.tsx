@@ -423,7 +423,7 @@ export function MeltPlanningModal({
   return (
     <>
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className={cn("w-[95vw] sm:max-w-[1200px] h-[90vh] text-foreground p-0 shadow-2xl flex flex-col transition-colors duration-500 ease-in-out", warmBg, warmBorder)}>
+      <DialogContent className={cn("w-full h-full max-w-full rounded-none sm:w-[95vw] sm:max-w-[1200px] sm:h-[90vh] sm:rounded-2xl text-foreground p-0 shadow-2xl flex flex-col transition-colors duration-500 ease-in-out", warmBg, warmBorder)}>
         <div className="flex flex-col w-full h-full">
           {/* Header */}
           <DialogHeader className={cn("p-6 pb-4 border-b shrink-0 bg-white transition-colors duration-500 ease-in-out", warmBorder)}>
@@ -483,11 +483,11 @@ export function MeltPlanningModal({
             {/* Furnace Schedule */}
             {activeFurnaceId && (
               <div className="space-y-4">
-                <div className={cn("flex items-center justify-between gap-4 bg-white rounded-xl border p-4 transition-colors duration-500 ease-in-out", warmBorder)}>
-                  <div className="flex items-center gap-5">
+                <div className={cn("flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white rounded-xl border p-4 transition-colors duration-500 ease-in-out", warmBorder)}>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5">
                     <h3 className="font-bold text-[#172554] text-base shrink-0">Heat Schedule</h3>
-                    <div className={cn("h-8 w-px transition-colors duration-500 ease-in-out", warmBorder)} />
-                    <div className="flex items-center gap-5">
+                    <div className={cn("hidden sm:block h-8 w-px transition-colors duration-500 ease-in-out", warmBorder)} />
+                    <div className="flex items-center gap-5 flex-wrap">
                       {furnace?.avgPiecesPerHour && (
                         <div className="flex flex-col gap-0.5">
                           <span className="text-[9px] font-bold uppercase tracking-wider text-[#94A3B8]">Avg Heats/Hr</span>
@@ -529,7 +529,7 @@ export function MeltPlanningModal({
                     <PopoverTrigger
                       disabled={!newHeatGrade}
                       title={!newHeatGrade ? 'Select a grade first' : undefined}
-                      className={cn(buttonVariants({ variant: "default" }), "h-9 px-4 bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold disabled:opacity-50 disabled:pointer-events-none shrink-0")}
+                      className={cn(buttonVariants({ variant: "default" }), "h-9 px-4 bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold disabled:opacity-50 disabled:pointer-events-none shrink-0 w-full lg:w-auto")}
                     >
                       <Plus className="w-4 h-4 mr-1" /> Add Heat
                     </PopoverTrigger>

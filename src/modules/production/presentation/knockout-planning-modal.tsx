@@ -398,7 +398,7 @@ export function KnockoutPlanningModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="w-[98vw] sm:max-w-[98vw] h-[95vh] bg-[#F4F6FB] border-[#E0E7FF] text-foreground p-0 shadow-2xl flex flex-col">
+      <DialogContent className="w-full h-full max-w-full rounded-none sm:w-[98vw] sm:max-w-[98vw] sm:h-[95vh] sm:rounded-2xl bg-[#F4F6FB] border-[#E0E7FF] text-foreground p-0 shadow-2xl flex flex-col">
         <div className="flex flex-col w-full h-full">
           <DialogHeader className="p-6 pb-4 border-b border-[#E0E7FF] shrink-0">
           <div>

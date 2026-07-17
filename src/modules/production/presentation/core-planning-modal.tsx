@@ -545,10 +545,10 @@ export function CorePlanningModal({
   return (
     <>
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className={cn("w-[98vw] sm:max-w-[98vw] h-[95vh] text-foreground p-0 shadow-2xl flex flex-col overflow-hidden transition-colors duration-500 ease-in-out", theme.dialog)}>
+      <DialogContent className={cn("w-full h-full max-w-full rounded-none sm:w-[98vw] sm:max-w-[98vw] sm:h-[95vh] sm:rounded-2xl text-foreground p-0 shadow-2xl flex flex-col overflow-hidden transition-colors duration-500 ease-in-out", theme.dialog)}>
         <div className="flex flex-col w-full h-full">
           <DialogHeader className={cn("p-8 pb-6 border-b shrink-0 transition-colors duration-500 ease-in-out", theme.header)}>
-            <div className="flex items-start justify-between gap-6">
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 sm:gap-6">
               <div className="space-y-4">
                 <DialogTitle className={cn("text-2xl font-heading transition-colors duration-500 ease-in-out", theme.title)}>
                   {dateString} - Core Planning
@@ -579,7 +579,7 @@ export function CorePlanningModal({
 
               </div>
 
-              <div className={cn("flex gap-4 p-3 rounded-xl border shadow-sm transition-colors duration-500 ease-in-out", theme.metricsBar)}>
+              <div className={cn("flex gap-4 p-3 rounded-xl border shadow-sm transition-colors duration-500 ease-in-out w-full sm:w-auto", theme.metricsBar)}>
                 <div className="text-center px-3">
                   <p className={cn("text-[10px] font-bold uppercase tracking-wider mb-1 transition-colors duration-500 ease-in-out", theme.metricLabel)}>Beginning of Day</p>
                   <p className={cn("text-xl font-mono font-bold transition-colors duration-500 ease-in-out", theme.metricValue)}>{topMetrics.beginningOfDay}</p>
@@ -708,8 +708,8 @@ export function CorePlanningModal({
                     <p className="text-sm">Click the button above to add a core box to this machine's schedule.</p>
                   </div>
                 ) : (
-                  <div className="w-full">
-                    <table className="w-full table-fixed text-sm text-left">
+                  <div className="w-full overflow-x-auto">
+                    <table className="w-full min-w-[900px] table-fixed text-sm text-left">
                       <thead className={cn("border-b uppercase tracking-wider font-bold text-[11px] transition-colors duration-500 ease-in-out", theme.tableHead)}>
                         <tr>
                           <th className="px-3 py-3 w-[150px]">Core Box Details</th>
