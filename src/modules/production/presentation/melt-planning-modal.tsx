@@ -483,19 +483,29 @@ export function MeltPlanningModal({
             {/* Furnace Schedule */}
             {activeFurnaceId && (
               <div className="space-y-4">
-                <div className="flex items-center justify-between px-2">
-                  <h3 className="font-bold text-[#172554] text-lg">Heat Schedule</h3>
-                  <div className="flex items-center gap-4">
-                    <div className="text-sm text-[#64748B] font-semibold flex items-center gap-4">
+                <div className={cn("flex items-center justify-between gap-4 bg-white rounded-xl border p-4 transition-colors duration-500 ease-in-out", warmBorder)}>
+                  <div className="flex items-center gap-5">
+                    <h3 className="font-bold text-[#172554] text-base shrink-0">Heat Schedule</h3>
+                    <div className={cn("h-8 w-px transition-colors duration-500 ease-in-out", warmBorder)} />
+                    <div className="flex items-center gap-5">
                       {furnace?.avgPiecesPerHour && (
-                        <span>Avg Heats/Hr: <span className="text-amber-600">{furnace.avgPiecesPerHour}</span></span>
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[9px] font-bold uppercase tracking-wider text-[#94A3B8]">Avg Heats/Hr</span>
+                          <span className="text-sm font-bold text-amber-600 font-mono leading-none">{furnace.avgPiecesPerHour}</span>
+                        </div>
                       )}
-                      <span>First Heat: <span className="text-amber-600">{getHeatDurationMins(furnace, true)}m</span></span>
-                      <span>Regular Heat: <span className="text-amber-600">{getHeatDurationMins(furnace, false)}m</span></span>
-                      <div className="flex items-center gap-1.5">
-                        <label className="text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]">Grade</label>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-[#94A3B8]">First / Regular</span>
+                        <span className="text-sm font-bold text-amber-600 font-mono leading-none">{getHeatDurationMins(furnace, true)}m / {getHeatDurationMins(furnace, false)}m</span>
+                      </div>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-[#94A3B8]">Max Capacity</span>
+                        <span className="text-sm font-bold text-amber-600 font-mono leading-none">{maxCapacity} kg</span>
+                      </div>
+                      <div className="flex flex-col gap-0.5">
+                        <label className="text-[9px] font-bold uppercase tracking-wider text-[#94A3B8]">Grade</label>
                         <Select value={newHeatGrade} onValueChange={setNewHeatGrade}>
-                          <SelectTrigger className="h-8 w-[130px] text-sm">
+                          <SelectTrigger className="h-7 w-[120px] text-xs border-none bg-transparent px-0 shadow-none font-bold text-[#172554] focus-visible:ring-0">
                             <SelectValue placeholder="Select grade" />
                           </SelectTrigger>
                           <SelectContent>
@@ -505,47 +515,46 @@ export function MeltPlanningModal({
                           </SelectContent>
                         </Select>
                       </div>
-                      <span>Max Capacity: <span className="text-amber-600">{maxCapacity} kg</span></span>
                     </div>
-                    <Popover open={addHeatOpen} onOpenChange={(open) => {
-                      setAddHeatOpen(open)
-                      if (open) {
-                        const furnaceHeats = heats.filter(h => h.furnaceId === activeFurnaceId)
-                        setNewHeatCode(buildDefaultHeatCode(date, furnaceHeats.length + 1))
-                      } else {
-                        setNewHeatCode('')
-                      }
-                    }}>
-                      <PopoverTrigger
-                        disabled={!newHeatGrade}
-                        title={!newHeatGrade ? 'Select a grade first' : undefined}
-                        className={cn(buttonVariants({ variant: "default" }), "h-9 px-4 bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold disabled:opacity-50 disabled:pointer-events-none")}
-                      >
-                        <Plus className="w-4 h-4 mr-1" /> Add Heat
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[280px] p-4 shadow-2xl border-[#E0E7FF] rounded-xl" side="bottom" align="end">
-                        <div className="space-y-3">
-                          <div className="text-xs text-[#64748B]">Grade: <span className="font-bold text-amber-600">{newHeatGrade}</span></div>
-                          <div className="space-y-1.5">
-                            <label className="text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]">Heat Code</label>
-                            <Input
-                              value={newHeatCode}
-                              onChange={e => setNewHeatCode(e.target.value)}
-                              placeholder="e.g. H001"
-                              className="h-9 text-sm font-mono"
-                            />
-                          </div>
-                          <Button
-                            onClick={addHeat}
-                            disabled={!newHeatGrade || !newHeatCode.trim()}
-                            className="w-full h-9 bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold disabled:opacity-50"
-                          >
-                            Add Heat
-                          </Button>
-                        </div>
-                      </PopoverContent>
-                    </Popover>
                   </div>
+                  <Popover open={addHeatOpen} onOpenChange={(open) => {
+                    setAddHeatOpen(open)
+                    if (open) {
+                      const furnaceHeats = heats.filter(h => h.furnaceId === activeFurnaceId)
+                      setNewHeatCode(buildDefaultHeatCode(date, furnaceHeats.length + 1))
+                    } else {
+                      setNewHeatCode('')
+                    }
+                  }}>
+                    <PopoverTrigger
+                      disabled={!newHeatGrade}
+                      title={!newHeatGrade ? 'Select a grade first' : undefined}
+                      className={cn(buttonVariants({ variant: "default" }), "h-9 px-4 bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold disabled:opacity-50 disabled:pointer-events-none shrink-0")}
+                    >
+                      <Plus className="w-4 h-4 mr-1" /> Add Heat
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[280px] p-4 shadow-2xl border-[#E0E7FF] rounded-xl" side="bottom" align="end">
+                      <div className="space-y-3">
+                        <div className="text-xs text-[#64748B]">Grade: <span className="font-bold text-amber-600">{newHeatGrade}</span></div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]">Heat Code</label>
+                          <Input
+                            value={newHeatCode}
+                            onChange={e => setNewHeatCode(e.target.value)}
+                            placeholder="e.g. H001"
+                            className="h-9 text-sm font-mono"
+                          />
+                        </div>
+                        <Button
+                          onClick={addHeat}
+                          disabled={!newHeatGrade || !newHeatCode.trim()}
+                          className="w-full h-9 bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold disabled:opacity-50"
+                        >
+                          Add Heat
+                        </Button>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
                 {activeHeats.length === 0 && (
@@ -555,7 +564,7 @@ export function MeltPlanningModal({
                 )}
 
                 {/* Compact chip grid - one small box per heat, click shows its full card in the panel below */}
-                <div className="flex flex-wrap gap-3">
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(112px,1fr))] gap-2.5">
                   {activeHeats.map(heat => {
                     const heatPours = pours.filter(p => p.heatId === heat.id)
                     const totalWeight = heatPours.reduce((sum, p) => sum + (p.mouldsScheduled * p.mouldWeight), 0)
@@ -567,7 +576,7 @@ export function MeltPlanningModal({
                         key={heat.id}
                         onClick={() => setDetailHeatId(heat.id)}
                         className={cn(
-                          "min-w-[112px] shrink-0 text-left bg-white p-3 rounded-[12px] border shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:-translate-y-[2px] hover:shadow-[0_4px_14px_rgba(79,70,229,0.08)] transition-all duration-300 ease-out",
+                          "w-full text-left bg-white p-3 rounded-[12px] border shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:-translate-y-[2px] hover:shadow-[0_4px_14px_rgba(79,70,229,0.08)] transition-all duration-300 ease-out",
                           isOverCapacity ? "border-red-300 hover:border-red-400" : cn(warmBorder, "hover:border-amber-400"),
                           isSelected && "ring-2 ring-amber-300 border-amber-400"
                         )}
@@ -601,7 +610,7 @@ export function MeltPlanningModal({
                     {/* Heat Header - identity row */}
                     <div className={cn(
                       "px-4 py-3 border-b flex items-center gap-2.5 transition-colors duration-500 ease-in-out",
-                      selectedHeatOverCapacity ? "bg-red-50 border-red-200" : cn("bg-gradient-to-r from-amber-50/70 to-white", warmBorder)
+                      selectedHeatOverCapacity ? "bg-red-50 border-red-200" : cn("bg-amber-50/40", warmBorder)
                     )}>
                       <div className={cn(
                         "w-9 h-9 rounded-lg flex items-center justify-center shrink-0",
@@ -685,14 +694,17 @@ export function MeltPlanningModal({
                       ) : (
                         <div className="space-y-2">
                           {selectedHeatPours.map(pour => (
-                            <div key={pour.id} className={cn("flex items-center justify-between p-2 rounded-lg border transition-colors duration-500 ease-in-out", warmBg, warmBorder)}>
-                              <div className="flex flex-col">
-                                <span className="font-bold text-sm text-[#172554]">{pour.patternRef} <span className="text-xs font-normal text-[#64748B]">({pour.grade})</span></span>
-                                <span className="text-[10px] text-[#94A3B8]">{pour.orderNo} | {pour.mouldWeight} kg/mould</span>
+                            <div key={pour.id} className={cn("group flex items-center justify-between p-2.5 rounded-lg border transition-colors duration-500 ease-in-out", warmBg, warmBorder)}>
+                              <div className="flex flex-col gap-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold text-sm text-[#172554] truncate">{pour.patternRef}</span>
+                                  <span className="text-[9px] font-bold uppercase tracking-wide text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded shrink-0">{pour.grade}</span>
+                                </div>
+                                <span className="text-[10px] text-[#94A3B8]">{pour.orderNo} · {pour.mouldWeight} kg/mould</span>
                               </div>
-                              <div className="flex items-center gap-4">
-                                <span className="font-mono font-bold text-amber-600">{pour.mouldsScheduled} moulds</span>
-                                <Button variant="ghost" size="icon" onClick={() => removePour(pour.id)} className="h-6 w-6 text-red-400 hover:text-red-600 hover:bg-red-50">
+                              <div className="flex items-center gap-3 shrink-0">
+                                <span className="font-mono font-bold text-amber-600 text-sm">{pour.mouldsScheduled} <span className="font-normal text-[#94A3B8] text-xs">moulds</span></span>
+                                <Button variant="ghost" size="icon" onClick={() => removePour(pour.id)} className="h-6 w-6 text-[#CBD5E1] opacity-0 group-hover:opacity-100 hover:text-red-600 hover:bg-red-50 transition-all">
                                   <Trash className="w-4 h-4" />
                                 </Button>
                               </div>
@@ -710,7 +722,7 @@ export function MeltPlanningModal({
                         </PopoverTrigger>
                         <PopoverContent className="w-[340px] p-0 shadow-2xl border-[#E0E7FF] rounded-xl" side="bottom" align="center">
                           <div className="flex flex-col bg-white rounded-xl overflow-hidden">
-                            <div className="p-3 bg-gradient-to-r from-amber-50 to-white border-b border-[#E0E7FF]">
+                            <div className="p-3 bg-amber-50/50 border-b border-[#E0E7FF]">
                               <h4 className="font-bold text-[#172554] text-sm flex items-center gap-2">
                                 <Fire className="w-4 h-4 text-amber-500" /> Allocate to Heat {selectedHeat.heatNumber}
                               </h4>
