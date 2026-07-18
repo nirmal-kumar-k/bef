@@ -22,6 +22,17 @@ export const productionPlans = pgTable('production_plans', {
   laborersAssigned: integer('laborers_assigned').default(1),
   workersAssigned: integer('workers_assigned'),
   equipmentId: text('equipment_id'),
+  // Which shift (Day/Night) this plan belongs to - was previously read/written
+  // by Core/Mould/Melt planning code but never actually had a column to
+  // persist to, so it silently dropped on every save and every plan looked
+  // shift-less on reload.
+  shiftId: text('shift_id'),
+  // Melt-specific heat identity - same story as shiftId: read/written by
+  // melt-planning-modal.tsx but never persisted, so heats collapsed into one
+  // on reload and mould counts were lost.
+  heatNumber: integer('heat_number'),
+  heatSequenceNumber: integer('heat_sequence_number'),
+  mouldsScheduled: integer('moulds_scheduled'),
   hourlyTargets: jsonb('hourly_targets').$type<Record<string, number>>(),
   hourlyWorkers: jsonb('hourly_workers').$type<Record<string, number>>(),
   hourlyEquipments: jsonb('hourly_equipments').$type<Record<string, string>>(),
