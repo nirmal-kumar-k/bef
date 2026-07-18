@@ -134,7 +134,7 @@ export function ViewPatternModal({
         setCoreBoxPresent('Yes')
         setSharedCoreBoxes(savedBoxes)
       } else {
-        setCoreBoxPresent('Yes')
+        setCoreBoxPresent('No')
         setSharedCoreBoxes([{ id: 'init-shared', code: '', owner: 'Customer', images: [] }])
       }
     }
