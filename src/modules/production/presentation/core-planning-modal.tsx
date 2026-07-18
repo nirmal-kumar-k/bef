@@ -40,7 +40,6 @@ interface PlannedRow {
   patternRef: string
   coreBoxCode: string
   machineId: string
-  totalQty: string
   // Display-only possible-quantity text (PQ). Seeded from the computed
   // capacity (avgPiecesPerHour x shift hours) but freely editable afterward -
   // never used for capacity validation, which always uses the live
@@ -224,7 +223,6 @@ export function CorePlanningModal({
           patternRef: p.patternRef || '',
           coreBoxCode: p.coreBoxCode || '',
           machineId: p.equipmentId || '',
-          totalQty: p.quantityScheduled ? String(p.quantityScheduled) : '',
           possibleQtyText: p.possibleQuantity !== undefined ? String(p.possibleQuantity) : '',
           hourlyTargets: p.hourlyTargets || {},
           hourlyWorkers: p.hourlyWorkers || {},
@@ -280,7 +278,6 @@ export function CorePlanningModal({
   const toSnapshotRow = (r: PlannedRow) => ({
     machineId: r.machineId,
     coreBoxCode: r.coreBoxCode,
-    totalQty: r.totalQty,
     possibleQtyText: r.possibleQtyText,
     hourlyTargets: r.hourlyTargets,
     hourlyWorkers: r.hourlyWorkers
@@ -384,17 +381,7 @@ export function CorePlanningModal({
     onClose()
   }
 
-  // Value change only - freely editable, not capped to the pending backlog
-  // quantity, so users can schedule ahead or correct a miscount when needed.
-  const handleTotalQtyInput = (rowId: string, value: string) => {
-    setPlannedRows(prev => prev.map(r => {
-      if (r.id !== rowId) return r
-      if (value === '') return { ...r, totalQty: value }
-      const num = parseInt(value, 10)
-      if (isNaN(num)) return { ...r, totalQty: value }
-      return { ...r, totalQty: String(Math.max(0, num)) }
-    }))
-  }
+
 
   // How much of this machine's per-slot capacity is already claimed by OTHER
   // rows scheduled on it (excludeRowId lets a row re-fill around its own prior
@@ -444,10 +431,11 @@ export function CorePlanningModal({
       const row = prev.find(r => r.id === rowId)
       if (!row) return prev
 
-      const target = parseInt(row.totalQty, 10)
-      if (isNaN(target) || target <= 0) return prev
+      const { totalRequired, totalScheduled } = getBacklogAggregate(row.orderNo, row.coreBoxCode)
+      const pendingQty = Math.max(0, totalRequired - (totalScheduled - row.originalQty))
+      if (pendingQty <= 0) return prev
 
-      const { hourlyTargets, hourlyWorkers } = distributeQty(target, row.machineId, row.id, prev)
+      const { hourlyTargets, hourlyWorkers } = distributeQty(pendingQty, row.machineId, row.id, prev)
       return prev.map(r => r.id === rowId ? { ...r, hourlyTargets, hourlyWorkers } : r)
     })
   }
@@ -516,7 +504,6 @@ export function CorePlanningModal({
         patternRef,
         coreBoxCode: coreBoxCode,
         machineId: activeMachineId,
-        totalQty: remaining > 0 ? String(remaining) : '',
         possibleQtyText: String(computePossibleQty(activeMachineId)),
         hourlyTargets,
         hourlyWorkers,
@@ -760,9 +747,6 @@ export function CorePlanningModal({
                       <tbody className={cn("divide-y transition-colors duration-500 ease-in-out", theme.tableDivide)}>
                         {rowMeta.map(({ row }) => {
                           const scheduledSum = Object.values(row.hourlyTargets).reduce((s, v) => s + (v || 0), 0)
-                          const target = parseInt(row.totalQty, 10) || 0
-                          const delta = target - scheduledSum
-                          const isMismatched = delta !== 0 && row.totalQty !== ''
                           const { totalRequired: itemRequired, totalScheduled: itemScheduled } = getBacklogAggregate(row.orderNo, row.coreBoxCode)
                           const pendingQty = Math.max(0, itemRequired - itemScheduled)
                           return (
@@ -793,26 +777,12 @@ export function CorePlanningModal({
                                     {pendingQty}
                                   </div>
                                   <span className={cn("h-7 flex items-center text-[9px] font-bold leading-none text-left transition-colors duration-500 ease-in-out", theme.rowMuted)}>TP</span>
-                                  <Input
-                                    type="number"
-                                    min="0"
-                                    value={row.totalQty}
-                                    onChange={e => handleTotalQtyInput(row.id, e.target.value)}
-                                    onBlur={() => autoFillRow(row.id)}
-                                    onKeyDown={e => {
-                                      if (e.key === 'Enter') {
-                                        autoFillRow(row.id)
-                                        e.currentTarget.blur()
-                                      }
-                                    }}
-                                    placeholder="0"
-                                    title={isMismatched ? (delta > 0 ? `${delta} not yet scheduled to a time slot` : `${-delta} more scheduled than the total qty`) : undefined}
-                                    className={cn(
-                                      "h-7 font-mono text-center font-bold text-xs px-1 transition-colors duration-500 ease-in-out focus-visible:ring-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
-                                      isMismatched ? theme.mismatch : theme.pendingQtyDefault,
-                                      !isMismatched && theme.pendingQtyRing
-                                    )}
-                                  />
+                                  <div
+                                    title="Today's production - sum of all scheduled hourly targets for today, view only"
+                                    className={cn("h-7 flex items-center justify-center font-mono font-semibold text-xs px-1 rounded-md border transition-colors duration-500 ease-in-out", theme.pendingQtyDefault)}
+                                  >
+                                    {scheduledSum}
+                                  </div>
                                   <span />
                                   <Button
                                     onClick={() => autoFillRow(row.id)}
@@ -824,11 +794,6 @@ export function CorePlanningModal({
                                     <MagicWand weight="fill" className="w-3.5 h-3.5" />
                                   </Button>
                                 </div>
-                                {isMismatched && (
-                                  <span className={cn("block w-full text-[9px] font-bold leading-none whitespace-nowrap text-center transition-colors duration-500 ease-in-out", theme.mismatchLabel)}>
-                                    {delta > 0 ? `+${delta} unscheduled` : `${-delta} over`}
-                                  </span>
-                                )}
                               </div>
                             </td>
                             {TIME_SLOTS.map(slot => {
@@ -848,7 +813,7 @@ export function CorePlanningModal({
                                         isNightShift
                                           ? "hover:border-orange-200 focus:border-orange-400 focus:bg-white"
                                           : "hover:border-[#E0E7FF] focus:border-[#4285F4] focus:bg-white",
-                                        ownValue > 0 && (isMismatched ? theme.mismatchCell : theme.hourlyFilled)
+                                        ownValue > 0 && theme.hourlyFilled
                                       )}
                                     />
                                     {viewLabourers && (
