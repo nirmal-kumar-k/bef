@@ -213,11 +213,9 @@ export function MeltPlanningModal({
             grade: p.grade || '',
             heatCode: p.heatNo || '',
             sequenceNumber: p.heatSequenceNumber,
-            // Not persisted as its own column - the "first heat" duration is
-            // already baked into the saved startTime/endTime, so this is just
-            // the sane default for the checkbox on reload (heat #1 unless the
-            // user re-toggles it this session).
-            isFirstHeat: hNum === 1
+            // heatNumber === 1 is only a fallback default for plan rows saved
+            // before the isFirstHeat column existed.
+            isFirstHeat: p.isFirstHeat ?? (hNum === 1)
           }
         }
 
@@ -429,6 +427,7 @@ export function MeltPlanningModal({
         grade: h?.grade,
         heatNo: h?.heatCode,
         heatSequenceNumber: h?.sequenceNumber,
+        isFirstHeat: !!h?.isFirstHeat,
         isConfirmed: p.isConfirmed
       }
     })

@@ -33,6 +33,11 @@ export const productionPlans = pgTable('production_plans', {
   heatNumber: integer('heat_number'),
   heatSequenceNumber: integer('heat_sequence_number'),
   mouldsScheduled: integer('moulds_scheduled'),
+  // Manual override of which heat was this furnace's first heat of the day
+  // (longer startup duration) - a real record instead of re-deriving it from
+  // heatNumber === 1 on every reload, since the user can move it after
+  // deleting/reordering heats.
+  isFirstHeat: boolean('is_first_heat').default(false),
   hourlyTargets: jsonb('hourly_targets').$type<Record<string, number>>(),
   hourlyWorkers: jsonb('hourly_workers').$type<Record<string, number>>(),
   hourlyEquipments: jsonb('hourly_equipments').$type<Record<string, string>>(),
