@@ -159,10 +159,15 @@ export function MeltPlanningModal({
     }
   }, [isOpen])
 
-  // Initialize from dailyPlans
+  // Initialize from dailyPlans - scoped to the currently selected shift too,
+  // not just date/stage. Without this, Day and Night shift showed the exact
+  // same heats/pours (whichever shift was selected at save time silently
+  // overwrote the other's shiftId), making the two indistinguishable. Plans
+  // saved before shiftId existed (no value at all) still show under any
+  // shift, since we can't know which one they belonged to.
   useEffect(() => {
-    if (isOpen && dailyPlans && equipments.length > 0) {
-      const existingMelt = dailyPlans.filter(p => p.stage === 'Melt')
+    if (isOpen && dailyPlans && equipments.length > 0 && selectedShiftId) {
+      const existingMelt = dailyPlans.filter(p => p.stage === 'Melt' && (!p.shiftId || p.shiftId === selectedShiftId))
       
       const loadedHeats: Record<string, Heat> = {}
       const loadedPours: Pour[] = []
@@ -226,7 +231,7 @@ export function MeltPlanningModal({
   // this should only re-run when equipment data first loads, not every time
   // its contents change (e.g. addHeat updating a furnace's heatSequence
   // locally), which would otherwise wipe out any heat added but not yet saved.
-  }, [isOpen, dailyPlans, equipments.length, openOrders, products, patterns])
+  }, [isOpen, dailyPlans, equipments.length, openOrders, products, patterns, selectedShiftId])
 
   // Add a heat manually: grade is picked first, then a heat code is entered for it.
   // Start time cascades off the last existing heat for this furnace (or the shift

@@ -203,10 +203,15 @@ export function MouldPlanningModal({
     cancelButton: 'text-[#64748B] hover:text-[#172554] hover:bg-[#F8FAFC]',
   }
 
-  // Initialize plans
+  // Initialize plans - scoped to the currently selected shift too, not just
+  // date/stage. Without this, Day and Night shift showed the exact same
+  // rows (whichever shift was selected at save time silently overwrote the
+  // other's shiftId), making the two indistinguishable. Plans saved before
+  // shiftId existed (no value at all) still show under any shift, since we
+  // can't know which one they belonged to.
   useEffect(() => {
-    if (isOpen && dailyPlans) {
-      const existingMouldPlans = dailyPlans.filter(p => p.stage === 'Mould')
+    if (isOpen && dailyPlans && selectedShiftId) {
+      const existingMouldPlans = dailyPlans.filter(p => p.stage === 'Mould' && (!p.shiftId || p.shiftId === selectedShiftId))
       const initRows: PlannedRow[] = existingMouldPlans.map(p => {
         const order = openOrders.find(o => o.id === p.orderId)
         return {
@@ -228,7 +233,7 @@ export function MouldPlanningModal({
       setRemovedPlanIds([])
       initialSnapshotRef.current = JSON.stringify(initRows.map(toSnapshotRow))
     }
-  }, [isOpen, dailyPlans, openOrders])
+  }, [isOpen, dailyPlans, openOrders, selectedShiftId])
 
   // Top panel metrics (Global across all planned items)
   const topMetrics = useMemo(() => {
