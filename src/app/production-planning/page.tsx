@@ -140,15 +140,24 @@ export default function ProductionPlanningPage() {
         const coreBoxReqs = new Map<string, number>() // code -> total cores required across the group
         let hasProductSpecificCoreBoxes = false
         groupItems.forEach(ci => {
-          if (ci.mappedProduct?.selectedCoreBoxes?.length > 0) {
+          // A selectedCoreBoxes entry with a blank code means no core box was
+          // actually chosen for that slot - it must not count as a real
+          // requirement, or every product would silently need an "Unnamed
+          // Core Box" it was never actually mapped to.
+          const validSelectedCoreBoxes = (ci.mappedProduct?.selectedCoreBoxes || []).filter((cb: any) => cb.coreBoxCode && cb.coreBoxCode.trim() !== '')
+          if (validSelectedCoreBoxes.length > 0) {
             hasProductSpecificCoreBoxes = true
-            ci.mappedProduct.selectedCoreBoxes.forEach((cb: any) => {
-              const code = cb.coreBoxCode || 'Unnamed Core Box'
+            validSelectedCoreBoxes.forEach((cb: any) => {
               const qtyPerUnit = cb.quantity || 1
-              coreBoxReqs.set(code, (coreBoxReqs.get(code) || 0) + ci.item.quantity * qtyPerUnit)
+              coreBoxReqs.set(cb.coreBoxCode, (coreBoxReqs.get(cb.coreBoxCode) || 0) + ci.item.quantity * qtyPerUnit)
             })
           }
         })
+
+        // Same rule for a pattern's shared core boxes - a row with no code
+        // filled in isn't a real core box, so it must not generate a bogus
+        // "Unnamed Core Box" requirement either.
+        const validSharedCoreBoxes = (pattern?.sharedCoreBoxes || []).filter((cb: any) => cb.code && cb.code.trim() !== '')
 
         if (hasProductSpecificCoreBoxes) {
           coreBoxReqs.forEach((totalCoreRequired, codeToUse) => {
@@ -158,10 +167,10 @@ export default function ProductionPlanningPage() {
               totalRequired: totalCoreRequired, totalScheduled: coreScheduled, unit: 'cores'
             })
           })
-        } else if (pattern && pattern.sharedCoreBoxes && pattern.sharedCoreBoxes.length > 0) {
-          pattern.sharedCoreBoxes.forEach((cb: any) => {
+        } else if (validSharedCoreBoxes.length > 0) {
+          validSharedCoreBoxes.forEach((cb: any) => {
             const totalCoreRequired = finalUnits
-            const codeToUse = cb.code || 'Unnamed Core Box'
+            const codeToUse = cb.code
             const coreScheduled = plans.filter(p => p.stage === 'Core' && p.itemId === representativeId && p.coreBoxCode === codeToUse).reduce((sum, p) => sum + p.quantityScheduled, 0)
             coreBacklog.push({
               itemId: representativeId, orderNo: order.customerOrderNo, patternRef: pattern.code, productName, coreBoxCode: codeToUse,
