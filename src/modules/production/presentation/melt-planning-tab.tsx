@@ -120,6 +120,11 @@ export function MeltPlanningTab({ defaultMetalQty, openOrders, products, pattern
             const sum = dayPlans.reduce((s, p) => s + p.quantityScheduled, 0)
             const pendingAmount = meltBacklog.reduce((s, b) => s + Math.max(0, b.totalRequired - b.totalScheduled), 0)
             const hasPending = pendingAmount > 0
+            // Condensed to heat count + product(s) instead of one line per pour -
+            // a day with many pours split across heats used to render a long,
+            // unreadable list of individual rows in a 100px-tall cell.
+            const heatCount = new Set(dayPlans.map(p => `${p.equipmentId}-${p.heatNumber}`)).size
+            const productNames = Array.from(new Set(dayPlans.map(p => p.patternRef).filter(Boolean)))
             
             return (
               <div 
@@ -155,21 +160,14 @@ export function MeltPlanningTab({ defaultMetalQty, openOrders, products, pattern
                       </div>
                     ) : null
                   ) : (
-                    <div className="text-[10px] space-y-1">
-                      {dayPlans.map((p, idx) => {
-                        const order = openOrders.find(o => o.id === p.orderId)
-                        return (
-                          <div key={idx} className={cn(
-                            "truncate px-1.5 py-0.5 rounded border border-amber-100 flex items-center justify-between",
-                            p.isConfirmed ? "bg-amber-50" : "bg-gray-50 border-dashed border-gray-200"
-                          )}>
-                            <span className="font-semibold text-amber-900">{order?.customerOrderNo || 'Melt'}</span>
-                            <span className={cn("font-mono", p.isConfirmed ? "text-amber-700" : "text-gray-500")}>
-                              {p.quantityScheduled}kg
-                            </span>
-                          </div>
-                        )
-                      })}
+                    <div className="px-1.5 py-1 rounded-md bg-amber-50 border border-amber-100 space-y-0.5">
+                      <div className="text-[10px] font-bold text-amber-900">
+                        {heatCount} heat{heatCount !== 1 ? 's' : ''}
+                      </div>
+                      <div className="text-[9.5px] text-amber-700/80 truncate">
+                        {productNames.slice(0, 2).join(', ')}
+                        {productNames.length > 2 ? ` +${productNames.length - 2}` : ''}
+                      </div>
                     </div>
                   )}
                 </div>

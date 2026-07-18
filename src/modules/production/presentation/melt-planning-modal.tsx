@@ -367,24 +367,48 @@ export function MeltPlanningModal({
     }
   }
 
+  // How many moulds this session has already newly committed to a product,
+  // across EVERY heat/furnace (not just the one currently open) - both
+  // backlogData and mouldCapBacklog only reflect what's actually saved to the
+  // server, so without this a product could be split across many heats with
+  // each pour looking "fine" in isolation while the combined total blew past
+  // what was actually required.
+  const getSessionCommittedMoulds = (orderNo: string, patternRef: string) => pours
+    .filter(p => p.orderNo === orderNo && p.patternRef === patternRef)
+    .reduce((sum, p) => sum + (p.mouldsScheduled - p.originalQty), 0)
+
   // Validates and builds the save payload; returns null if blocked (a
   // capacity-error popup was already shown). Shared by both Save Day Plan
   // (closes the modal) and Save & Refresh (keeps it open).
   const buildPlansToSave = (): any[] | null => {
-    // Block the save if any pour claims more mould-units than actually exist
-    // for that product (produced by Mould Planning, minus what's already
-    // poured for elsewhere across every date).
-    const overQuantityPours = pours.map(p => {
-      const { totalRequired, totalScheduled } = getMouldCapAggregate(p.orderNo, p.patternRef)
-      const cap = Math.max(0, totalRequired - (totalScheduled - p.originalQty))
-      return { p, cap }
-    }).filter(({ p, cap }) => p.mouldsScheduled > cap)
+    // Block the save if a product's pours, ADDED UP ACROSS EVERY HEAT/FURNACE,
+    // claim more mould-units than actually exist for it (produced by Mould
+    // Planning, minus what's already poured for elsewhere across every date).
+    // This has to be checked per PRODUCT, not per individual pour - checking
+    // each pour in isolation let the same product be split across many heats,
+    // with every single pour looking "fine" on its own while the combined
+    // total blew past what was actually required.
+    const pourGroups = new Map<string, { patternRef: string, scheduled: number, originalQty: number }>()
+    pours.forEach(p => {
+      const key = `${p.orderNo}|${p.patternRef}`
+      const g = pourGroups.get(key) || { patternRef: p.patternRef, scheduled: 0, originalQty: 0 }
+      g.scheduled += p.mouldsScheduled
+      g.originalQty += p.originalQty
+      pourGroups.set(key, g)
+    })
 
-    if (overQuantityPours.length > 0) {
-      setCapacityErrorLines(overQuantityPours.map(({ p, cap }) =>
+    const overQuantityGroups = Array.from(pourGroups.entries()).map(([key, g]) => {
+      const [orderNo] = key.split('|')
+      const { totalRequired, totalScheduled } = getMouldCapAggregate(orderNo, g.patternRef)
+      const cap = Math.max(0, totalRequired - (totalScheduled - g.originalQty))
+      return { g, cap }
+    }).filter(({ g, cap }) => g.scheduled > cap)
+
+    if (overQuantityGroups.length > 0) {
+      setCapacityErrorLines(overQuantityGroups.map(({ g, cap }) =>
         cap <= 0
-          ? `${p.patternRef}: no moulds available to pour - none produced yet or all already poured`
-          : `${p.patternRef}: only ${cap} moulds available to pour, ${p.mouldsScheduled} scheduled`
+          ? `${g.patternRef}: no moulds available to pour - none produced yet or all already poured`
+          : `${g.patternRef}: only ${cap} moulds available to pour, ${g.scheduled} scheduled across your pours`
       ))
       return null
     }
@@ -773,22 +797,23 @@ export function MeltPlanningModal({
                 </div>
 
                 {/* Selected heat's full detail card, shown inline below the chip grid.
-                    Deliberately a deeper amber (not the plain white the chip grid and
-                    the rest of the page use) so it reads as a distinct "detail" surface
-                    rather than blending into the surrounding cards. */}
+                    A soft, barely-tinted warm-cream surface (not the plain white the
+                    chip grid and the rest of the page use) so it reads as a distinct
+                    "detail" surface without the harsh, saturated block a full amber
+                    fill would create. */}
                 {selectedHeat && (
                   <div className={cn(
-                    "bg-amber-100 rounded-xl border shadow-md flex flex-col overflow-hidden transition-all max-w-2xl",
-                    selectedHeatOverCapacity ? "border-red-300 ring-1 ring-red-300" : "border-amber-300"
+                    "bg-[#FFFDF8] rounded-xl border shadow-[0_8px_24px_-10px_rgba(180,130,40,0.25)] flex flex-col overflow-hidden transition-all max-w-2xl",
+                    selectedHeatOverCapacity ? "border-red-300 ring-1 ring-red-300" : "border-[#F0E2C4]"
                   )}>
                     {/* Heat Header - identity row */}
                     <div className={cn(
                       "px-4 py-3 border-b flex items-center gap-2.5 transition-colors duration-500 ease-in-out",
-                      selectedHeatOverCapacity ? "bg-red-50 border-red-200" : "bg-amber-200/70 border-amber-300"
+                      selectedHeatOverCapacity ? "bg-red-50 border-red-200" : "bg-gradient-to-r from-[#FBF3E2] to-[#FFFDF8] border-[#F0E2C4]"
                     )}>
                       <div className={cn(
                         "w-9 h-9 rounded-lg flex items-center justify-center shrink-0",
-                        selectedHeatOverCapacity ? "bg-red-100" : "bg-amber-100"
+                        selectedHeatOverCapacity ? "bg-red-100" : "bg-[#FBF3E2]"
                       )}>
                         <Fire weight="fill" className={cn("w-5 h-5", selectedHeatOverCapacity ? "text-red-500" : "text-amber-600")} />
                       </div>
@@ -798,7 +823,7 @@ export function MeltPlanningModal({
                       </div>
                       <label
                         title={`First heat of the day for this furnace runs ${getHeatDurationMins(equipments.find(e => e.id === selectedHeat.furnaceId), true)} min (furnace startup); only one heat per furnace can be marked first`}
-                        className="flex items-center gap-1.5 shrink-0 cursor-pointer select-none bg-white/60 border border-amber-300 rounded-lg px-2 py-1"
+                        className="flex items-center gap-1.5 shrink-0 cursor-pointer select-none bg-white border border-[#F0E2C4] rounded-lg px-2 py-1"
                       >
                         <input
                           type="checkbox"
@@ -806,11 +831,11 @@ export function MeltPlanningModal({
                           onChange={() => toggleFirstHeat(selectedHeat.id)}
                           className="h-3.5 w-3.5 accent-amber-600 cursor-pointer"
                         />
-                        <span className="text-[10px] font-bold uppercase tracking-wide text-amber-800">First Heat</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wide text-amber-800/80">First Heat</span>
                       </label>
                       <span
                         title="Furnace's running heat count - never resets on its own (reset in Equipment Master)"
-                        className="font-mono text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded shrink-0"
+                        className="font-mono text-[10px] font-bold text-amber-700/80 bg-[#FBF3E2] px-1.5 py-0.5 rounded shrink-0"
                       >
                         #{selectedHeat.sequenceNumber ?? selectedHeat.heatNumber}
                       </span>
@@ -923,11 +948,12 @@ export function MeltPlanningModal({
                                 backlogByGrade.get(selectedHeat.grade)?.map(b => {
                                     const pattern = patterns.find(p => p.code === b.patternRef)
                                     const boxWeight = pattern?.totalWeight || 20
-                                    const remainingMoulds = Math.ceil((b.totalRequired - b.totalScheduled) / boxWeight)
+                                    const sessionCommitted = getSessionCommittedMoulds(b.orderNo, b.patternRef)
+                                    const remainingMoulds = Math.max(0, Math.ceil((b.totalRequired - b.totalScheduled) / boxWeight) - sessionCommitted)
                                     const remainingHeatCapacity = Math.max(0, maxCapacity - selectedHeatWeight)
                                     const possibleMoulds = Math.floor(remainingHeatCapacity / boxWeight)
                                     const { totalRequired: mouldsProduced, totalScheduled: mouldsPoured } = getMouldCapAggregate(b.orderNo, b.patternRef)
-                                    const mouldsAvailable = Math.max(0, mouldsProduced - mouldsPoured)
+                                    const mouldsAvailable = Math.max(0, mouldsProduced - mouldsPoured - sessionCommitted)
                                     const maxAllowed = Math.min(remainingMoulds, possibleMoulds, mouldsAvailable)
 
                                     return (

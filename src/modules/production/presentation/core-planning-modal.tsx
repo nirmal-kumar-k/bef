@@ -325,6 +325,15 @@ export function CorePlanningModal({
     }
   }
 
+  // How much of a core box's requirement this session has already newly
+  // committed, across EVERY machine (not just the active one) - backlogData
+  // only reflects what's actually saved to the server, so without this a box
+  // added to a second machine this session would look like the full amount
+  // is still available, letting the same requirement be over-claimed.
+  const getSessionCommittedQty = (orderNo: string, coreBoxCode: string) => plannedRows
+    .filter(r => r.orderNo === orderNo && r.coreBoxCode === coreBoxCode)
+    .reduce((sum, r) => sum + (Object.values(r.hourlyTargets).reduce((s, v) => s + (v || 0), 0) - r.originalQty), 0)
+
   // Validates and builds the save payload; returns null if blocked (a
   // capacity-error popup was already shown). Shared by both Save Day Plan
   // (closes the modal) and Save & Refresh (keeps it open).
@@ -332,21 +341,36 @@ export function CorePlanningModal({
     // Equipment-capacity blocking is deliberately disabled for now (removed
     // per product decision, to be reintroduced later) - only the product's
     // total required quantity is enforced below, across all dates combined.
-    const overQuantityRows = plannedRows.map(r => {
-      const scheduledSum = Object.values(r.hourlyTargets).reduce((s, v) => s + (v || 0), 0)
-      const { totalRequired, totalScheduled } = getBacklogAggregate(r.orderNo, r.coreBoxCode)
-      // totalScheduled already includes this row's own prior contribution
-      // (originalQty) - subtract it back out so we're comparing against what
-      // every OTHER row/date has claimed, not double-counting this one.
-      const cap = Math.max(0, totalRequired - (totalScheduled - r.originalQty))
-      return { r, scheduledSum, cap }
-    }).filter(({ scheduledSum, cap }) => scheduledSum > cap)
+    //
+    // Checked per PRODUCT (grouped across every machine), not per row - a
+    // core box can legitimately be split across two machines to speed things
+    // up, but checking each row in isolation let every row look "fine" on its
+    // own (each under the full cap) while the combined total across machines
+    // blew past what was actually required.
+    const rowGroups = new Map<string, { coreBoxCode: string, scheduledSum: number, originalQty: number }>()
+    plannedRows.forEach(r => {
+      const key = `${r.orderNo}|${r.coreBoxCode}`
+      const g = rowGroups.get(key) || { coreBoxCode: r.coreBoxCode, scheduledSum: 0, originalQty: 0 }
+      g.scheduledSum += Object.values(r.hourlyTargets).reduce((s, v) => s + (v || 0), 0)
+      g.originalQty += r.originalQty
+      rowGroups.set(key, g)
+    })
 
-    if (overQuantityRows.length > 0) {
-      setCapacityErrorLines(overQuantityRows.map(({ r, cap }) =>
+    const overQuantityGroups = Array.from(rowGroups.entries()).map(([key, g]) => {
+      const [orderNo] = key.split('|')
+      const { totalRequired, totalScheduled } = getBacklogAggregate(orderNo, g.coreBoxCode)
+      // totalScheduled already includes every row in this group's own prior
+      // contribution (originalQty) - subtract it back out so we're comparing
+      // against what every OTHER row/date has claimed, not double-counting.
+      const cap = Math.max(0, totalRequired - (totalScheduled - g.originalQty))
+      return { g, cap }
+    }).filter(({ g, cap }) => g.scheduledSum > cap)
+
+    if (overQuantityGroups.length > 0) {
+      setCapacityErrorLines(overQuantityGroups.map(({ g, cap }) =>
         cap <= 0
-          ? `${r.coreBoxCode}: product quantity already fully planned`
-          : `${r.coreBoxCode}: product quantity satisfied - only ${cap} more can be scheduled`
+          ? `${g.coreBoxCode}: product quantity already fully planned`
+          : `${g.coreBoxCode}: product quantity satisfied - only ${cap} more can be scheduled across your rows`
       ))
       return null
     }
@@ -464,7 +488,13 @@ export function CorePlanningModal({
       if (!row) return prev
 
       const { totalRequired, totalScheduled } = getBacklogAggregate(row.orderNo, row.coreBoxCode)
-      const pendingQty = Math.max(0, totalRequired - (totalScheduled - row.originalQty))
+      // Net out every OTHER row's session commitment (any machine, not just
+      // this one) too - otherwise auto-fill could claim the full remaining
+      // pool for this row even though another row already claimed part of it
+      // this session, over-committing the moment both get saved.
+      const thisRowCommitted = Object.values(row.hourlyTargets).reduce((s, v) => s + (v || 0), 0) - row.originalQty
+      const otherRowsCommitted = getSessionCommittedQty(row.orderNo, row.coreBoxCode) - thisRowCommitted
+      const pendingQty = Math.max(0, totalRequired - (totalScheduled - row.originalQty) - otherRowsCommitted)
       if (pendingQty <= 0) return prev
 
       const { hourlyTargets, hourlyWorkers } = distributeQty(pendingQty, row.machineId, row.id, prev)
@@ -490,7 +520,13 @@ export function CorePlanningModal({
       const prevTotal = Object.values(r.hourlyTargets).reduce((s, v) => s + (v || 0), 0)
       const newTotal = Object.values(newTargets).reduce((s, v) => s + (v || 0), 0)
       const { totalRequired, totalScheduled } = getBacklogAggregate(r.orderNo, r.coreBoxCode)
-      const cap = Math.max(0, totalRequired - (totalScheduled - r.originalQty))
+      // Net out every OTHER row's session commitment (any machine) so this
+      // nudge reflects the same true cap Save enforces, not just this row's
+      // own isolated share.
+      const otherRowsCommitted = prev
+        .filter(other => other.id !== r.id && other.orderNo === r.orderNo && other.coreBoxCode === r.coreBoxCode)
+        .reduce((sum, other) => sum + (Object.values(other.hourlyTargets).reduce((s, v) => s + (v || 0), 0) - other.originalQty), 0)
+      const cap = Math.max(0, totalRequired - (totalScheduled - r.originalQty) - otherRowsCommitted)
       if (prevTotal <= cap && newTotal > cap) {
         setCapacityErrorLines([
           cap <= 0
@@ -520,7 +556,7 @@ export function CorePlanningModal({
     const { totalRequired, totalScheduled } = getBacklogAggregate(orderNo, coreBoxCode)
     const order = openOrders.find(o => o.customerOrderNo === orderNo)
 
-    const remaining = Math.max(0, totalRequired - totalScheduled)
+    const remaining = Math.max(0, totalRequired - totalScheduled - getSessionCommittedQty(orderNo, coreBoxCode))
     const patternRef = matches[0].patternRef || ''
 
     setPlannedRows(prev => {
@@ -566,10 +602,15 @@ export function CorePlanningModal({
   const mappedCoreBoxes: string[] = activeMachine?.restrictedCoreBoxes || []
   const backlogOptions = useMemo(() => {
     if (mappedCoreBoxes.length === 0) return []
-    // Exclude core boxes that already have a row on this machine this session -
+    // Exclude core boxes that already have a row on THIS machine this session -
     // adding the same one twice would double-book it and, on save, create a second
     // DB row instead of updating the first (since neither carries the other's id),
-    // silently doubling what counts as "already scheduled" from then on.
+    // silently doubling what counts as "already scheduled" from then on. A box
+    // can still be offered for a DIFFERENT machine (splitting one box across two
+    // machines is legitimate), but its displayed remaining is netted against
+    // every session row for that box - on any machine - so it can't look like
+    // the full amount is still available when part of it was already claimed
+    // elsewhere this session.
     const alreadyOnMachine = new Set(activeRows.map(r => `${r.orderNo}|${r.coreBoxCode}`))
     // Multiple cart lines can map to the same core box within one order, each
     // producing its own backlog entry - sum them into one aggregated option
@@ -588,8 +629,10 @@ export function CorePlanningModal({
           options.set(key, { ...b })
         }
       })
-    return Array.from(options.values()).filter(b => b.totalRequired > b.totalScheduled)
-  }, [backlogData, mappedCoreBoxes, activeRows])
+    return Array.from(options.values())
+      .map(b => ({ ...b, totalScheduled: b.totalScheduled + getSessionCommittedQty(b.orderNo, b.coreBoxCode || '') }))
+      .filter(b => b.totalRequired > b.totalScheduled)
+  }, [backlogData, mappedCoreBoxes, activeRows, plannedRows])
 
   // Per-row wrapper, shared between the column header and the blocking check below
   const rowMeta = useMemo(() => {
