@@ -114,8 +114,13 @@ export function ViewPatternModal({
       setPatternName(pattern.name || '')
       setCategory(pattern.category || 'Machine Moulding')
       setRemarks(pattern.remarks || '')
-      setGoodCastingWeight(pattern.goodWeight ?? '')
-      setTotalBoxWeight(pattern.totalWeight ?? '')
+      // pattern.goodWeight/totalWeight come back from the API as numeric
+      // strings (e.g. "45.5"), not numbers - without converting here, the
+      // save handler's `typeof === 'number'` check would silently fail
+      // whenever the field wasn't manually retyped, sending 0 and wiping out
+      // the real saved value.
+      setGoodCastingWeight(pattern.goodWeight != null && pattern.goodWeight !== '' ? Number(pattern.goodWeight) : '')
+      setTotalBoxWeight(pattern.totalWeight != null && pattern.totalWeight !== '' ? Number(pattern.totalWeight) : '')
       setPatternImages(pattern.patternImages || [])
       setTopPresent(pattern.topMatchplate ? 'Yes' : 'No')
       setTopOwner(pattern.topOwner || 'Customer')
