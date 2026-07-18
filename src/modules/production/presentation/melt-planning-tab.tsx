@@ -9,10 +9,11 @@ interface MeltPlanningTabProps {
   products: any[]
   patterns: any[]
   dailyPlans: any[]
+  mouldCapBacklog: BacklogItem[]
   onSaveDayPlan: (date: string, plans: any[]) => void
 }
 
-export function MeltPlanningTab({ defaultMetalQty, openOrders, products, patterns, dailyPlans, onSaveDayPlan }: MeltPlanningTabProps) {
+export function MeltPlanningTab({ defaultMetalQty, openOrders, products, patterns, dailyPlans, mouldCapBacklog, onSaveDayPlan }: MeltPlanningTabProps) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
 
   // Calendar logic
@@ -188,6 +189,7 @@ export function MeltPlanningTab({ defaultMetalQty, openOrders, products, pattern
           dailyPlans={dailyPlans.filter(p => p.date === selectedDate && p.stage === 'Melt')}
           patterns={patterns}
           products={products}
+          mouldCapBacklog={mouldCapBacklog}
           onSaveDayPlan={onSaveDayPlan}
         />
       )}

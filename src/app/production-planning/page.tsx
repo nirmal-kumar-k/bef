@@ -64,6 +64,10 @@ export default function ProductionPlanningPage() {
     const mouldBacklog: BacklogItem[] = []
     const meltBacklog: BacklogItem[] = []
     const knockoutBacklog: BacklogItem[] = []
+    // Melt can't pour more mould-units for a product than Mould Planning has
+    // actually produced for it - tracked separately from meltBacklog (which
+    // is in kg) since this cap is a mould-count comparison instead.
+    const meltMouldCapBacklog: BacklogItem[] = []
 
     openOrders.forEach(order => {
       const orderId = order.id || order._id
@@ -110,6 +114,16 @@ export default function ProductionPlanningPage() {
         mouldBacklog.push({
           itemId: representativeId, orderNo: order.customerOrderNo, patternRef: pattern?.code || '-', productName,
           totalRequired: finalMoulds, totalScheduled: mouldScheduled, unit: 'boxes'
+        })
+
+        // MELT MOULD CAP - moulds actually produced (mouldScheduled, "scheduled
+        // = completed" same as everywhere else) vs. moulds already poured for
+        // in Melt across every date, so Melt can never claim more mould-units
+        // than physically exist for this product.
+        const mouldsPouredInMelt = plans.filter(p => p.stage === 'Melt' && p.itemId === representativeId).reduce((sum, p) => sum + (p.mouldsScheduled || 0), 0)
+        meltMouldCapBacklog.push({
+          itemId: representativeId, orderNo: order.customerOrderNo, patternRef: pattern?.code || '-', productName,
+          totalRequired: mouldScheduled, totalScheduled: mouldsPouredInMelt, unit: 'moulds'
         })
 
         // MELT
@@ -188,7 +202,7 @@ export default function ProductionPlanningPage() {
       })
     })
 
-    return { Core: coreBacklog, Mould: mouldBacklog, Melt: meltBacklog, Knockout: knockoutBacklog }
+    return { Core: coreBacklog, Mould: mouldBacklog, Melt: meltBacklog, Knockout: knockoutBacklog, MeltMouldCap: meltMouldCapBacklog }
   }, [openOrders, products, patterns, plans])
 
   const totals = useMemo(() => {
@@ -543,7 +557,7 @@ export default function ProductionPlanningPage() {
                 <MouldPlanningTab mouldBacklog={backlogData.Mould} patterns={patterns} openOrders={openOrders} dailyPlans={plans} onSaveDayPlan={handleSaveDayPlan} />
               )}
               {activeTab === 'Melt' && (
-                <MeltPlanningTab defaultMetalQty={totals.metal} products={products} patterns={patterns} openOrders={openOrders} dailyPlans={plans} onSaveDayPlan={handleSaveDayPlan} />
+                <MeltPlanningTab defaultMetalQty={totals.metal} products={products} patterns={patterns} openOrders={openOrders} dailyPlans={plans} mouldCapBacklog={backlogData.MeltMouldCap} onSaveDayPlan={handleSaveDayPlan} />
               )}
               {activeTab === 'Pour' && (
                 <PourPlanningTab patterns={patterns} openOrders={openOrders} dailyPlans={plans} onSaveDayPlan={handleSaveDayPlan} />

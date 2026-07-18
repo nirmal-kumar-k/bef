@@ -25,6 +25,10 @@ interface MeltPlanningModalProps {
   dailyPlans: any[]
   patterns: any[]
   products: any[]
+  // Moulds actually produced (Mould Planning's scheduled total) vs. moulds
+  // already poured for in Melt across every date - caps how many mould-units
+  // a product's pours can claim, same idea as Core/Mould's quantity cap.
+  mouldCapBacklog: BacklogItem[]
   onSaveDayPlan: (date: string, plans: any[]) => void
 }
 
@@ -57,6 +61,10 @@ interface Pour {
   mouldsScheduled: number
   isConfirmed: boolean
   itemId: string
+  // Moulds this pour already contributed to mouldCapBacklog's totalScheduled
+  // when the modal opened - needed to compute how much MORE it can take
+  // without double-subtracting its own prior contribution.
+  originalQty: number
 }
 
 const parseTime = (timeStr: string) => {
@@ -114,6 +122,7 @@ export function MeltPlanningModal({
   dailyPlans,
   patterns,
   products,
+  mouldCapBacklog,
   onSaveDayPlan
 }: MeltPlanningModalProps) {
   const [shifts, setShifts] = useState<Shift[]>([])
@@ -207,6 +216,7 @@ export function MeltPlanningModal({
           || patterns.find(pat => pat.mappedProducts?.some((mp: any) => mp.name === product?.name))
         const mouldWeight = pattern?.totalWeight || 20
 
+        const loadedMoulds = p.mouldsScheduled || Math.ceil(p.quantityScheduled / mouldWeight) || 0
         loadedPours.push({
           id: Math.random().toString(),
           planId: p.id || p._id,
@@ -218,9 +228,10 @@ export function MeltPlanningModal({
           productName: product?.name || '',
           grade: product?.grade || 'Unassigned',
           mouldWeight: mouldWeight,
-          mouldsScheduled: p.mouldsScheduled || Math.ceil(p.quantityScheduled / mouldWeight) || 0,
+          mouldsScheduled: loadedMoulds,
           isConfirmed: !!p.isConfirmed,
-          itemId: p.itemId
+          itemId: p.itemId,
+          originalQty: loadedMoulds
         })
       })
 
@@ -299,7 +310,36 @@ export function MeltPlanningModal({
     return map
   }, [backlogData, products])
 
+  // Moulds actually produced for this item vs. already poured for in Melt
+  // across every date - the real ceiling on how many mould-units Melt can
+  // ever claim, separate from the kg-based charge-weight capacity check.
+  const getMouldCapAggregate = (orderNo: string, patternRef: string) => {
+    const matches = mouldCapBacklog.filter(b => b.orderNo === orderNo && b.patternRef === patternRef)
+    return {
+      totalRequired: matches.reduce((s, b) => s + b.totalRequired, 0),
+      totalScheduled: matches.reduce((s, b) => s + b.totalScheduled, 0)
+    }
+  }
+
   const handleSave = () => {
+    // Block the save if any pour claims more mould-units than actually exist
+    // for that product (produced by Mould Planning, minus what's already
+    // poured for elsewhere across every date).
+    const overQuantityPours = pours.map(p => {
+      const { totalRequired, totalScheduled } = getMouldCapAggregate(p.orderNo, p.patternRef)
+      const cap = Math.max(0, totalRequired - (totalScheduled - p.originalQty))
+      return { p, cap }
+    }).filter(({ p, cap }) => p.mouldsScheduled > cap)
+
+    if (overQuantityPours.length > 0) {
+      setCapacityErrorLines(overQuantityPours.map(({ p, cap }) =>
+        cap <= 0
+          ? `${p.patternRef}: no moulds available to pour - none produced yet or all already poured`
+          : `${p.patternRef}: only ${cap} moulds available to pour, ${p.mouldsScheduled} scheduled`
+      ))
+      return
+    }
+
     // Same hard capacity guard as Core/Mould planning - a heat's charge weight
     // already gets flagged red on screen when over capacity, but that was
     // only a visual warning; block the actual save too so an over-capacity
@@ -395,7 +435,8 @@ export function MeltPlanningModal({
       mouldWeight: pattern?.totalWeight || 20,
       mouldsScheduled: mouldsToPour,
       isConfirmed: false,
-      itemId: backlogItem.itemId
+      itemId: backlogItem.itemId,
+      originalQty: 0
     }])
     setAllocationHeatId(null)
   }
@@ -745,7 +786,9 @@ export function MeltPlanningModal({
                                     const remainingMoulds = Math.ceil((b.totalRequired - b.totalScheduled) / boxWeight)
                                     const remainingHeatCapacity = Math.max(0, maxCapacity - selectedHeatWeight)
                                     const possibleMoulds = Math.floor(remainingHeatCapacity / boxWeight)
-                                    const maxAllowed = Math.min(remainingMoulds, possibleMoulds)
+                                    const { totalRequired: mouldsProduced, totalScheduled: mouldsPoured } = getMouldCapAggregate(b.orderNo, b.patternRef)
+                                    const mouldsAvailable = Math.max(0, mouldsProduced - mouldsPoured)
+                                    const maxAllowed = Math.min(remainingMoulds, possibleMoulds, mouldsAvailable)
 
                                     return (
                                       <PourAllocationRow
