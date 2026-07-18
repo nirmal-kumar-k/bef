@@ -85,17 +85,30 @@ export function CorePlanningTab({ coreBacklog, patterns, openOrders, dailyPlans,
   const totalRemainingCores = coreBacklog.reduce((sum, b) => sum + Math.max(0, b.totalRequired - b.totalScheduled), 0)
   const totalWorkers = Object.values(workersPerBox).reduce((sum, w) => sum + (Number(w) || 0), 0)
 
-  // Tomorrow-only "Pending" preview: combined possible output across every
-  // active Core machine for one shift, capped at whatever's actually still
-  // required - never shows more than what's really left to schedule, and
-  // never appears on any day besides the one right after today.
-  const tomorrowStr = useMemo(() => {
-    const t = new Date()
-    t.setDate(t.getDate() + 1)
-    return toLocalDateString(t)
-  }, [])
+  // "Pending" preview: rolls forward to the next day that actually has free
+  // machine capacity. Combined possible output across every active Core
+  // machine for one shift, minus whatever that specific day already has
+  // scheduled - if a day's already fully booked, check the day after it,
+  // and so on, so the badge never sits on a day with zero room left.
   const totalPossibleCoreCapacity = coreEquipments.reduce((sum, e) => sum + (Number(e.avgPiecesPerHour) || 0), 0) * SHIFT_HOURS
-  const tomorrowPendingAmount = Math.min(totalRemainingCores, totalPossibleCoreCapacity)
+  const pendingPreview = useMemo(() => {
+    if (totalRemainingCores <= 0 || totalPossibleCoreCapacity <= 0) return null
+    const cursor = new Date()
+    cursor.setHours(0, 0, 0, 0)
+    const maxLookaheadDays = 60
+    for (let i = 0; i < maxLookaheadDays; i++) {
+      cursor.setDate(cursor.getDate() + 1)
+      const cursorStr = toLocalDateString(cursor)
+      const dayScheduled = dailyPlans
+        .filter(p => p.date === cursorStr && p.stage === 'Core')
+        .reduce((s, p) => s + p.quantityScheduled, 0)
+      const dayFreeCapacity = Math.max(0, totalPossibleCoreCapacity - dayScheduled)
+      if (dayFreeCapacity > 0) {
+        return { date: cursorStr, amount: Math.min(totalRemainingCores, dayFreeCapacity) }
+      }
+    }
+    return null
+  }, [dailyPlans, totalRemainingCores, totalPossibleCoreCapacity])
   
   // To get a blended average core production, we can take a simple average of the shift planning avgProduction 
   // or a weighted average. Let's do simple for now or just take a default 10 if no boxes.
@@ -207,16 +220,16 @@ export function CorePlanningTab({ coreBacklog, patterns, openOrders, dailyPlans,
                         <span className="text-[10.5px] font-bold text-[#0F172A]">{sum}</span>
                       </div>
                     )}
-                    {dateStr === tomorrowStr && tomorrowPendingAmount > 0 && (
+                    {pendingPreview && dateStr === pendingPreview.date && (
                       <div
-                        title="Combined possible output across all active Core machines for one shift, capped at what's actually still required"
+                        title="Combined possible output across all active Core machines for one shift, minus what that day already has scheduled - rolls forward until a day with free capacity is found"
                         className="flex items-center justify-between px-1.5 py-1 bg-red-50/50 rounded-md mt-1"
                       >
                         <div className="flex items-center gap-1.5">
                           <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
                           <span className="text-[10.5px] font-medium text-red-600">Pending</span>
                         </div>
-                        <span className="text-[10.5px] font-bold text-red-600">{Math.round(tomorrowPendingAmount)}</span>
+                        <span className="text-[10.5px] font-bold text-red-600">{Math.round(pendingPreview.amount)}</span>
                       </div>
                     )}
                   </div>
