@@ -99,14 +99,21 @@ export default function PatternsPage() {
     }
   }
 
-  const handleSaveMapping = async (mappedProducts: any[]) => {
+  const handleSaveMapping = async (mappedProducts: any[], goodCastingWeight?: number) => {
     if (!mappingPatternId) return
     setIsSavingMapping(true)
     try {
+      const body: Record<string, any> = { mappedProducts }
+      if (goodCastingWeight !== undefined) {
+        const pattern = patterns.find(p => p.id === mappingPatternId)
+        const totalWeight = Number(pattern?.totalWeight) || 0
+        body.goodWeight = goodCastingWeight
+        body.runnerRiserWeight = Math.max(0, totalWeight - goodCastingWeight)
+      }
       const res = await fetch(`/api/patterns/${mappingPatternId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mappedProducts }),
+        body: JSON.stringify(body),
       })
       if (res.ok) {
         await fetchPatterns()

@@ -56,7 +56,7 @@ export function ProductMappingModal({
   isOpen: boolean
   onClose: () => void
   patternId: string | null
-  onSave?: (mappedProducts: any[]) => void
+  onSave?: (mappedProducts: any[], goodCastingWeight?: number) => void
   isSaving?: boolean
   initialMappedProducts?: any[]
   coreBoxes?: { id: string; code: string; owner: string; typeOfCore?: string; coreWeight?: number }[]
@@ -159,13 +159,19 @@ export function ProductMappingModal({
 
   const handleSave = () => {
     if (!onSave) return
+    let goodCastingWeight = 0
     const mappedProducts = lines
       .filter(l => l.selectedProductId)
       .map(l => {
         const prod = products.find(p => p.id === l.selectedProductId)
+        const cavities = Number(l.cavities) || 1
+        // Good Casting Weight = sum of each mapped product's unit weight x its
+        // cavities - one mould pour yields that many units of the product at
+        // once, so its metal contribution scales with cavities.
+        goodCastingWeight += (parseFloat(prod?.weight) || 0) * cavities
         return {
           name: prod ? prod.name : l.productCode,
-          cavities: Number(l.cavities) || 1,
+          cavities,
           selectedCoreBoxes: l.selectedCoreBoxes.map(cb => ({
             coreBoxId: cb.coreBoxId,
             coreBoxCode: cb.coreBoxCode,
@@ -173,7 +179,7 @@ export function ProductMappingModal({
           }))
         }
       })
-    onSave(mappedProducts)
+    onSave(mappedProducts, goodCastingWeight)
   }
 
   return (
