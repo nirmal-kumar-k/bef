@@ -145,6 +145,12 @@ export function MeltPlanningModal({
   const [pours, setPours] = useState<Pour[]>([])
   const [grades, setGrades] = useState<{ id: string; code: string; name: string }[]>([])
 
+  // Plan ids removed from the schedule (via heat/pour delete) this session -
+  // without this, a deleted pour's saved DB row was never told to delete
+  // itself, so it kept counting against the mould cap forever even after
+  // being removed from view, and every fresh delete threw the cap numbers off.
+  const [removedPlanIds, setRemovedPlanIds] = useState<string[]>([])
+
   const [allocationHeatId, setAllocationHeatId] = useState<string | null>(null)
   // Which heat's full detail card is open in the popup - null means the popup
   // is closed and only the compact chip grid shows.
@@ -257,6 +263,7 @@ export function MeltPlanningModal({
       const loadedHeatsArr = Object.values(loadedHeats)
       setHeats(loadedHeatsArr)
       setPours(loadedPours)
+      setRemovedPlanIds([])
       initialSnapshotRef.current = JSON.stringify({
         heats: loadedHeatsArr.map(toHeatSnapshot),
         pours: loadedPours.map(toPourSnapshot)
@@ -338,10 +345,17 @@ export function MeltPlanningModal({
 
   // Deleting a heat also drops any pours already allocated to it - a heat
   // with dangling pours pointing at a heat that no longer exists would be
-  // broken, not just orphaned.
+  // broken, not just orphaned. Any of those pours that were already saved to
+  // the DB (have a planId) must be queued for explicit deletion too - just
+  // dropping them from local state would leave their saved row behind,
+  // permanently and invisibly still counting against the mould cap.
   const removeHeat = (heatId: string) => {
     setHeats(prev => prev.filter(h => h.id !== heatId))
-    setPours(prev => prev.filter(p => p.heatId !== heatId))
+    setPours(prev => {
+      const removedIds = prev.filter(p => p.heatId === heatId && p.planId).map(p => p.planId!)
+      if (removedIds.length > 0) setRemovedPlanIds(ids => [...ids, ...removedIds])
+      return prev.filter(p => p.heatId !== heatId)
+    })
   }
 
   // Group backlog by Grade
@@ -430,7 +444,7 @@ export function MeltPlanningModal({
       return null
     }
 
-    return pours.map(p => {
+    const plansToSave = pours.map(p => {
       const h = heats.find(ht => ht.id === p.heatId)
       return {
         id: p.planId,
@@ -455,6 +469,13 @@ export function MeltPlanningModal({
         isConfirmed: p.isConfirmed
       }
     })
+
+    // Heats/pours removed via the trash icon this session need an explicit
+    // delete instruction - they're not in plansToSave at all, so without this
+    // their existing DB record would sit there untouched forever, silently
+    // continuing to count against the mould cap on every future save.
+    const deletions = removedPlanIds.map(id => ({ id, _id: id, _delete: true }))
+    return [...plansToSave, ...deletions]
   }
 
   const handleSave = () => {
@@ -565,8 +586,14 @@ export function MeltPlanningModal({
     setAllocationHeatId(null)
   }
 
+  // Same as removeHeat - a removed pour's saved DB row (if it has a planId)
+  // must be explicitly queued for deletion, not just dropped from view.
   const removePour = (pourId: string) => {
-    setPours(prev => prev.filter(p => p.id !== pourId))
+    setPours(prev => {
+      const pour = prev.find(p => p.id === pourId)
+      if (pour?.planId) setRemovedPlanIds(ids => [...ids, pour.planId!])
+      return prev.filter(p => p.id !== pourId)
+    })
   }
 
   const dateObj = new Date(date || new Date())
