@@ -505,7 +505,7 @@ export function MeltPlanningModal({
                       <div className="flex flex-col gap-0.5">
                         <label className="text-[9px] font-bold uppercase tracking-wider text-[#94A3B8]">Grade</label>
                         <Select value={newHeatGrade} onValueChange={setNewHeatGrade}>
-                          <SelectTrigger className="h-7 w-[120px] text-xs border-none bg-transparent px-0 shadow-none font-bold text-[#172554] focus-visible:ring-0">
+                          <SelectTrigger className="h-7 w-[120px] px-2.5 text-xs border border-amber-200 rounded-md bg-white shadow-none font-bold text-[#172554] focus:border-amber-400 focus:ring-1 focus:ring-amber-400 focus-visible:border-amber-400 focus-visible:ring-1 focus-visible:ring-amber-400">
                             <SelectValue placeholder="Select grade" />
                           </SelectTrigger>
                           <SelectContent>
@@ -564,7 +564,7 @@ export function MeltPlanningModal({
                 )}
 
                 {/* Compact chip grid - one small box per heat, click shows its full card in the panel below */}
-                <div className="grid grid-cols-[repeat(auto-fill,minmax(112px,1fr))] gap-2.5">
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-2.5">
                   {activeHeats.map(heat => {
                     const heatPours = pours.filter(p => p.heatId === heat.id)
                     const totalWeight = heatPours.reduce((sum, p) => sum + (p.mouldsScheduled * p.mouldWeight), 0)
@@ -581,8 +581,8 @@ export function MeltPlanningModal({
                           isSelected && "ring-2 ring-amber-300 border-amber-400"
                         )}
                       >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="font-mono font-bold text-xs text-[#172554]">{heat.heatCode || `Heat ${heat.heatNumber}`}</span>
+                        <div className="flex items-center justify-between gap-2 min-w-0">
+                          <span className="font-mono font-bold text-xs text-[#172554] whitespace-nowrap truncate min-w-0">{heat.heatCode || `Heat ${heat.heatNumber}`}</span>
                           <span
                             title="Furnace's running heat count - never resets on its own (reset in Equipment Master)"
                             className="font-mono text-xs font-bold text-amber-700 bg-amber-100 px-2 py-1 rounded shrink-0"
