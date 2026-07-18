@@ -242,7 +242,7 @@ export function MouldPlanningTab({ mouldBacklog, patterns, openOrders, dailyPlan
             openOrders={openOrders}
             backlogData={mouldBacklog}
             patterns={patterns}
-            dailyPlans={dailyPlans}
+            dailyPlans={selectedDate ? dailyPlans.filter(p => p.date === selectedDate && p.stage === 'Mould') : []}
             onSaveDayPlan={onSaveDayPlan}
           />
         </div>

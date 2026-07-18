@@ -217,10 +217,10 @@ export function KnockoutPlanningTab({ knockoutBacklog, patterns, openOrders, dai
             openOrders={openOrders}
             backlogData={knockoutBacklog}
             patterns={patterns}
-            dailyPlans={dailyPlans}
+            dailyPlans={selectedDate ? dailyPlans.filter(p => p.date === selectedDate && p.stage === 'Knockout') : []}
             onSaveDayPlan={onSaveDayPlan}
           />
-          
+
         </div>
       ) : (
         <div className="space-y-8">

@@ -185,7 +185,7 @@ export function MeltPlanningTab({ defaultMetalQty, openOrders, products, pattern
           date={selectedDate}
           openOrders={openOrders}
           backlogData={meltBacklog}
-          dailyPlans={dailyPlans}
+          dailyPlans={dailyPlans.filter(p => p.date === selectedDate && p.stage === 'Melt')}
           patterns={patterns}
           products={products}
           onSaveDayPlan={onSaveDayPlan}
