@@ -49,16 +49,36 @@ interface CartItem {
   unitCost: number
 }
 
+// SO-MM-YY-#### - MM/YY reflect the month the order is created in, but the
+// sequence itself is a single running count that never resets by month, so
+// it looks at every existing order's number regardless of when it was made.
+const generateNextInternalOrderNo = (existingOrders: Order[]) => {
+  const now = new Date()
+  const mm = String(now.getMonth() + 1).padStart(2, '0')
+  const yy = String(now.getFullYear()).slice(-2)
+  let maxSeq = 0
+  existingOrders.forEach(o => {
+    const match = /^SO-\d{2}-\d{2}-(\d+)$/.exec(o.internalOrderNo || '')
+    if (match) {
+      const n = parseInt(match[1], 10)
+      if (n > maxSeq) maxSeq = n
+    }
+  })
+  return `SO-${mm}-${yy}-${String(maxSeq + 1).padStart(4, '0')}`
+}
+
 export function NewOrderModal({
   isOpen,
   onClose,
   onSave,
   initialData,
+  existingOrders = [],
 }: {
   isOpen: boolean
   onClose: () => void
   onSave: (order: Order | Omit<Order, 'id'>) => void
   initialData?: Order | null
+  existingOrders?: Order[]
 }) {
   const { role } = useRole()
   const [customerOpen, setCustomerOpen] = useState(false)
@@ -83,6 +103,14 @@ export function NewOrderModal({
   // Fetched data from API
   const [customers, setCustomers] = useState<{ value: string; label: string }[]>([])
   const [allProductsList, setAllProductsList] = useState<{ value: string; label: string; weight: number; ratePerKg: number }[]>([])
+
+  // Auto-fill the next Internal Order No. when opening for a brand new order
+  // (not editing an existing one) - still a plain editable field afterward.
+  useEffect(() => {
+    if (isOpen && !initialData) {
+      setInternalOrderNo(generateNextInternalOrderNo(existingOrders))
+    }
+  }, [isOpen, initialData, existingOrders])
 
   useEffect(() => {
     if (!isOpen) return
@@ -258,7 +286,7 @@ export function NewOrderModal({
                 
                 <div className="space-y-2">
                   <Label className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">Internal Order No.</Label>
-                  <Input placeholder="e.g. INT-4412" value={internalOrderNo} onChange={e => setInternalOrderNo(e.target.value)} className="h-10 px-3 rounded-md bg-[#FFFFFF] border-[#E0E7FF] text-[#172554] text-sm" />
+                  <Input placeholder="e.g. SO-07-26-0001" value={internalOrderNo} onChange={e => setInternalOrderNo(e.target.value)} className="h-10 px-3 rounded-md bg-[#FFFFFF] border-[#E0E7FF] text-[#172554] text-sm" />
                 </div>
 
                 <div className="space-y-2">

@@ -237,6 +237,7 @@ export default function OrdersPage() {
           }} 
           onSave={handleSaveOrder}
           initialData={editingOrder}
+          existingOrders={orders}
         />
         <ViewOrderModal 
           order={viewingOrder} 
