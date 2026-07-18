@@ -506,36 +506,16 @@ export function CorePlanningModal({
   // tracked independently, so the mismatch indicator on TQ fires whichever
   // side you edit, instead of always being satisfied because the other side
   // silently followed along.
+  // Quantity-cap violations are only reported at Save time (buildPlansToSave) -
+  // no live popup while typing, since interrupting the user mid-edit with a
+  // "Cannot Save" dialog before they've finished distributing today's plan is
+  // more disruptive than helpful. Save's own hard block stays authoritative.
   const handleHourlyChange = (rowId: string, timeSlot: string, value: string) => {
     const num = value === '' ? undefined : parseInt(value, 10)
     setPlannedRows(prev => prev.map(r => {
       if (r.id !== rowId) return r
       const newValue = Math.max(0, num || 0)
-      const newTargets = { ...r.hourlyTargets, [timeSlot]: newValue }
-
-      // Live product-quantity warning: fire only on the crossing (previous
-      // total within the remaining product quantity, new total over it), not
-      // on every keystroke made while already over - Save's own hard block
-      // stays authoritative. Equipment-capacity blocking is disabled for now.
-      const prevTotal = Object.values(r.hourlyTargets).reduce((s, v) => s + (v || 0), 0)
-      const newTotal = Object.values(newTargets).reduce((s, v) => s + (v || 0), 0)
-      const { totalRequired, totalScheduled } = getBacklogAggregate(r.orderNo, r.coreBoxCode)
-      // Net out every OTHER row's session commitment (any machine) so this
-      // nudge reflects the same true cap Save enforces, not just this row's
-      // own isolated share.
-      const otherRowsCommitted = prev
-        .filter(other => other.id !== r.id && other.orderNo === r.orderNo && other.coreBoxCode === r.coreBoxCode)
-        .reduce((sum, other) => sum + (Object.values(other.hourlyTargets).reduce((s, v) => s + (v || 0), 0) - other.originalQty), 0)
-      const cap = Math.max(0, totalRequired - (totalScheduled - r.originalQty) - otherRowsCommitted)
-      if (prevTotal <= cap && newTotal > cap) {
-        setCapacityErrorLines([
-          cap <= 0
-            ? `${r.coreBoxCode}: product quantity already fully planned`
-            : `${r.coreBoxCode}: product quantity satisfied - only ${cap} more can be scheduled`
-        ])
-      }
-
-      return { ...r, hourlyTargets: newTargets }
+      return { ...r, hourlyTargets: { ...r.hourlyTargets, [timeSlot]: newValue } }
     }))
   }
 
