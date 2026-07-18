@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
 import { CapacityErrorDialog } from '@/shared/ui/capacity-error-dialog'
 import { BacklogItem } from './daily-planning-modal'
-import { Fire, Trash, Plus, Clock, WarningCircle } from '@phosphor-icons/react'
+import { Fire, Trash, Plus, Clock, WarningCircle, CaretLeft, CaretRight } from '@phosphor-icons/react'
 import { cn } from '@/shared/lib/utils'
 import type { Shift } from './shift-master-page'
 
@@ -30,6 +30,10 @@ interface MeltPlanningModalProps {
   // a product's pours can claim, same idea as Core/Mould's quantity cap.
   mouldCapBacklog: BacklogItem[]
   onSaveDayPlan: (date: string, plans: any[]) => void
+  // Lets the header arrows step to the adjacent day without closing the
+  // modal. Optional so the modal still works for any caller that hasn't
+  // wired up day navigation.
+  onNavigateDate?: (direction: 1 | -1) => void
 }
 
 interface Heat {
@@ -45,6 +49,12 @@ interface Heat {
   // moment this heat was created (see the Heat Sequence Counter in Equipment
   // Master). Distinct from heatCode's date segment, which resets daily.
   sequenceNumber?: number
+  // Manual override for which heat on this furnace gets the longer "first
+  // heat" duration (furnace startup takes longer than a heat poured into an
+  // already-hot furnace). Defaults to the furnace's actual first heat, but
+  // the user can move it - e.g. after deleting/reordering heats - since only
+  // one heat per furnace/shift can ever be the first heat at a time.
+  isFirstHeat: boolean
 }
 
 interface Pour {
@@ -123,7 +133,8 @@ export function MeltPlanningModal({
   patterns,
   products,
   mouldCapBacklog,
-  onSaveDayPlan
+  onSaveDayPlan,
+  onNavigateDate
 }: MeltPlanningModalProps) {
   const [shifts, setShifts] = useState<Shift[]>([])
   const [equipments, setEquipments] = useState<any[]>([])
@@ -144,6 +155,11 @@ export function MeltPlanningModal({
   const [capacityErrorLines, setCapacityErrorLines] = useState<string[] | null>(null)
   const [newHeatGrade, setNewHeatGrade] = useState('')
   const [newHeatCode, setNewHeatCode] = useState('')
+
+  // Snapshot of the fields that matter for saving, captured once when the
+  // modal's heats/pours are (re)initialized - compared against current state
+  // to know whether navigating away would discard unsaved edits.
+  const initialSnapshotRef = useRef<string>('')
 
   // Fetch Master Data
   useEffect(() => {
@@ -196,7 +212,12 @@ export function MeltPlanningModal({
             actualMeltWeight: p.actualMeltWeight,
             grade: p.grade || '',
             heatCode: p.heatNo || '',
-            sequenceNumber: p.heatSequenceNumber
+            sequenceNumber: p.heatSequenceNumber,
+            // Not persisted as its own column - the "first heat" duration is
+            // already baked into the saved startTime/endTime, so this is just
+            // the sane default for the checkbox on reload (heat #1 unless the
+            // user re-toggles it this session).
+            isFirstHeat: hNum === 1
           }
         }
 
@@ -235,14 +256,40 @@ export function MeltPlanningModal({
         })
       })
 
-      setHeats(Object.values(loadedHeats))
+      const loadedHeatsArr = Object.values(loadedHeats)
+      setHeats(loadedHeatsArr)
       setPours(loadedPours)
+      initialSnapshotRef.current = JSON.stringify({
+        heats: loadedHeatsArr.map(toHeatSnapshot),
+        pours: loadedPours.map(toPourSnapshot)
+      })
     }
   // equipments.length (not equipments itself) is the dependency deliberately -
   // this should only re-run when equipment data first loads, not every time
   // its contents change (e.g. addHeat updating a furnace's heatSequence
   // locally), which would otherwise wipe out any heat added but not yet saved.
-  }, [isOpen, dailyPlans, equipments.length, openOrders, products, patterns, selectedShiftId])
+  }, [isOpen, date, dailyPlans, equipments.length, openOrders, products, patterns, selectedShiftId])
+
+  // Fields whose values determine what actually gets saved - used both for
+  // the dirty snapshot and its live comparison.
+  const toHeatSnapshot = (h: Heat) => ({
+    furnaceId: h.furnaceId, heatNumber: h.heatNumber, startTime: h.startTime, endTime: h.endTime, grade: h.grade, heatCode: h.heatCode, isFirstHeat: h.isFirstHeat
+  })
+  const toPourSnapshot = (p: Pour) => ({
+    heatId: p.heatId, mouldsScheduled: p.mouldsScheduled, isConfirmed: p.isConfirmed
+  })
+
+  const isDirty = useMemo(
+    () => JSON.stringify({ heats: heats.map(toHeatSnapshot), pours: pours.map(toPourSnapshot) }) !== initialSnapshotRef.current,
+    [heats, pours]
+  )
+
+  // Warn before discarding unsaved edits when hopping days via the header
+  // arrows - otherwise just switch immediately.
+  const handleNavigateDate = (direction: 1 | -1) => {
+    if (isDirty && !confirm('You have unsaved changes on this day. Discard them and switch days?')) return
+    onNavigateDate?.(direction)
+  }
 
   // Add a heat manually: grade is picked first, then a heat code is entered for it.
   // Start time cascades off the last existing heat for this furnace (or the shift
@@ -271,7 +318,8 @@ export function MeltPlanningModal({
       endTime: formatTime(currentStart + duration),
       grade: newHeatGrade,
       heatCode: newHeatCode.trim(),
-      sequenceNumber: nextSequence
+      sequenceNumber: nextSequence,
+      isFirstHeat: nextNumber === 1
     }])
     setAddHeatOpen(false)
     setNewHeatCode('')
@@ -321,7 +369,10 @@ export function MeltPlanningModal({
     }
   }
 
-  const handleSave = () => {
+  // Validates and builds the save payload; returns null if blocked (a
+  // capacity-error popup was already shown). Shared by both Save Day Plan
+  // (closes the modal) and Save & Refresh (keeps it open).
+  const buildPlansToSave = (): any[] | null => {
     // Block the save if any pour claims more mould-units than actually exist
     // for that product (produced by Mould Planning, minus what's already
     // poured for elsewhere across every date).
@@ -337,7 +388,7 @@ export function MeltPlanningModal({
           ? `${p.patternRef}: no moulds available to pour - none produced yet or all already poured`
           : `${p.patternRef}: only ${cap} moulds available to pour, ${p.mouldsScheduled} scheduled`
       ))
-      return
+      return null
     }
 
     // Same hard capacity guard as Core/Mould planning - a heat's charge weight
@@ -354,10 +405,10 @@ export function MeltPlanningModal({
 
     if (overCapacityHeats.length > 0) {
       setCapacityErrorLines(overCapacityHeats.map(({ h, totalWeight, cap }) => `Heat ${h.heatNumber} (${h.heatCode}): ${totalWeight.toFixed(1)} kg scheduled, max ${cap} kg`))
-      return
+      return null
     }
 
-    const plansToSave = pours.map(p => {
+    return pours.map(p => {
       const h = heats.find(ht => ht.id === p.heatId)
       return {
         id: p.planId,
@@ -381,8 +432,23 @@ export function MeltPlanningModal({
         isConfirmed: p.isConfirmed
       }
     })
+  }
+
+  const handleSave = () => {
+    const plansToSave = buildPlansToSave()
+    if (!plansToSave) return
     onSaveDayPlan(date, plansToSave)
     onClose()
+  }
+
+  // Saves exactly like Save Day Plan, but keeps the modal open and re-loads
+  // this shift's heats/pours fresh from the just-saved backend state (the
+  // dailyPlans prop update naturally re-triggers the init effect), instead
+  // of closing.
+  const handleSaveAndRefresh = () => {
+    const plansToSave = buildPlansToSave()
+    if (!plansToSave) return
+    onSaveDayPlan(date, plansToSave)
   }
 
   // Adjust cascade heat timings
@@ -402,11 +468,46 @@ export function MeltPlanningModal({
       
       for (let i = targetIdx; i < furnaceHeats.length; i++) {
         const h = furnaceHeats[i]
-        const dur = h.heatNumber === 1 ? firstDur : regDur
+        const dur = h.isFirstHeat ? firstDur : regDur
         h.startTime = formatTime(currentMins)
         currentMins += dur
         h.endTime = formatTime(currentMins)
       }
+
+      return [...otherHeats, ...furnaceHeats]
+    })
+  }
+
+  // Marking a heat "First Heat" is a manual override (e.g. after deleting the
+  // original first heat) and only one heat per furnace can hold it at a time,
+  // so checking one clears it from every other heat on that furnace. The
+  // whole furnace's schedule is then recomputed from the shift start, since
+  // moving which heat gets the longer startup duration shifts every heat
+  // after it too (not just the ones from the toggled heat onward).
+  const toggleFirstHeat = (heatId: string) => {
+    setHeats(prev => {
+      const heat = prev.find(h => h.id === heatId)
+      if (!heat) return prev
+      const makingFirst = !heat.isFirstHeat
+
+      const toggled = prev.map(h => {
+        if (h.id === heatId) return { ...h, isFirstHeat: makingFirst }
+        if (h.furnaceId === heat.furnaceId && makingFirst) return { ...h, isFirstHeat: false }
+        return h
+      })
+
+      const furnace = equipments.find(e => e.id === heat.furnaceId)
+      const shift = shifts.find(s => s.id === selectedShiftId)
+      const furnaceHeats = toggled.filter(h => h.furnaceId === heat.furnaceId).sort((a, b) => a.heatNumber - b.heatNumber)
+      const otherHeats = toggled.filter(h => h.furnaceId !== heat.furnaceId)
+
+      let currentMins = parseTime(shift?.startTime || '08:00 AM')
+      furnaceHeats.forEach(h => {
+        const dur = getHeatDurationMins(furnace, h.isFirstHeat)
+        h.startTime = formatTime(currentMins)
+        currentMins += dur
+        h.endTime = formatTime(currentMins)
+      })
 
       return [...otherHeats, ...furnaceHeats]
     })
@@ -475,8 +576,28 @@ export function MeltPlanningModal({
           <DialogHeader className={cn("p-6 pb-4 border-b shrink-0 bg-white transition-colors duration-500 ease-in-out", warmBorder)}>
             <div className="flex items-center justify-between">
               <div>
-                <DialogTitle className="text-2xl font-heading text-[#172554]">
-                  {dateString} - Melt Planning
+                <DialogTitle className="flex items-center gap-2 text-2xl font-heading text-[#172554]">
+                  {onNavigateDate && (
+                    <button
+                      type="button"
+                      onClick={() => handleNavigateDate(-1)}
+                      className="p-1 rounded-lg transition-colors hover:bg-amber-100"
+                      aria-label="Previous day"
+                    >
+                      <CaretLeft size={20} weight="bold" />
+                    </button>
+                  )}
+                  <span>{dateString} - Melt Planning</span>
+                  {onNavigateDate && (
+                    <button
+                      type="button"
+                      onClick={() => handleNavigateDate(1)}
+                      className="p-1 rounded-lg transition-colors hover:bg-amber-100"
+                      aria-label="Next day"
+                    >
+                      <CaretRight size={20} weight="bold" />
+                    </button>
+                  )}
                 </DialogTitle>
                 <div className="flex items-center gap-3 mt-3">
                   <span className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">Select Shift:</span>
@@ -636,7 +757,12 @@ export function MeltPlanningModal({
                             #{heat.sequenceNumber ?? heat.heatNumber}
                           </span>
                         </div>
-                        <div className="text-[10px] font-semibold text-[#64748B] mt-1">{heat.grade}</div>
+                        <div className="flex items-center justify-between mt-1">
+                          <span className="text-[10px] font-semibold text-[#64748B]">{heat.grade}</span>
+                          {heat.isFirstHeat && (
+                            <span className="text-[8px] font-bold uppercase tracking-wide text-amber-700 bg-amber-100 px-1 py-0.5 rounded shrink-0">First</span>
+                          )}
+                        </div>
                         {isOverCapacity && (
                           <div className="text-[9px] font-bold text-red-600 mt-1.5 flex items-center gap-0.5">
                             <WarningCircle weight="fill" className="w-2.5 h-2.5" /> Over
@@ -647,16 +773,19 @@ export function MeltPlanningModal({
                   })}
                 </div>
 
-                {/* Selected heat's full detail card, shown inline below the chip grid */}
+                {/* Selected heat's full detail card, shown inline below the chip grid.
+                    Deliberately a deeper amber (not the plain white the chip grid and
+                    the rest of the page use) so it reads as a distinct "detail" surface
+                    rather than blending into the surrounding cards. */}
                 {selectedHeat && (
                   <div className={cn(
-                    "bg-white rounded-xl border shadow-sm flex flex-col overflow-hidden transition-all max-w-2xl",
-                    selectedHeatOverCapacity ? "border-red-300 ring-1 ring-red-300" : warmBorder
+                    "bg-amber-100 rounded-xl border shadow-md flex flex-col overflow-hidden transition-all max-w-2xl",
+                    selectedHeatOverCapacity ? "border-red-300 ring-1 ring-red-300" : "border-amber-300"
                   )}>
                     {/* Heat Header - identity row */}
                     <div className={cn(
                       "px-4 py-3 border-b flex items-center gap-2.5 transition-colors duration-500 ease-in-out",
-                      selectedHeatOverCapacity ? "bg-red-50 border-red-200" : cn("bg-amber-50/40", warmBorder)
+                      selectedHeatOverCapacity ? "bg-red-50 border-red-200" : "bg-amber-200/70 border-amber-300"
                     )}>
                       <div className={cn(
                         "w-9 h-9 rounded-lg flex items-center justify-center shrink-0",
@@ -668,6 +797,18 @@ export function MeltPlanningModal({
                         <span className="font-mono font-black text-base text-[#172554] leading-tight truncate">{selectedHeat.heatCode || `Heat ${selectedHeat.heatNumber}`}</span>
                         <span className="text-[11px] font-semibold text-[#64748B] truncate mt-0.5">{selectedHeat.grade}</span>
                       </div>
+                      <label
+                        title={`First heat of the day for this furnace runs ${getHeatDurationMins(equipments.find(e => e.id === selectedHeat.furnaceId), true)} min (furnace startup); only one heat per furnace can be marked first`}
+                        className="flex items-center gap-1.5 shrink-0 cursor-pointer select-none bg-white/60 border border-amber-300 rounded-lg px-2 py-1"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedHeat.isFirstHeat}
+                          onChange={() => toggleFirstHeat(selectedHeat.id)}
+                          className="h-3.5 w-3.5 accent-amber-600 cursor-pointer"
+                        />
+                        <span className="text-[10px] font-bold uppercase tracking-wide text-amber-800">First Heat</span>
+                      </label>
                       <span
                         title="Furnace's running heat count - never resets on its own (reset in Equipment Master)"
                         className="font-mono text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded shrink-0"
@@ -816,6 +957,7 @@ export function MeltPlanningModal({
           {/* Footer */}
           <DialogFooter className={cn("m-0 p-5 border-t bg-[#FFFFFF] shrink-0 sm:justify-end rounded-b-2xl transition-colors duration-500 ease-in-out", warmBorder)}>
             <Button variant="ghost" onClick={onClose} className="text-[#64748B] hover:text-[#172554] hover:bg-[#F8FAFC]">Cancel</Button>
+            <Button variant="outline" onClick={handleSaveAndRefresh} className="border-amber-500 text-amber-600 hover:bg-amber-50 h-10 px-6 text-sm font-bold">Save & Refresh</Button>
             <Button onClick={handleSave} className="bg-amber-500 text-white hover:bg-amber-600 shadow-md h-10 px-8 text-sm font-bold">Save Day Plan</Button>
           </DialogFooter>
         </div>

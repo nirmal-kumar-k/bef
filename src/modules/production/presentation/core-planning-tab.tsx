@@ -247,6 +247,14 @@ export function CorePlanningTab({ coreBacklog, patterns, openOrders, dailyPlans,
             dailyPlans={selectedDate ? dailyPlans.filter(p => p.date === selectedDate && p.stage === 'Core') : []}
             patterns={patterns}
             onSaveDayPlan={onSaveDayPlan}
+            onNavigateDate={(direction) => {
+              setSelectedDate(prev => {
+                if (!prev) return prev
+                const d = new Date(`${prev}T00:00:00`)
+                d.setDate(d.getDate() + direction)
+                return toLocalDateString(d)
+              })
+            }}
           />
         </div>
       ) : (

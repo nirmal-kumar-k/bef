@@ -216,6 +216,14 @@ export function MouldPlanningTab({ mouldBacklog, patterns, openOrders, dailyPlan
             patterns={patterns}
             dailyPlans={selectedDate ? dailyPlans.filter(p => p.date === selectedDate && p.stage === 'Mould') : []}
             onSaveDayPlan={onSaveDayPlan}
+            onNavigateDate={(direction) => {
+              setSelectedDate(prev => {
+                if (!prev) return prev
+                const d = new Date(`${prev}T00:00:00`)
+                d.setDate(d.getDate() + direction)
+                return toLocalDateString(d)
+              })
+            }}
           />
         </div>
       ) : (

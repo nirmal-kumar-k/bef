@@ -191,6 +191,14 @@ export function MeltPlanningTab({ defaultMetalQty, openOrders, products, pattern
           products={products}
           mouldCapBacklog={mouldCapBacklog}
           onSaveDayPlan={onSaveDayPlan}
+          onNavigateDate={(direction) => {
+            setSelectedDate(prev => {
+              if (!prev) return prev
+              const d = new Date(`${prev}T00:00:00`)
+              d.setDate(d.getDate() + direction)
+              return toLocalDateString(d)
+            })
+          }}
         />
       )}
     </div>

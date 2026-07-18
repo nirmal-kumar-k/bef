@@ -15,7 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/shared/ui/command'
 import { CapacityErrorDialog } from '@/shared/ui/capacity-error-dialog'
 import { BacklogItem } from './daily-planning-modal'
-import { CubeTransparent, Trash, CaretDown, MagicWand } from '@phosphor-icons/react'
+import { CubeTransparent, Trash, CaretDown, CaretLeft, CaretRight, MagicWand } from '@phosphor-icons/react'
 import { cn } from '@/shared/lib/utils'
 import { generateTimeSlots, TimeSlot, resolveAvgProductionRate } from '@/shared/lib/utils'
 import type { Shift } from './shift-master-page'
@@ -29,6 +29,10 @@ interface CorePlanningModalProps {
   dailyPlans: any[] // existing plans for this date and stage
   patterns: any[]
   onSaveDayPlan: (date: string, plans: any[]) => void
+  // Lets the header arrows step to the adjacent day without closing the
+  // modal. Optional so the modal still works for any caller that hasn't
+  // wired up day navigation.
+  onNavigateDate?: (direction: 1 | -1) => void
 }
 
 interface PlannedRow {
@@ -62,7 +66,8 @@ export function CorePlanningModal({
   backlogData,
   dailyPlans,
   patterns,
-  onSaveDayPlan
+  onSaveDayPlan,
+  onNavigateDate
 }: CorePlanningModalProps) {
   // Master Data
   const [shifts, setShifts] = useState<Shift[]>([])
@@ -239,7 +244,7 @@ export function CorePlanningModal({
       setRemovedPlanIds([])
       initialSnapshotRef.current = JSON.stringify(initRows.map(toSnapshotRow))
     }
-  }, [isOpen, dailyPlans, openOrders, selectedShiftId])
+  }, [isOpen, date, dailyPlans, openOrders, selectedShiftId])
 
   // Top panel metrics (Global across all planned items)
   const topMetrics = useMemo(() => {
@@ -293,6 +298,13 @@ export function CorePlanningModal({
     [plannedRows]
   )
 
+  // Warn before discarding unsaved edits when hopping days via the header
+  // arrows - otherwise just switch immediately.
+  const handleNavigateDate = (direction: 1 | -1) => {
+    if (isDirty && !confirm('You have unsaved changes on this day. Discard them and switch days?')) return
+    onNavigateDate?.(direction)
+  }
+
   // Real, equipment-derived ceiling for a machine this shift - the only
   // number ever used for capacity validation (PQ text is display-only).
   const computePossibleQty = (machineId: string) => {
@@ -313,7 +325,10 @@ export function CorePlanningModal({
     }
   }
 
-  const handleSave = () => {
+  // Validates and builds the save payload; returns null if blocked (a
+  // capacity-error popup was already shown). Shared by both Save Day Plan
+  // (closes the modal) and Save & Refresh (keeps it open).
+  const buildPlansToSave = (): any[] | null => {
     // Equipment-capacity blocking is deliberately disabled for now (removed
     // per product decision, to be reintroduced later) - only the product's
     // total required quantity is enforced below, across all dates combined.
@@ -333,7 +348,7 @@ export function CorePlanningModal({
           ? `${r.coreBoxCode}: product quantity already fully planned`
           : `${r.coreBoxCode}: product quantity satisfied - only ${cap} more can be scheduled`
       ))
-      return
+      return null
     }
 
     const plansToSave = plannedRows.map(r => {
@@ -381,12 +396,24 @@ export function CorePlanningModal({
     // instruction - they're not in plansToSave at all, so without this their
     // existing DB record would just sit there untouched forever.
     const deletions = removedPlanIds.map(id => ({ id, _id: id, _delete: true }))
+    return [...plansToSave, ...deletions]
+  }
 
-    onSaveDayPlan(date, [...plansToSave, ...deletions])
+  const handleSave = () => {
+    const plans = buildPlansToSave()
+    if (!plans) return
+    onSaveDayPlan(date, plans)
     onClose()
   }
 
-
+  // Saves exactly like Save Day Plan, but keeps the modal open and re-loads
+  // this shift's rows fresh from the just-saved backend state (the dailyPlans
+  // prop update naturally re-triggers the init effect), instead of closing.
+  const handleSaveAndRefresh = () => {
+    const plans = buildPlansToSave()
+    if (!plans) return
+    onSaveDayPlan(date, plans)
+  }
 
   // How much of this machine's per-slot capacity is already claimed by OTHER
   // rows scheduled on it (excludeRowId lets a row re-fill around its own prior
@@ -577,8 +604,28 @@ export function CorePlanningModal({
           <DialogHeader className={cn("p-8 pb-6 border-b shrink-0 transition-colors duration-500 ease-in-out", theme.header)}>
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 sm:gap-6">
               <div className="space-y-4">
-                <DialogTitle className={cn("text-2xl font-heading transition-colors duration-500 ease-in-out", theme.title)}>
-                  {dateString} - Core Planning
+                <DialogTitle className={cn("flex items-center gap-2 text-2xl font-heading transition-colors duration-500 ease-in-out", theme.title)}>
+                  {onNavigateDate && (
+                    <button
+                      type="button"
+                      onClick={() => handleNavigateDate(-1)}
+                      className={cn("p-1 rounded-lg transition-colors", isNightShift ? "hover:bg-orange-100" : "hover:bg-[#EEF2FF]")}
+                      aria-label="Previous day"
+                    >
+                      <CaretLeft size={20} weight="bold" />
+                    </button>
+                  )}
+                  <span>{dateString} - Core Planning</span>
+                  {onNavigateDate && (
+                    <button
+                      type="button"
+                      onClick={() => handleNavigateDate(1)}
+                      className={cn("p-1 rounded-lg transition-colors", isNightShift ? "hover:bg-orange-100" : "hover:bg-[#EEF2FF]")}
+                      aria-label="Next day"
+                    >
+                      <CaretRight size={20} weight="bold" />
+                    </button>
+                  )}
                 </DialogTitle>
 
                 <div className="flex items-center gap-3">
@@ -858,6 +905,17 @@ export function CorePlanningModal({
 
           <DialogFooter className={cn("m-0 p-6 border-t shrink-0 sm:justify-end rounded-b-2xl transition-colors duration-500 ease-in-out", theme.footer)}>
             <Button variant="ghost" onClick={onClose} className={cn("transition-colors duration-500 ease-in-out", theme.cancelButton)}>Cancel</Button>
+            <Button
+              variant="outline"
+              onClick={handleSaveAndRefresh}
+              disabled={!isDirty}
+              className={cn(
+                "h-10 px-6 text-sm transition-colors duration-500 ease-in-out disabled:opacity-40 disabled:cursor-not-allowed",
+                isNightShift ? "border-orange-500 text-orange-600 hover:bg-orange-50" : "border-[#4F46E5] text-[#4F46E5] hover:bg-[#4F46E5]/5"
+              )}
+            >
+              Save & Refresh
+            </Button>
             <Button
               onClick={handleSave}
               disabled={!isDirty}
