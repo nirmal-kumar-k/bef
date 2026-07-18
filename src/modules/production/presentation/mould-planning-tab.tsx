@@ -63,6 +63,18 @@ export function MouldPlanningTab({ mouldBacklog, patterns, openOrders, dailyPlan
   const capacityRatio = totalRemainingMoulds / shiftCapacity
   const daysToComplete = capacityRatio > 0 ? capacityRatio.toFixed(1) : 0
 
+  // Tomorrow-only "Pending" preview: combined possible output across every
+  // active Mould machine for one shift, capped at whatever's actually still
+  // required - never shows more than what's really left to schedule, and
+  // never appears on any day besides the one right after today.
+  const tomorrowStr = useMemo(() => {
+    const t = new Date()
+    t.setDate(t.getDate() + 1)
+    return toLocalDateString(t)
+  }, [])
+  const totalPossibleMouldCapacity = mouldEquipments.reduce((sum, e) => sum + (Number(e.avgPiecesPerHour) || 0), 0) * SHIFT_HOURS
+  const tomorrowPendingAmount = Math.min(totalRemainingMoulds, totalPossibleMouldCapacity)
+
   return (
     <div className="space-y-6">
       <div className="flex justify-end">
@@ -162,6 +174,18 @@ export function MouldPlanningTab({ mouldBacklog, patterns, openOrders, dailyPlan
                           <span className="text-[10.5px] font-medium text-[#64748B]">Production</span>
                         </div>
                         <span className="text-[10.5px] font-bold text-[#0F172A]">{sum}</span>
+                      </div>
+                    )}
+                    {dateStr === tomorrowStr && tomorrowPendingAmount > 0 && (
+                      <div
+                        title="Combined possible output across all active Mould machines for one shift, capped at what's actually still required"
+                        className="flex items-center justify-between px-1.5 py-1 bg-red-50/50 rounded-md mt-1"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                          <span className="text-[10.5px] font-medium text-red-600">Pending</span>
+                        </div>
+                        <span className="text-[10.5px] font-bold text-red-600">{Math.round(tomorrowPendingAmount)}</span>
                       </div>
                     )}
                   </div>
