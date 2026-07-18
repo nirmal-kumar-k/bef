@@ -129,8 +129,6 @@ export function CorePlanningTab({ coreBacklog, patterns, openOrders, dailyPlans,
               
               const dayPlans = dailyPlans.filter(p => p.date === dateStr && p.stage === 'Core')
               const sum = dayPlans.reduce((s, p) => s + p.quantityScheduled, 0)
-              const pendingAmount = coreBacklog.reduce((s, b) => s + Math.max(0, b.totalRequired - b.totalScheduled), 0)
-              const hasPending = pendingAmount > 0
 
               const handleDrop = (e: React.DragEvent) => {
                 e.preventDefault()
@@ -142,40 +140,11 @@ export function CorePlanningTab({ coreBacklog, patterns, openOrders, dailyPlans,
                   if (data.type === 'planned' && data.plans && data.plans.length > 0 && data.plans[0].date !== dateStr) {
                     const updates = data.plans.map((p: any) => ({ ...p, date: dateStr }))
                     onSaveDayPlan(dateStr, updates)
-                  } else if (data.type === 'pending') {
-                    const newPlans: any[] = []
-                    coreBacklog.forEach(b => {
-                      const remaining = b.totalRequired - b.totalScheduled
-                      if (remaining > 0) {
-                        newPlans.push({
-                          stage: 'Core',
-                          date: dateStr,
-                          itemId: b.itemId,
-                          productName: b.productName,
-                          patternRef: b.patternRef,
-                          coreBoxCode: b.coreBoxCode,
-                          quantityScheduled: remaining
-                        })
-                      }
-                    })
-                    if (newPlans.length > 0) {
-                      onSaveDayPlan(dateStr, newPlans)
-                    }
                   }
                 } catch (err) {
                   console.error('Drop parse error', err)
                 }
               }
-
-              const prevDate = new Date(date)
-              prevDate.setDate(date.getDate() - 1)
-              const prevDateStr = toLocalDateString(prevDate)
-              const prevDayPlans = dailyPlans.filter(p => p.date === prevDateStr && p.stage === 'Core')
-              // With no Actual entry to compare against, we can't know what was
-              // actually produced, so we conservatively carry the full
-              // scheduled amount forward as still-pending.
-              const carryForwardAmount = prevDayPlans.reduce((s, p) => s + p.quantityScheduled, 0)
-              const hasCarryForward = carryForwardAmount > 0
 
               return (
                 <div 
@@ -224,40 +193,6 @@ export function CorePlanningTab({ coreBacklog, patterns, openOrders, dailyPlans,
                           <span className="text-[10.5px] font-medium text-[#64748B]">Production</span>
                         </div>
                         <span className="text-[10.5px] font-bold text-[#0F172A]">{sum}</span>
-                      </div>
-                    )}
-                    {isToday && hasPending && !hasCarryForward && (
-                      <div 
-                        draggable
-                        onDragStart={(e) => {
-                          e.stopPropagation()
-                          e.dataTransfer.effectAllowed = 'move'
-                          e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'pending' }))
-                        }}
-                        className="flex items-center justify-between px-1.5 py-1 bg-red-50/50 hover:bg-red-50 rounded-md transition-colors cursor-grab mt-1"
-                      >
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                          <span className="text-[10.5px] font-medium text-red-600">Pending</span>
-                        </div>
-                        <span className="text-[10.5px] font-bold text-red-600">{pendingAmount}</span>
-                      </div>
-                    )}
-                    {hasCarryForward && (
-                      <div 
-                        draggable
-                        onDragStart={(e) => {
-                          e.stopPropagation()
-                          e.dataTransfer.effectAllowed = 'move'
-                          e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'pending' }))
-                        }}
-                        className="flex items-center justify-between px-1.5 py-1 bg-red-50/50 hover:bg-red-50 rounded-md transition-colors cursor-grab mt-1"
-                      >
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                          <span className="text-[10.5px] font-medium text-red-600">Pending</span>
-                        </div>
-                        <span className="text-[10.5px] font-bold text-red-600">{carryForwardAmount}</span>
                       </div>
                     )}
                   </div>
