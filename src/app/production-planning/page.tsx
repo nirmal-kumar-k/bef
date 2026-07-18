@@ -215,10 +215,13 @@ export default function ProductionPlanningPage() {
       if (!map.has(p.date)) map.set(p.date, { core: 0, coreDone: 0, mould: 0, mouldDone: 0, melt: 0, meltDone: 0 })
       const entry = map.get(p.date)!
       const planned = Number(p.quantityScheduled) || 0
-      const completed = Number(p.actualQuantity) || 0
-      if (p.stage === 'Core') { entry.core += planned; entry.coreDone += completed }
-      else if (p.stage === 'Mould') { entry.mould += planned; entry.mouldDone += completed }
-      else if (p.stage === 'Melt') { entry.melt += planned; entry.meltDone += completed }
+      // Core/Mould no longer have an Actual-entry field - whatever got
+      // scheduled counts as done, same "scheduled = completed" rule applied
+      // everywhere else since that removal. Melt still has real Actual
+      // entry, so it keeps comparing against actualQuantity.
+      if (p.stage === 'Core') { entry.core += planned; entry.coreDone += planned }
+      else if (p.stage === 'Mould') { entry.mould += planned; entry.mouldDone += planned }
+      else if (p.stage === 'Melt') { entry.melt += planned; entry.meltDone += (Number(p.actualQuantity) || 0) }
     })
     return map
   }, [plans])
