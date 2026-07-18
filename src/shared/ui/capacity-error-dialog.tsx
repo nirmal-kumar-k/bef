@@ -5,9 +5,10 @@ import { Button } from '@/shared/ui/button'
 import { WarningCircle } from '@phosphor-icons/react'
 
 // Centered, app-styled replacement for the native browser alert() used to
-// block over-capacity saves in Core/Mould/Melt planning - a native alert
-// anchors wherever the browser puts it (and shows the raw domain/IP), not
-// centered on screen like the rest of the app's dialogs.
+// block invalid saves in Core/Mould/Melt planning (over machine capacity,
+// or over the product's total required quantity) - a native alert anchors
+// wherever the browser puts it (and shows the raw domain/IP), not centered
+// on screen like the rest of the app's dialogs.
 export function CapacityErrorDialog({ lines, onClose }: { lines: string[] | null; onClose: () => void }) {
   return (
     <Dialog open={!!lines} onOpenChange={(open) => !open && onClose()}>
@@ -21,7 +22,7 @@ export function CapacityErrorDialog({ lines, onClose }: { lines: string[] | null
           </div>
         </DialogHeader>
         <div className="py-2 space-y-3">
-          <p className="text-sm text-[#64748B]">The following exceed this machine&apos;s possible capacity for the shift:</p>
+          <p className="text-sm text-[#64748B]">The following can&apos;t be saved as scheduled:</p>
           <div className="space-y-1.5">
             {lines?.map((line, i) => (
               <div key={i} className="text-sm font-mono font-semibold text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">

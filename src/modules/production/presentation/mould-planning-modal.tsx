@@ -294,19 +294,37 @@ export function MouldPlanningModal({
     return Math.round(avgProd * shiftHours)
   }
 
-  const handleSave = () => {
-    // Block the save entirely if any row's actual hourly-scheduled total
-    // exceeds what this machine can physically produce this shift - allocating
-    // more than the machine's capacity would silently record output that
-    // never happened, wiping backlog that should have carried to the next day.
-    const overCapacityRows = plannedRows.map(r => {
-      const scheduledSum = Object.values(r.hourlyTargets).reduce((s, v) => s + (v || 0), 0)
-      const possibleQty = computePossibleQty(r.machineId)
-      return { r, scheduledSum, possibleQty }
-    }).filter(({ scheduledSum, possibleQty }) => scheduledSum > possibleQty)
+  // Multiple cart lines can map to the same pattern within one order, each
+  // producing its own backlog entry - sum every match so this reflects the
+  // real total, same aggregation used when adding a pattern to the schedule.
+  const getBacklogAggregate = (orderNo: string, patternRef: string) => {
+    const matches = backlogData.filter(b => b.orderNo === orderNo && b.patternRef === patternRef)
+    return {
+      totalRequired: matches.reduce((s, b) => s + b.totalRequired, 0),
+      totalScheduled: matches.reduce((s, b) => s + b.totalScheduled, 0)
+    }
+  }
 
-    if (overCapacityRows.length > 0) {
-      setCapacityErrorLines(overCapacityRows.map(({ r, scheduledSum, possibleQty }) => `${r.patternRef}: ${scheduledSum} scheduled, max ${possibleQty}`))
+  const handleSave = () => {
+    // Equipment-capacity blocking is deliberately disabled for now (removed
+    // per product decision, to be reintroduced later) - only the product's
+    // total required quantity is enforced below, across all dates combined.
+    const overQuantityRows = plannedRows.map(r => {
+      const scheduledSum = Object.values(r.hourlyTargets).reduce((s, v) => s + (v || 0), 0)
+      const { totalRequired, totalScheduled } = getBacklogAggregate(r.orderNo, r.patternRef)
+      // totalScheduled already includes this row's own prior contribution
+      // (originalQty) - subtract it back out so we're comparing against what
+      // every OTHER row/date has claimed, not double-counting this one.
+      const cap = Math.max(0, totalRequired - (totalScheduled - r.originalQty))
+      return { r, scheduledSum, cap }
+    }).filter(({ scheduledSum, cap }) => scheduledSum > cap)
+
+    if (overQuantityRows.length > 0) {
+      setCapacityErrorLines(overQuantityRows.map(({ r, cap }) =>
+        cap <= 0
+          ? `${r.patternRef}: product quantity already fully planned`
+          : `${r.patternRef}: product quantity satisfied - only ${cap} more can be scheduled`
+      ))
       return
     }
 
@@ -437,14 +455,20 @@ export function MouldPlanningModal({
       const newValue = Math.max(0, num || 0)
       const newTargets = { ...r.hourlyTargets, [timeSlot]: newValue }
 
-      // Live over-capacity warning: fire only on the crossing (previous
-      // total within capacity, new total over it), not on every keystroke
-      // made while already over - Save's own hard block stays authoritative.
+      // Live product-quantity warning: fire only on the crossing (previous
+      // total within the remaining product quantity, new total over it), not
+      // on every keystroke made while already over - Save's own hard block
+      // stays authoritative. Equipment-capacity blocking is disabled for now.
       const prevTotal = Object.values(r.hourlyTargets).reduce((s, v) => s + (v || 0), 0)
       const newTotal = Object.values(newTargets).reduce((s, v) => s + (v || 0), 0)
-      const possibleQty = computePossibleQty(r.machineId)
-      if (prevTotal <= possibleQty && newTotal > possibleQty) {
-        setCapacityErrorLines([`${r.patternRef}: ${newTotal} scheduled, max ${possibleQty}`])
+      const { totalRequired, totalScheduled } = getBacklogAggregate(r.orderNo, r.patternRef)
+      const cap = Math.max(0, totalRequired - (totalScheduled - r.originalQty))
+      if (prevTotal <= cap && newTotal > cap) {
+        setCapacityErrorLines([
+          cap <= 0
+            ? `${r.patternRef}: product quantity already fully planned`
+            : `${r.patternRef}: product quantity satisfied - only ${cap} more can be scheduled`
+        ])
       }
 
       return { ...r, hourlyTargets: newTargets }
@@ -463,14 +487,9 @@ export function MouldPlanningModal({
   const addPatternToMachine = (backlogItemKey: string) => {
     if (!backlogItemKey) return
     const [orderNo, patternRef] = backlogItemKey.split('|')
-    // Multiple cart lines can map to the same pattern within one order, each
-    // producing its own backlog entry - summing every match (not just the
-    // first) so "remaining" here matches topMetrics' own grouped total
-    // instead of silently showing just one line's share of it.
     const matches = backlogData.filter(b => b.orderNo === orderNo && b.patternRef === patternRef)
     if (matches.length === 0) return
-    const totalRequired = matches.reduce((s, b) => s + b.totalRequired, 0)
-    const totalScheduled = matches.reduce((s, b) => s + b.totalScheduled, 0)
+    const { totalRequired, totalScheduled } = getBacklogAggregate(orderNo, patternRef)
     const order = openOrders.find(o => o.customerOrderNo === orderNo)
 
     const remaining = Math.max(0, totalRequired - totalScheduled)
