@@ -471,12 +471,18 @@ export function CorePlanningModal({
   const addCoreBoxToMachine = (backlogItemKey: string) => {
     if (!backlogItemKey) return
     const [orderNo, coreBoxCode] = backlogItemKey.split('|')
-    const b = backlogData.find(b => b.orderNo === orderNo && b.coreBoxCode === coreBoxCode)
-    if (!b) return
+    // Multiple cart lines can map to the same core box within one order, each
+    // producing its own backlog entry - summing every match (not just the
+    // first) so "remaining" here matches topMetrics' own grouped total
+    // instead of silently showing just one line's share of it.
+    const matches = backlogData.filter(b => b.orderNo === orderNo && b.coreBoxCode === coreBoxCode)
+    if (matches.length === 0) return
+    const totalRequired = matches.reduce((s, b) => s + b.totalRequired, 0)
+    const totalScheduled = matches.reduce((s, b) => s + b.totalScheduled, 0)
     const order = openOrders.find(o => o.customerOrderNo === orderNo)
 
-    const remaining = Math.max(0, b.totalRequired - b.totalScheduled)
-    const patternRef = b.patternRef || ''
+    const remaining = Math.max(0, totalRequired - totalScheduled)
+    const patternRef = matches[0].patternRef || ''
 
     setPlannedRows(prev => {
       const { hourlyTargets, hourlyWorkers } = remaining > 0
@@ -527,14 +533,24 @@ export function CorePlanningModal({
     // DB row instead of updating the first (since neither carries the other's id),
     // silently doubling what counts as "already scheduled" from then on.
     const alreadyOnMachine = new Set(activeRows.map(r => `${r.orderNo}|${r.coreBoxCode}`))
+    // Multiple cart lines can map to the same core box within one order, each
+    // producing its own backlog entry - sum them into one aggregated option
+    // instead of the last one silently overwriting the others in the map.
     const options = new Map<string, BacklogItem>()
     backlogData
-      .filter(b => b.totalRequired > b.totalScheduled && !!b.coreBoxCode && mappedCoreBoxes.includes(b.coreBoxCode))
+      .filter(b => !!b.coreBoxCode && mappedCoreBoxes.includes(b.coreBoxCode))
       .forEach(b => {
         const key = `${b.orderNo}|${b.coreBoxCode}`
-        if (!alreadyOnMachine.has(key)) options.set(key, b)
+        if (alreadyOnMachine.has(key)) return
+        const existing = options.get(key)
+        if (existing) {
+          existing.totalRequired += b.totalRequired
+          existing.totalScheduled += b.totalScheduled
+        } else {
+          options.set(key, { ...b })
+        }
       })
-    return Array.from(options.values())
+    return Array.from(options.values()).filter(b => b.totalRequired > b.totalScheduled)
   }, [backlogData, mappedCoreBoxes, activeRows])
 
   // Per-row wrapper, shared between the column header and the blocking check below

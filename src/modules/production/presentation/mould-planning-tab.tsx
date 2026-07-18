@@ -136,6 +136,16 @@ export function MouldPlanningTab({ mouldBacklog, patterns, openOrders, dailyPlan
                 }
               }
 
+              const prevDate = new Date(date)
+              prevDate.setDate(date.getDate() - 1)
+              const prevDateStr = toLocalDateString(prevDate)
+              const prevDayPlans = dailyPlans.filter(p => p.date === prevDateStr && p.stage === 'Mould')
+              // With no Actual entry to compare against, we can't know what was
+              // actually produced, so we conservatively carry the full
+              // scheduled amount forward as still-pending.
+              const carryForwardAmount = prevDayPlans.reduce((s, p) => s + p.quantityScheduled, 0)
+              const hasCarryForward = carryForwardAmount > 0
+
               return (
                 <div 
                   key={dateStr}
@@ -185,8 +195,8 @@ export function MouldPlanningTab({ mouldBacklog, patterns, openOrders, dailyPlan
                         <span className="text-[10.5px] font-bold text-[#0F172A]">{sum}</span>
                       </div>
                     )}
-                    {isToday && hasPending && (
-                      <div 
+                    {isToday && hasPending && !hasCarryForward && (
+                      <div
                         draggable
                         onDragStart={(e) => {
                           e.stopPropagation()
@@ -200,6 +210,23 @@ export function MouldPlanningTab({ mouldBacklog, patterns, openOrders, dailyPlan
                           <span className="text-[10.5px] font-medium text-red-600">Pending</span>
                         </div>
                         <span className="text-[10.5px] font-bold text-red-600">{pendingAmount}</span>
+                      </div>
+                    )}
+                    {hasCarryForward && (
+                      <div
+                        draggable
+                        onDragStart={(e) => {
+                          e.stopPropagation()
+                          e.dataTransfer.effectAllowed = 'move'
+                          e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'pending' }))
+                        }}
+                        className="flex items-center justify-between px-1.5 py-1 bg-red-50/50 hover:bg-red-50 rounded-md transition-colors cursor-grab mt-1"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                          <span className="text-[10.5px] font-medium text-red-600">Pending</span>
+                        </div>
+                        <span className="text-[10.5px] font-bold text-red-600">{carryForwardAmount}</span>
                       </div>
                     )}
                   </div>

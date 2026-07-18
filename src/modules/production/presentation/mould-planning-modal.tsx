@@ -463,11 +463,17 @@ export function MouldPlanningModal({
   const addPatternToMachine = (backlogItemKey: string) => {
     if (!backlogItemKey) return
     const [orderNo, patternRef] = backlogItemKey.split('|')
-    const b = backlogData.find(b => b.orderNo === orderNo && b.patternRef === patternRef)
-    if (!b) return
+    // Multiple cart lines can map to the same pattern within one order, each
+    // producing its own backlog entry - summing every match (not just the
+    // first) so "remaining" here matches topMetrics' own grouped total
+    // instead of silently showing just one line's share of it.
+    const matches = backlogData.filter(b => b.orderNo === orderNo && b.patternRef === patternRef)
+    if (matches.length === 0) return
+    const totalRequired = matches.reduce((s, b) => s + b.totalRequired, 0)
+    const totalScheduled = matches.reduce((s, b) => s + b.totalScheduled, 0)
     const order = openOrders.find(o => o.customerOrderNo === orderNo)
 
-    const remaining = Math.max(0, b.totalRequired - b.totalScheduled)
+    const remaining = Math.max(0, totalRequired - totalScheduled)
 
     setPlannedRows(prev => {
       const { hourlyTargets, hourlyWorkers } = remaining > 0
@@ -512,12 +518,22 @@ export function MouldPlanningModal({
     // DB row instead of updating the first (since neither carries the other's id),
     // silently doubling what counts as "already scheduled" from then on.
     const alreadyOnMachine = new Set(activeRows.map(r => `${r.orderNo}|${r.patternRef}`))
+    // Multiple cart lines can map to the same pattern within one order, each
+    // producing its own backlog entry - sum them into one aggregated option
+    // instead of the last one silently overwriting the others in the map.
     const options = new Map<string, BacklogItem>()
-    backlogData.filter(b => b.totalRequired > b.totalScheduled).forEach(b => {
+    backlogData.forEach(b => {
       const key = `${b.orderNo}|${b.patternRef}`
-      if (!alreadyOnMachine.has(key)) options.set(key, b)
+      if (alreadyOnMachine.has(key)) return
+      const existing = options.get(key)
+      if (existing) {
+        existing.totalRequired += b.totalRequired
+        existing.totalScheduled += b.totalScheduled
+      } else {
+        options.set(key, { ...b })
+      }
     })
-    return Array.from(options.values())
+    return Array.from(options.values()).filter(b => b.totalRequired > b.totalScheduled)
   }, [backlogData, activeRows])
 
   return (
