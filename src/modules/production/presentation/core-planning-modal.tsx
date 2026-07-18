@@ -763,6 +763,8 @@ export function CorePlanningModal({
                           const target = parseInt(row.totalQty, 10) || 0
                           const delta = target - scheduledSum
                           const isMismatched = delta !== 0 && row.totalQty !== ''
+                          const { totalRequired: itemRequired, totalScheduled: itemScheduled } = getBacklogAggregate(row.orderNo, row.coreBoxCode)
+                          const pendingQty = Math.max(0, itemRequired - itemScheduled)
                           return (
                           <tr key={row.id} className={cn("transition-colors duration-500 ease-in-out group", theme.rowHover)}>
                             <td className="px-3 py-3">
@@ -785,12 +787,12 @@ export function CorePlanningModal({
                                 <div className="grid grid-cols-[20px_1fr] gap-1 items-center">
                                   <span className={cn("h-7 flex items-center text-[9px] font-bold leading-none text-left transition-colors duration-500 ease-in-out", theme.rowMuted)}>PQ</span>
                                   <div
-                                    title="Possible quantity - equipment-derived capacity, view only"
+                                    title="Pending quantity - remaining required for this item across all dates, view only"
                                     className={cn("h-7 flex items-center justify-center font-mono font-semibold text-xs px-1 rounded-md border transition-colors duration-500 ease-in-out", theme.pendingQtyDefault)}
                                   >
-                                    {row.possibleQtyText || 0}
+                                    {pendingQty}
                                   </div>
-                                  <span className={cn("h-7 flex items-center text-[9px] font-bold leading-none text-left transition-colors duration-500 ease-in-out", theme.rowMuted)}>TQ</span>
+                                  <span className={cn("h-7 flex items-center text-[9px] font-bold leading-none text-left transition-colors duration-500 ease-in-out", theme.rowMuted)}>TP</span>
                                   <Input
                                     type="number"
                                     min="0"

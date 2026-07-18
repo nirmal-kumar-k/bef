@@ -215,7 +215,7 @@ export function CorePlanningTab({ coreBacklog, patterns, openOrders, dailyPlans,
                       >
                         <div className="flex items-center gap-1.5">
                           <div className="w-1.5 h-1.5 rounded-full bg-[#4285F4]" />
-                          <span className="text-[10.5px] font-medium text-[#64748B]">Production</span>
+                          <span className="text-[10.5px] font-medium text-[#64748B]">Day Production</span>
                         </div>
                         <span className="text-[10.5px] font-bold text-[#0F172A]">{sum}</span>
                       </div>
