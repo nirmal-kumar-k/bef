@@ -145,11 +145,14 @@ export function MeltPlanningModal({
   const [pours, setPours] = useState<Pour[]>([])
   const [grades, setGrades] = useState<{ id: string; code: string; name: string }[]>([])
 
-  // Plan ids removed from the schedule (via heat/pour delete) this session -
-  // without this, a deleted pour's saved DB row was never told to delete
-  // itself, so it kept counting against the mould cap forever even after
-  // being removed from view, and every fresh delete threw the cap numbers off.
-  const [removedPlanIds, setRemovedPlanIds] = useState<string[]>([])
+  // Pours removed from the schedule (via heat/pour delete) this session -
+  // kept in full (not just planId) for two reasons: (1) without an explicit
+  // delete instruction, a removed pour's saved DB row was never told to
+  // delete itself, so it kept counting against the mould cap forever even
+  // after being removed from view; (2) its originalQty must still be
+  // credited against the cap until that deletion is actually saved, or the
+  // cap shrinks the moment a pour is deleted instead of growing.
+  const [removedPours, setRemovedPours] = useState<Pour[]>([])
 
   const [allocationHeatId, setAllocationHeatId] = useState<string | null>(null)
   // Which heat's full detail card is open in the popup - null means the popup
@@ -271,7 +274,7 @@ export function MeltPlanningModal({
       const loadedHeatsArr = Object.values(loadedHeats)
       setHeats(loadedHeatsArr)
       setPours(loadedPours)
-      setRemovedPlanIds([])
+      setRemovedPours([])
       initialSnapshotRef.current = JSON.stringify({
         heats: loadedHeatsArr.map(toHeatSnapshot),
         pours: loadedPours.map(toPourSnapshot)
@@ -360,8 +363,8 @@ export function MeltPlanningModal({
   const removeHeat = (heatId: string) => {
     setHeats(prev => prev.filter(h => h.id !== heatId))
     setPours(prev => {
-      const removedIds = prev.filter(p => p.heatId === heatId && p.planId).map(p => p.planId!)
-      if (removedIds.length > 0) setRemovedPlanIds(ids => [...ids, ...removedIds])
+      const removed = prev.filter(p => p.heatId === heatId)
+      if (removed.length > 0) setRemovedPours(pours => [...pours, ...removed])
       return prev.filter(p => p.heatId !== heatId)
     })
   }
@@ -394,10 +397,18 @@ export function MeltPlanningModal({
   // backlogData and mouldCapBacklog only reflect what's actually saved to the
   // server, so without this a product could be split across many heats with
   // each pour looking "fine" in isolation while the combined total blew past
-  // what was actually required.
-  const getSessionCommittedMoulds = (orderNo: string, patternRef: string) => pours
-    .filter(p => p.orderNo === orderNo && p.patternRef === patternRef)
-    .reduce((sum, p) => sum + (p.mouldsScheduled - p.originalQty), 0)
+  // what was actually required. Pours removed this session count as giving
+  // back their full original claim (negative commitment) - otherwise
+  // deleting a pour wouldn't free up any room until the delete was saved.
+  const getSessionCommittedMoulds = (orderNo: string, patternRef: string) => {
+    const presentCommitted = pours
+      .filter(p => p.orderNo === orderNo && p.patternRef === patternRef)
+      .reduce((sum, p) => sum + (p.mouldsScheduled - p.originalQty), 0)
+    const removedCommitted = removedPours
+      .filter(p => p.orderNo === orderNo && p.patternRef === patternRef)
+      .reduce((sum, p) => sum - p.originalQty, 0)
+    return presentCommitted + removedCommitted
+  }
 
   // Validates and builds the save payload; returns null if blocked (a
   // capacity-error popup was already shown). Shared by both Save Day Plan
@@ -415,6 +426,16 @@ export function MeltPlanningModal({
       const key = `${p.orderNo}|${p.patternRef}`
       const g = pourGroups.get(key) || { patternRef: p.patternRef, scheduled: 0, originalQty: 0 }
       g.scheduled += p.mouldsScheduled
+      g.originalQty += p.originalQty
+      pourGroups.set(key, g)
+    })
+    // Pours removed this session still contributed their originalQty to the
+    // server's totalScheduled (the delete hasn't been saved yet) - credit it
+    // back the same way a still-present pour's originalQty would be, or the
+    // cap shrinks the moment something is deleted instead of growing.
+    removedPours.forEach(p => {
+      const key = `${p.orderNo}|${p.patternRef}`
+      const g = pourGroups.get(key) || { patternRef: p.patternRef, scheduled: 0, originalQty: 0 }
       g.originalQty += p.originalQty
       pourGroups.set(key, g)
     })
@@ -482,7 +503,7 @@ export function MeltPlanningModal({
     // delete instruction - they're not in plansToSave at all, so without this
     // their existing DB record would sit there untouched forever, silently
     // continuing to count against the mould cap on every future save.
-    const deletions = removedPlanIds.map(id => ({ id, _id: id, _delete: true }))
+    const deletions = removedPours.filter(p => p.planId).map(p => ({ id: p.planId, _id: p.planId, _delete: true }))
     return [...plansToSave, ...deletions]
   }
 
@@ -595,11 +616,12 @@ export function MeltPlanningModal({
   }
 
   // Same as removeHeat - a removed pour's saved DB row (if it has a planId)
-  // must be explicitly queued for deletion, not just dropped from view.
+  // must be explicitly queued for deletion, not just dropped from view, and
+  // its originalQty must still count toward the cap until that's saved.
   const removePour = (pourId: string) => {
     setPours(prev => {
       const pour = prev.find(p => p.id === pourId)
-      if (pour?.planId) setRemovedPlanIds(ids => [...ids, pour.planId!])
+      if (pour) setRemovedPours(pours => [...pours, pour])
       return prev.filter(p => p.id !== pourId)
     })
   }

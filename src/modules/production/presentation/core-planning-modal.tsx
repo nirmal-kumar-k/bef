@@ -85,10 +85,14 @@ export function CorePlanningModal({
   const [comboboxOpen, setComboboxOpen] = useState(false)
   const [capacityErrorLines, setCapacityErrorLines] = useState<string[] | null>(null)
 
-  // Plan ids removed from the schedule via the trash icon this session -
-  // plansToSave only ever contains rows still on screen, so a removed row's
-  // existing DB record would otherwise never be told to delete itself.
-  const [removedPlanIds, setRemovedPlanIds] = useState<string[]>([])
+  // Rows removed from the schedule via the trash icon this session - kept in
+  // full (not just their id) because their originalQty must still be
+  // credited against the cap until the deletion is actually saved. Without
+  // this, deleting a row to free up quota made the cap shrink instead of
+  // grow: the backlog's server-side totalScheduled doesn't drop until the
+  // delete is saved, so the row's prior contribution has to keep being
+  // treated as "still ours" right up until then, not as newly unclaimed.
+  const [removedRows, setRemovedRows] = useState<PlannedRow[]>([])
 
   // Snapshot of the fields that matter for saving, captured once when the
   // modal's rows are (re)initialized - compared against current state to
@@ -249,7 +253,7 @@ export function CorePlanningModal({
         }
       })
       setPlannedRows(initRows)
-      setRemovedPlanIds([])
+      setRemovedRows([])
       initialSnapshotRef.current = JSON.stringify(initRows.map(toSnapshotRow))
     }
   }, [isOpen, date, dailyPlans, openOrders, selectedShiftId])
@@ -337,10 +341,19 @@ export function CorePlanningModal({
   // committed, across EVERY machine (not just the active one) - backlogData
   // only reflects what's actually saved to the server, so without this a box
   // added to a second machine this session would look like the full amount
-  // is still available, letting the same requirement be over-claimed.
-  const getSessionCommittedQty = (orderNo: string, coreBoxCode: string) => plannedRows
-    .filter(r => r.orderNo === orderNo && r.coreBoxCode === coreBoxCode)
-    .reduce((sum, r) => sum + (Object.values(r.hourlyTargets).reduce((s, v) => s + (v || 0), 0) - r.originalQty), 0)
+  // is still available, letting the same requirement be over-claimed. Rows
+  // removed this session count as giving back their full original claim
+  // (negative commitment) - otherwise deleting a row wouldn't free up any
+  // room for auto-fill/add until the deletion was actually saved.
+  const getSessionCommittedQty = (orderNo: string, coreBoxCode: string) => {
+    const presentCommitted = plannedRows
+      .filter(r => r.orderNo === orderNo && r.coreBoxCode === coreBoxCode)
+      .reduce((sum, r) => sum + (Object.values(r.hourlyTargets).reduce((s, v) => s + (v || 0), 0) - r.originalQty), 0)
+    const removedCommitted = removedRows
+      .filter(r => r.orderNo === orderNo && r.coreBoxCode === coreBoxCode)
+      .reduce((sum, r) => sum - r.originalQty, 0)
+    return presentCommitted + removedCommitted
+  }
 
   // Validates and builds the save payload; returns null if blocked (a
   // capacity-error popup was already shown). Shared by both Save Day Plan
@@ -360,6 +373,16 @@ export function CorePlanningModal({
       const key = `${r.orderNo}|${r.coreBoxCode}`
       const g = rowGroups.get(key) || { coreBoxCode: r.coreBoxCode, scheduledSum: 0, originalQty: 0 }
       g.scheduledSum += Object.values(r.hourlyTargets).reduce((s, v) => s + (v || 0), 0)
+      g.originalQty += r.originalQty
+      rowGroups.set(key, g)
+    })
+    // Rows removed this session still contributed their originalQty to the
+    // server's totalScheduled (the delete hasn't been saved yet) - credit it
+    // back the same way a still-present row's originalQty would be, or the
+    // cap shrinks the moment something is deleted instead of growing.
+    removedRows.forEach(r => {
+      const key = `${r.orderNo}|${r.coreBoxCode}`
+      const g = rowGroups.get(key) || { coreBoxCode: r.coreBoxCode, scheduledSum: 0, originalQty: 0 }
       g.originalQty += r.originalQty
       rowGroups.set(key, g)
     })
@@ -427,7 +450,7 @@ export function CorePlanningModal({
     // Rows removed via the trash icon this session need an explicit delete
     // instruction - they're not in plansToSave at all, so without this their
     // existing DB record would just sit there untouched forever.
-    const deletions = removedPlanIds.map(id => ({ id, _id: id, _delete: true }))
+    const deletions = removedRows.filter(r => r.planId).map(r => ({ id: r.planId, _id: r.planId, _delete: true }))
     return [...plansToSave, ...deletions]
   }
 
@@ -573,7 +596,7 @@ export function CorePlanningModal({
   const removeRow = (rowId: string) => {
     setPlannedRows(prev => {
       const row = prev.find(r => r.id === rowId)
-      if (row?.planId) setRemovedPlanIds(ids => [...ids, row.planId!])
+      if (row) setRemovedRows(rows => [...rows, row])
       return prev.filter(r => r.id !== rowId)
     })
   }
