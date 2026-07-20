@@ -136,30 +136,30 @@ export default function ProductionPlanningPage() {
           totalRequired: metalRequired, totalScheduled: meltScheduled, unit: 'kg'
         })
 
-        // KNOCKOUT - moulds actually poured (Melt's mouldsScheduled, "scheduled
-        // = completed" same as everywhere else), not the old Pour Planning
-        // actual-entry field (that tab is read-only now, no longer a data source).
-        const pouredMoulds = plans.filter(p => p.stage === 'Melt' && p.itemId === representativeId).reduce((sum, p) => sum + (p.mouldsScheduled || 0), 0)
+        // KNOCKOUT - required is in PIECES (moulds poured x cavities, same
+        // "scheduled = completed" convention as Core/Mould), not moulds -
+        // knockout works on individual pieces once a mould is broken open,
+        // and a mould with multiple cavities yields more than one piece.
+        const repItemForCavities = groupItems[0]
+        const cavitiesForKnockout = repItemForCavities.mappedProduct?.cavities || repItemForCavities.product?.cavities || 1
+        const knockoutRequiredPieces = mouldsPouredInMelt * cavitiesForKnockout
         const knockoutScheduled = plans.filter(p => p.stage === 'Knockout' && p.itemId === representativeId).reduce((sum, p) => sum + p.quantityScheduled, 0)
-        if (pouredMoulds > 0) {
+        if (knockoutRequiredPieces > 0) {
           knockoutBacklog.push({
             itemId: representativeId, orderNo: order.customerOrderNo, patternRef: pattern?.code || '-', productName,
-            totalRequired: pouredMoulds, totalScheduled: knockoutScheduled, unit: 'moulds'
+            totalRequired: knockoutRequiredPieces, totalScheduled: knockoutScheduled, unit: 'pieces'
           })
         }
 
         // FETTLING STOCK - the moulded -> poured -> knocked-out funnel for this
-        // product. Fettling Inward is in PIECES (moulds knocked out x cavities,
-        // same cavity mapping /api/knockout-done uses), while Mould/Poured stay
-        // in mould units - a mould with multiple cavities yields that many
-        // pieces once fettled, so the last column deliberately isn't 1:1 with
-        // the others.
+        // product. Fettling Inward is in PIECES (Knockout's own quantityScheduled,
+        // already piece-denominated), while Mould/Poured stay in mould units -
+        // a mould with multiple cavities yields that many pieces once fettled,
+        // so the last column deliberately isn't 1:1 with the others.
         if (mouldScheduled > 0) {
-          const repItem = groupItems[0]
-          const cavities = repItem.mappedProduct?.cavities || repItem.product?.cavities || 1
           fettlingStock.push({
             itemId: representativeId, orderNo: order.customerOrderNo, patternRef: pattern?.code || '-', productName,
-            mouldQuantity: mouldScheduled, pouredQuantity: mouldsPouredInMelt, fettlingInwardQuantity: knockoutScheduled * cavities
+            mouldQuantity: mouldScheduled, pouredQuantity: mouldsPouredInMelt, fettlingInwardQuantity: knockoutScheduled
           })
         }
 
@@ -278,12 +278,13 @@ export default function ProductionPlanningPage() {
           continue
         }
         if (id) {
-          // Core/Mould no longer have an Actual-entry field, so `actualQuantity`
-          // can never be set for them again - treating an unscheduled (0-hourly)
-          // row as "delete this plan" would wipe existing rows any time hourly
-          // cells are left empty, with no way to opt out. Melt/Knockout still
-          // rely on this guard since their Actual-entry flow is unchanged.
-          const usesActualSafetyValve = plan.stage !== 'Core' && plan.stage !== 'Mould'
+          // Core/Mould/Knockout no longer have an Actual-entry field, so
+          // `actualQuantity` can never be set for them again - treating an
+          // unscheduled (0-hourly) row as "delete this plan" would wipe
+          // existing rows any time hourly cells are left empty, with no way
+          // to opt out. Melt still relies on this guard since its
+          // Actual-entry flow is unchanged.
+          const usesActualSafetyValve = plan.stage !== 'Core' && plan.stage !== 'Mould' && plan.stage !== 'Knockout'
           if (usesActualSafetyValve && plan.quantityScheduled === 0 && !plan.actualQuantity) {
             // Delete
             await fetch(`/api/production-plans/${id}`, { method: 'DELETE' })
@@ -581,7 +582,7 @@ export default function ProductionPlanningPage() {
                 <PourPlanningTab openOrders={openOrders} dailyPlans={plans} />
               )}
               {activeTab === 'Knockout' && (
-                <KnockoutPlanningTab knockoutBacklog={backlogData.Knockout} openOrders={openOrders} onRefetch={fetchData} />
+                <KnockoutPlanningTab knockoutBacklog={backlogData.Knockout} openOrders={openOrders} dailyPlans={plans} onSaveDayPlan={handleSaveDayPlan} />
               )}
 
               {activeTab === 'FettlingStock' && (
