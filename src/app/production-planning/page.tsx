@@ -26,7 +26,7 @@ export default function ProductionPlanningPage() {
   const [plans, setPlans] = useState<any[]>([])
   
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'Summary' | 'Core' | 'Mould' | 'Melt' | 'Pour' | 'Knockout' | 'Actuals'>('Summary')
+  const [activeTab, setActiveTab] = useState<'Summary' | 'Core' | 'Mould' | 'Melt' | 'Pour' | 'Knockout' | 'FettlingStock'>('Summary')
   const [splitUpStage, setSplitUpStage] = useState<'Core' | 'Mould' | 'Melt' | null>(null)
   const [summaryView, setSummaryView] = useState<'calendar' | 'list'>('calendar')
 
@@ -68,6 +68,7 @@ export default function ProductionPlanningPage() {
     // actually produced for it - tracked separately from meltBacklog (which
     // is in kg) since this cap is a mould-count comparison instead.
     const meltMouldCapBacklog: BacklogItem[] = []
+    const fettlingStock: { itemId: string, orderNo: string, patternRef: string, productName: string, mouldQuantity: number, pouredQuantity: number, fettlingInwardQuantity: number }[] = []
 
     openOrders.forEach(order => {
       const orderId = order.id || order._id
@@ -147,6 +148,21 @@ export default function ProductionPlanningPage() {
           })
         }
 
+        // FETTLING STOCK - the moulded -> poured -> knocked-out funnel for this
+        // product. Fettling Inward is in PIECES (moulds knocked out x cavities,
+        // same cavity mapping /api/knockout-done uses), while Mould/Poured stay
+        // in mould units - a mould with multiple cavities yields that many
+        // pieces once fettled, so the last column deliberately isn't 1:1 with
+        // the others.
+        if (mouldScheduled > 0) {
+          const repItem = groupItems[0]
+          const cavities = repItem.mappedProduct?.cavities || repItem.product?.cavities || 1
+          fettlingStock.push({
+            itemId: representativeId, orderNo: order.customerOrderNo, patternRef: pattern?.code || '-', productName,
+            mouldQuantity: mouldScheduled, pouredQuantity: mouldsPouredInMelt, fettlingInwardQuantity: knockoutScheduled * cavities
+          })
+        }
+
         // CORE - sum every mapped product's core box requirements across the
         // group by code. Summed, not deduped by max: a core is consumed per
         // casting, so if two different products in the group happen to share
@@ -204,7 +220,7 @@ export default function ProductionPlanningPage() {
       })
     })
 
-    return { Core: coreBacklog, Mould: mouldBacklog, Melt: meltBacklog, Knockout: knockoutBacklog, MeltMouldCap: meltMouldCapBacklog }
+    return { Core: coreBacklog, Mould: mouldBacklog, Melt: meltBacklog, Knockout: knockoutBacklog, MeltMouldCap: meltMouldCapBacklog, FettlingStock: fettlingStock }
   }, [openOrders, products, patterns, plans])
 
   const totals = useMemo(() => {
@@ -370,18 +386,18 @@ export default function ProductionPlanningPage() {
           {/* TAB CONTENT */}
           <div className="space-y-6">
             <div className="inline-flex bg-[#F8FAFC] p-1.5 rounded-full overflow-x-auto shadow-inner border border-[#E2E8F0]">
-              {['Summary', 'Core', 'Mould', 'Melt', 'Pour', 'Knockout', 'Actuals'].map(tab => (
+              {['Summary', 'Core', 'Mould', 'Melt', 'Pour', 'Knockout', 'FettlingStock'].map(tab => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab as any)}
                   className={cn(
                     "px-8 py-2.5 text-sm font-bold transition-all duration-300 rounded-full whitespace-nowrap",
-                    activeTab === tab 
-                      ? "bg-[#4F46E5] text-white shadow-md shadow-[#4F46E5]/20" 
+                    activeTab === tab
+                      ? "bg-[#4F46E5] text-white shadow-md shadow-[#4F46E5]/20"
                       : "text-[#64748B] hover:text-[#4F46E5] hover:bg-[#EEF2FF]/50"
                   )}
                 >
-                  {tab === 'Summary' ? 'Summary' : tab === 'Actuals' ? 'Actuals' : `${tab} Planning`}
+                  {tab === 'Summary' ? 'Summary' : tab === 'FettlingStock' ? 'Fettling Stock' : `${tab} Planning`}
                 </button>
               ))}
             </div>
@@ -568,82 +584,41 @@ export default function ProductionPlanningPage() {
                 <KnockoutPlanningTab knockoutBacklog={backlogData.Knockout} openOrders={openOrders} onRefetch={fetchData} />
               )}
 
-              {activeTab === 'Actuals' && (
+              {activeTab === 'FettlingStock' && (
                 <div className="space-y-6 bg-white p-6 rounded-2xl border border-[#E0E7FF] shadow-lg">
                   <div>
-                    <h3 className="text-[#172554] font-bold text-lg font-heading">Production Actuals Log</h3>
-                    <p className="text-[#64748B] text-xs mt-1">Tracks completed production quantities, planned targets, and variances per stage.</p>
+                    <h3 className="text-[#172554] font-bold text-lg font-heading">Fettling Stock</h3>
+                    <p className="text-[#64748B] text-xs mt-1">Moulded &rarr; poured &rarr; knocked out, per product. Fettling Inward is in pieces (moulds knocked out &times; cavities per mould) - the other two columns are in moulds.</p>
                   </div>
                   <div className="border border-[#E0E7FF] rounded-xl overflow-x-auto shadow-sm">
                     <table className="w-full text-sm text-left whitespace-nowrap">
                       <thead className="bg-[#F4F6FB] border-b border-[#E0E7FF] text-[#64748B] font-semibold text-xs uppercase tracking-wider">
                         <tr>
-                          <th className="px-6 py-4">Date</th>
                           <th className="px-6 py-4">PO No</th>
+                          <th className="px-6 py-4">Product Name</th>
                           <th className="px-6 py-4">Pattern</th>
-                          <th className="px-6 py-4">Stage</th>
-                          <th className="px-6 py-4">Core Box / Info</th>
-                          <th className="px-6 py-4 text-center">Planned Qty</th>
-                          <th className="px-6 py-4 text-center">Actual Qty</th>
-                          <th className="px-6 py-4 text-center">Variance</th>
-                          <th className="px-6 py-4 text-center">Status</th>
+                          <th className="px-6 py-4 text-center">Mould Quantity</th>
+                          <th className="px-6 py-4 text-center">Poured Quantity</th>
+                          <th className="px-6 py-4 text-center">Fettling Inward Quantity</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[#E0E7FF]">
-                        {(() => {
-                          const plansWithActuals = plans.filter(p => p.quantityScheduled > 0 || p.actualQuantity !== undefined)
-                          if (plansWithActuals.length === 0) {
-                            return (
-                              <tr>
-                                <td colSpan={9} className="px-6 py-8 text-center text-[#94A3B8] italic">No logged plans or actuals found.</td>
-                              </tr>
-                            )
-                          }
-                          return plansWithActuals.map((plan, index) => {
-                            const order = orders.find(o => o.id === plan.orderId)
-                            const actual = plan.actualQuantity || 0
-                            const variance = actual - plan.quantityScheduled
-                            const status = plan.isConfirmed ? 'Confirmed' : 'Draft'
-                            
-                            return (
-                              <tr key={index} className="hover:bg-[#F8FAFC]">
-                                <td className="px-6 py-4 font-mono font-medium">{plan.date}</td>
-                                <td className="px-6 py-4 font-mono text-[#4285F4]">{order?.customerOrderNo || 'N/A'}</td>
-                                <td className="px-6 py-4 font-semibold">{plan.patternRef || '-'}</td>
-                                <td className="px-6 py-4">
-                                  <span className={cn(
-                                    "px-2 py-0.5 rounded text-[10px] font-bold uppercase",
-                                    plan.stage === 'Core' ? "bg-indigo-100 text-indigo-800" :
-                                    plan.stage === 'Mould' ? "bg-blue-100 text-blue-800" :
-                                    plan.stage === 'Melt' ? "bg-amber-100 text-amber-800" :
-                                    "bg-purple-100 text-purple-800"
-                                  )}>
-                                    {plan.stage}
-                                  </span>
-                                </td>
-                                <td className="px-6 py-4 font-mono text-gray-500">{plan.coreBoxCode || '-'}</td>
-                                <td className="px-6 py-4 text-center font-mono">{plan.quantityScheduled}</td>
-                                <td className="px-6 py-4 text-center font-mono font-semibold text-emerald-600">{actual}</td>
-                                <td className={cn(
-                                  "px-6 py-4 text-center font-mono font-semibold",
-                                  variance < 0 ? "text-rose-500" : variance > 0 ? "text-emerald-500" : "text-gray-500"
-                                )}>
-                                  {variance > 0 ? `+${variance}` : variance}
-                                </td>
-                                <td className="px-6 py-4 text-center">
-                                  <span className={cn(
-                                    "px-2 py-0.5 rounded-full text-xs font-medium border",
-                                    plan.isConfirmed 
-                                      ? "bg-[#10B981]/10 text-[#10B981] border-[#10B981]/20" 
-                                      : "bg-amber-100 text-amber-800 border-amber-200"
-                                  )}>
-                                    {status}
-                                  </span>
-                                </td>
-                              </tr>
-                            )
-                          })
-                        })()}
+                        {backlogData.FettlingStock.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="px-6 py-8 text-center text-[#94A3B8] italic">Nothing moulded yet.</td>
+                          </tr>
+                        ) : (
+                          backlogData.FettlingStock.map((row, index) => (
+                            <tr key={index} className="hover:bg-[#F8FAFC]">
+                              <td className="px-6 py-4 font-mono text-[#4285F4]">{row.orderNo}</td>
+                              <td className="px-6 py-4 font-semibold text-[#172554]">{row.productName}</td>
+                              <td className="px-6 py-4 font-mono text-gray-500">{row.patternRef}</td>
+                              <td className="px-6 py-4 text-center font-mono">{row.mouldQuantity}</td>
+                              <td className="px-6 py-4 text-center font-mono text-amber-600">{row.pouredQuantity}</td>
+                              <td className="px-6 py-4 text-center font-mono font-semibold text-emerald-600">{row.fettlingInwardQuantity}</td>
+                            </tr>
+                          ))
+                        )}
                       </tbody>
                     </table>
                   </div>
