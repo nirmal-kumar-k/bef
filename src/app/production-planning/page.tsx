@@ -578,7 +578,7 @@ export default function ProductionPlanningPage() {
                 <MeltPlanningTab defaultMetalQty={totals.metal} products={products} patterns={patterns} openOrders={openOrders} dailyPlans={plans} mouldCapBacklog={backlogData.MeltMouldCap} onSaveDayPlan={handleSaveDayPlan} />
               )}
               {activeTab === 'Pour' && (
-                <PourPlanningTab patterns={patterns} openOrders={openOrders} dailyPlans={plans} onSaveDayPlan={handleSaveDayPlan} />
+                <PourPlanningTab openOrders={openOrders} dailyPlans={plans} />
               )}
               {activeTab === 'Knockout' && (
                 <KnockoutPlanningTab knockoutBacklog={backlogData.Knockout} openOrders={openOrders} onRefetch={fetchData} />
