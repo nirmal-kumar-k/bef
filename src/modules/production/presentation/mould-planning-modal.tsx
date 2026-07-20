@@ -40,6 +40,11 @@ interface PlannedRow {
   planId?: string
   orderId: string
   orderNo: string
+  // The cart-group id this row's product actually belongs to (matches the
+  // BacklogItem it was added from) - NOT derived from orderId at save time,
+  // since an order can have more than one product/pattern and always
+  // assuming cart index 0 would silently credit the wrong product's backlog.
+  itemId: string
   productName: string
   patternRef: string
   machineId: string
@@ -231,12 +236,17 @@ export function MouldPlanningModal({
       const existingMouldPlans = dailyPlans.filter(p => p.stage === 'Mould' && (!p.shiftId || p.shiftId === selectedShiftId))
       const initRows: PlannedRow[] = existingMouldPlans.map(p => {
         const order = openOrders.find(o => o.id === p.orderId)
+        // Product name comes from the backlog entry this row's itemId matches,
+        // not a nonexistent order.productName field (orders don't carry a
+        // top-level product name - only their cart items do).
+        const b = backlogData.find(b => b.itemId === p.itemId)
         return {
           id: Math.random().toString(),
           planId: p.id || p._id,
           orderId: p.orderId || '',
           orderNo: order?.customerOrderNo || '',
-          productName: order?.productName || '',
+          itemId: p.itemId || '',
+          productName: b?.productName || '',
           patternRef: p.patternRef || '',
           machineId: p.equipmentId || '',
           possibleQtyText: p.possibleQuantity !== undefined ? String(p.possibleQuantity) : '',
@@ -250,7 +260,7 @@ export function MouldPlanningModal({
       setRemovedRows([])
       initialSnapshotRef.current = JSON.stringify(initRows.map(toSnapshotRow))
     }
-  }, [isOpen, date, dailyPlans, openOrders, selectedShiftId])
+  }, [isOpen, date, dailyPlans, openOrders, backlogData, selectedShiftId])
 
   // Top panel metrics (Global across all planned items)
   const topMetrics = useMemo(() => {
@@ -424,7 +434,7 @@ export function MouldPlanningModal({
         id: r.planId,
         _id: r.planId,
         orderId: r.orderId,
-        itemId: `${r.orderId}-0`,
+        itemId: r.itemId,
         stage: 'Mould',
         patternRef: r.patternRef,
         quantityScheduled: totalScheduled,
@@ -571,9 +581,13 @@ export function MouldPlanningModal({
 
       return [...prev, {
         id: Math.random().toString(),
-        orderId: order?.id || '',
+        orderId: order?.id || order?._id || '',
         orderNo: orderNo,
-        productName: order?.productName || '',
+        // A patternRef always maps to exactly one cart-group within an order
+        // (that's the whole point of the pattern-grouping upstream), so every
+        // match here shares the same itemId - just take the first.
+        itemId: matches[0].itemId,
+        productName: matches[0].productName,
         patternRef: patternRef,
         machineId: activeMachineId,
         possibleQtyText: String(computePossibleQty(activeMachineId)),

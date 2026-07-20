@@ -40,6 +40,11 @@ interface PlannedRow {
   planId?: string
   orderId: string
   orderNo: string
+  // The cart-group id this row's product actually belongs to (matches the
+  // BacklogItem it was added from) - NOT derived from orderId at save time,
+  // since an order can have more than one product/pattern and always
+  // assuming cart index 0 would silently credit the wrong product's backlog.
+  itemId: string
   productName: string
   patternRef: string
   coreBoxCode: string
@@ -236,12 +241,17 @@ export function CorePlanningModal({
       const existingCorePlans = dailyPlans.filter(p => p.stage === 'Core' && (!p.shiftId || p.shiftId === selectedShiftId))
       const initRows: PlannedRow[] = existingCorePlans.map(p => {
         const order = openOrders.find(o => o.id === p.orderId)
+        // Product name comes from the backlog entry this row's itemId matches,
+        // not a nonexistent order.productName field (orders don't carry a
+        // top-level product name - only their cart items do).
+        const b = backlogData.find(b => b.itemId === p.itemId)
         return {
           id: Math.random().toString(),
           planId: p.id || p._id,
           orderId: p.orderId || '',
           orderNo: order?.customerOrderNo || '',
-          productName: order?.productName || '',
+          itemId: p.itemId || '',
+          productName: b?.productName || '',
           patternRef: p.patternRef || '',
           coreBoxCode: p.coreBoxCode || '',
           machineId: p.equipmentId || '',
@@ -256,7 +266,7 @@ export function CorePlanningModal({
       setRemovedRows([])
       initialSnapshotRef.current = JSON.stringify(initRows.map(toSnapshotRow))
     }
-  }, [isOpen, date, dailyPlans, openOrders, selectedShiftId])
+  }, [isOpen, date, dailyPlans, openOrders, backlogData, selectedShiftId])
 
   // Top panel metrics (Global across all planned items)
   const topMetrics = useMemo(() => {
@@ -430,7 +440,7 @@ export function CorePlanningModal({
         id: r.planId,
         _id: r.planId,
         orderId: r.orderId,
-        itemId: `${r.orderId}-0`, // simplistic
+        itemId: r.itemId,
         stage: 'Core',
         patternRef: r.patternRef,
         coreBoxCode: r.coreBoxCode,
@@ -577,9 +587,13 @@ export function CorePlanningModal({
 
       return [...prev, {
         id: Math.random().toString(),
-        orderId: order?.id || '',
+        orderId: order?.id || order?._id || '',
         orderNo: orderNo,
-        productName: order?.productName || '',
+        // A core box code can in principle be shared across more than one
+        // product-group within an order - matches[0] is the best available
+        // representative, same as patternRef above.
+        itemId: matches[0].itemId,
+        productName: matches[0].productName,
         patternRef,
         coreBoxCode: coreBoxCode,
         machineId: activeMachineId,
