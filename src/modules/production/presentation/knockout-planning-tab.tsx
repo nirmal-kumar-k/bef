@@ -50,6 +50,13 @@ export function KnockoutPlanningTab({ knockoutBacklog, openOrders, dailyPlans, o
   // Aggregate capacities (pieces)
   const totalRemainingPieces = knockoutBacklog.reduce((sum, b) => sum + Math.max(0, b.totalRequired - b.totalScheduled), 0)
 
+  // "Pending" badge: always shows the REAL total remaining backlog (the same
+  // number the Add Product dropdown's "Remaining" shows) - never a
+  // capacity-capped subset, which used to make the badge show a small number
+  // while the actual backlog was much bigger, since that version was really
+  // measuring "how much fits today" and not "how much is left to schedule".
+  // Only the PLACEMENT rolls forward to the next day with free capacity, so
+  // the badge doesn't sit on a day that's already fully booked.
   const totalPossibleCapacity = knockoutEquipments.reduce((sum, e) => sum + (Number(e.avgPiecesPerHour) || 0), 0) * SHIFT_HOURS
   const pendingPreview = useMemo(() => {
     if (totalRemainingPieces <= 0 || totalPossibleCapacity <= 0) return null
@@ -64,7 +71,7 @@ export function KnockoutPlanningTab({ knockoutBacklog, openOrders, dailyPlans, o
         .reduce((s, p) => s + p.quantityScheduled, 0)
       const dayFreeCapacity = Math.max(0, totalPossibleCapacity - dayScheduled)
       if (dayFreeCapacity > 0) {
-        return { date: cursorStr, amount: Math.min(totalRemainingPieces, dayFreeCapacity) }
+        return { date: cursorStr, amount: totalRemainingPieces }
       }
     }
     return null
@@ -173,7 +180,7 @@ export function KnockoutPlanningTab({ knockoutBacklog, openOrders, dailyPlans, o
                     )}
                     {pendingPreview && dateStr === pendingPreview.date && (
                       <div
-                        title="Combined possible output across all active Knockout machines for one shift, minus what that day already has scheduled - rolls forward until a day with free capacity is found"
+                        title="Total remaining backlog across every product, still unscheduled - shown on the next day that has free machine capacity"
                         className="flex items-center justify-between px-1.5 py-1 bg-red-50/50 rounded-md mt-1"
                       >
                         <div className="flex items-center gap-1.5">
