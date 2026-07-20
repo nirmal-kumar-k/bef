@@ -136,32 +136,31 @@ export default function ProductionPlanningPage() {
           totalRequired: metalRequired, totalScheduled: meltScheduled, unit: 'kg'
         })
 
-        // KNOCKOUT - required is in PIECES (moulds poured x cavities, same
-        // "scheduled = completed" convention as Core/Mould), not moulds -
-        // knockout works on individual pieces once a mould is broken open,
-        // and a mould with multiple cavities yields more than one piece.
-        const repItemForCavities = groupItems[0]
-        const cavitiesForKnockout = repItemForCavities.mappedProduct?.cavities || repItemForCavities.product?.cavities || 1
-        const knockoutRequiredPieces = mouldsPouredInMelt * cavitiesForKnockout
-        const knockoutScheduled = plans.filter(p => p.stage === 'Knockout' && p.itemId === representativeId).reduce((sum, p) => sum + p.quantityScheduled, 0)
-        if (knockoutRequiredPieces > 0) {
-          knockoutBacklog.push({
-            itemId: representativeId, orderNo: order.customerOrderNo, patternRef: pattern?.code || '-', productName,
-            totalRequired: knockoutRequiredPieces, totalScheduled: knockoutScheduled, unit: 'pieces'
-          })
-        }
-
-        // FETTLING STOCK - the moulded -> poured -> knocked-out funnel for this
-        // product. Fettling Inward is in PIECES (Knockout's own quantityScheduled,
-        // already piece-denominated), while Mould/Poured stay in mould units -
-        // a mould with multiple cavities yields that many pieces once fettled,
-        // so the last column deliberately isn't 1:1 with the others.
-        if (mouldScheduled > 0) {
-          fettlingStock.push({
-            itemId: representativeId, orderNo: order.customerOrderNo, patternRef: pattern?.code || '-', productName,
-            mouldQuantity: mouldScheduled, pouredQuantity: mouldsPouredInMelt, fettlingInwardQuantity: knockoutScheduled
-          })
-        }
+        // KNOCKOUT & FETTLING STOCK - one row per INDIVIDUAL PRODUCT, not per
+        // pattern-group like Mould/Melt above. Two different products can share
+        // one mould pour (e.g. an "open" and "closed" bracket cast from the same
+        // pattern), and Mould/Melt rightly treat that as one shared mould count -
+        // but knocking those moulds out yields SEPARATE pieces of each product,
+        // using EACH product's own cavity count. A single blended row here would
+        // both use the wrong cavity count for whichever product wasn't first in
+        // the group, and make stock ever get credited to the wrong product.
+        groupItems.forEach(ci => {
+          const cavities = ci.mappedProduct?.cavities || ci.product?.cavities || 1
+          const requiredPieces = mouldsPouredInMelt * cavities
+          const knockoutScheduledForItem = plans.filter(p => p.stage === 'Knockout' && p.itemId === ci.uniqueId).reduce((sum, p) => sum + p.quantityScheduled, 0)
+          if (requiredPieces > 0) {
+            knockoutBacklog.push({
+              itemId: ci.uniqueId, orderNo: order.customerOrderNo, patternRef: pattern?.code || '-', productName: ci.item.productName,
+              totalRequired: requiredPieces, totalScheduled: knockoutScheduledForItem, unit: 'pieces'
+            })
+          }
+          if (mouldScheduled > 0) {
+            fettlingStock.push({
+              itemId: ci.uniqueId, orderNo: order.customerOrderNo, patternRef: pattern?.code || '-', productName: ci.item.productName,
+              mouldQuantity: mouldScheduled, pouredQuantity: mouldsPouredInMelt, fettlingInwardQuantity: knockoutScheduledForItem
+            })
+          }
+        })
 
         // CORE - sum every mapped product's core box requirements across the
         // group by code. Summed, not deduped by max: a core is consumed per
