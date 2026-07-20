@@ -135,8 +135,10 @@ export default function ProductionPlanningPage() {
           totalRequired: metalRequired, totalScheduled: meltScheduled, unit: 'kg'
         })
 
-        // KNOCKOUT
-        const pouredMoulds = plans.filter(p => p.stage === 'Melt' && p.itemId === representativeId).reduce((sum, p) => sum + (p.actualPouredMoulds || 0), 0)
+        // KNOCKOUT - moulds actually poured (Melt's mouldsScheduled, "scheduled
+        // = completed" same as everywhere else), not the old Pour Planning
+        // actual-entry field (that tab is read-only now, no longer a data source).
+        const pouredMoulds = plans.filter(p => p.stage === 'Melt' && p.itemId === representativeId).reduce((sum, p) => sum + (p.mouldsScheduled || 0), 0)
         const knockoutScheduled = plans.filter(p => p.stage === 'Knockout' && p.itemId === representativeId).reduce((sum, p) => sum + p.quantityScheduled, 0)
         if (pouredMoulds > 0) {
           knockoutBacklog.push({
@@ -563,7 +565,7 @@ export default function ProductionPlanningPage() {
                 <PourPlanningTab patterns={patterns} openOrders={openOrders} dailyPlans={plans} onSaveDayPlan={handleSaveDayPlan} />
               )}
               {activeTab === 'Knockout' && (
-                <KnockoutPlanningTab knockoutBacklog={backlogData.Knockout} patterns={patterns} openOrders={openOrders} dailyPlans={plans} onSaveDayPlan={handleSaveDayPlan} />
+                <KnockoutPlanningTab knockoutBacklog={backlogData.Knockout} openOrders={openOrders} onRefetch={fetchData} />
               )}
 
               {activeTab === 'Actuals' && (
