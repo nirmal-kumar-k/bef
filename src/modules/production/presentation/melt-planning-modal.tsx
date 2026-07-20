@@ -190,6 +190,14 @@ export function MeltPlanningModal({
     }
   }, [isOpen])
 
+  // Stepping to a different day (via the header arrows) defaults back to the
+  // first shift (Day Shift) instead of carrying over whatever shift was last
+  // selected - each day's plan starts fresh rather than silently staying on
+  // Night Shift because that's what the previous day happened to be on.
+  useEffect(() => {
+    if (shifts.length > 0) setSelectedShiftId(shifts[0].id!)
+  }, [date])
+
   // Initialize from dailyPlans - scoped to the currently selected shift too,
   // not just date/stage. Without this, Day and Night shift showed the exact
   // same heats/pours (whichever shift was selected at save time silently
