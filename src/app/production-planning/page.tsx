@@ -673,7 +673,7 @@ export default function ProductionPlanningPage() {
               )}
 
               {activeTab === 'Inspection' && (
-                <InspectionTab inspectionBacklog={backlogData.Inspection} openOrders={openOrders} onRefetch={fetchData} />
+                <InspectionTab inspectionBacklog={backlogData.Inspection} inspectionPlans={plans.filter(p => p.stage === 'Inspection')} openOrders={openOrders} onRefetch={fetchData} />
               )}
 
               {activeTab === 'FinishedStock' && (
