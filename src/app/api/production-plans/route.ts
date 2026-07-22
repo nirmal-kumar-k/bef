@@ -3,7 +3,6 @@ import { asc } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
 import { productionPlans } from '@/infrastructure/database/schema'
 import { syncScheduleFromPlans } from './_schedule-sync'
-import { syncKnockoutStock } from './_knockout-stock-sync'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,7 +22,6 @@ export async function POST(request: NextRequest) {
     const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...insertData } = body
     const [row] = await db.insert(productionPlans).values(insertData).returning()
     await syncScheduleFromPlans(row.orderId, row.date)
-    if (row.stage === 'Knockout') await syncKnockoutStock(row.itemId, row.orderId, 0, row.quantityScheduled)
     return NextResponse.json(row, { status: 201 })
   } catch (error) {
     console.error('POST /api/production-plans error:', error)

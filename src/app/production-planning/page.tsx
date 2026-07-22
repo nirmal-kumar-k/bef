@@ -15,6 +15,7 @@ import { MouldPlanningTab } from '@/modules/production/presentation/mould-planni
 import { MeltPlanningTab } from '@/modules/production/presentation/melt-planning-tab'
 import { PourPlanningTab } from '@/modules/production/presentation/pour-planning-tab'
 import { KnockoutPlanningTab } from '@/modules/production/presentation/knockout-planning-tab'
+import { InspectionTab } from '@/modules/production/presentation/inspection-tab'
 
 export default function ProductionPlanningPage() {
   const { role } = useRole()
@@ -26,7 +27,7 @@ export default function ProductionPlanningPage() {
   const [plans, setPlans] = useState<any[]>([])
   
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'Summary' | 'Core' | 'Mould' | 'Melt' | 'Pour' | 'Knockout' | 'FettlingStock'>('Summary')
+  const [activeTab, setActiveTab] = useState<'Summary' | 'Core' | 'Mould' | 'Melt' | 'Pour' | 'Knockout' | 'FettlingStock' | 'Inspection' | 'FinishedStock'>('Summary')
   const [splitUpStage, setSplitUpStage] = useState<'Core' | 'Mould' | 'Melt' | null>(null)
   const [summaryView, setSummaryView] = useState<'calendar' | 'list'>('calendar')
 
@@ -64,11 +65,12 @@ export default function ProductionPlanningPage() {
     const mouldBacklog: BacklogItem[] = []
     const meltBacklog: BacklogItem[] = []
     const knockoutBacklog: BacklogItem[] = []
+    const inspectionBacklog: BacklogItem[] = []
     // Melt can't pour more mould-units for a product than Mould Planning has
     // actually produced for it - tracked separately from meltBacklog (which
     // is in kg) since this cap is a mould-count comparison instead.
     const meltMouldCapBacklog: BacklogItem[] = []
-    const fettlingStock: { itemId: string, orderNo: string, patternRef: string, productName: string, mouldQuantity: number, pouredQuantity: number, fettlingInwardQuantity: number }[] = []
+    const fettlingStock: { itemId: string, orderNo: string, patternRef: string, productName: string, mouldQuantity: number, pouredQuantity: number, fettlingInwardQuantity: number, sentToInspection: number }[] = []
 
     openOrders.forEach(order => {
       const orderId = order.id || order._id
@@ -154,10 +156,25 @@ export default function ProductionPlanningPage() {
               totalRequired: requiredPieces, totalScheduled: knockoutScheduledForItem, unit: 'pieces'
             })
           }
+
+          // INSPECTION - available to inspect is whatever's been fettled
+          // (knocked out) minus every past batch already inspected for this
+          // item (accepted + rejected both count as "processed", freeing up
+          // that much of the fettled pool either way).
+          const inspectedForItem = plans.filter(p => p.stage === 'Inspection' && p.itemId === ci.uniqueId)
+            .reduce((sum, p) => sum + (p.quantityScheduled || 0) + (p.rejectedQuantity || 0), 0)
+          if (knockoutScheduledForItem > 0) {
+            inspectionBacklog.push({
+              itemId: ci.uniqueId, orderNo: order.customerOrderNo, patternRef: pattern?.code || '-', productName: ci.item.productName,
+              totalRequired: knockoutScheduledForItem, totalScheduled: inspectedForItem, unit: 'pieces'
+            })
+          }
+
           if (mouldScheduled > 0) {
             fettlingStock.push({
               itemId: ci.uniqueId, orderNo: order.customerOrderNo, patternRef: pattern?.code || '-', productName: ci.item.productName,
-              mouldQuantity: mouldScheduled, pouredQuantity: mouldsPouredInMelt, fettlingInwardQuantity: knockoutScheduledForItem
+              mouldQuantity: mouldScheduled, pouredQuantity: mouldsPouredInMelt, fettlingInwardQuantity: knockoutScheduledForItem,
+              sentToInspection: inspectedForItem
             })
           }
         })
@@ -219,8 +236,36 @@ export default function ProductionPlanningPage() {
       })
     })
 
-    return { Core: coreBacklog, Mould: mouldBacklog, Melt: meltBacklog, Knockout: knockoutBacklog, MeltMouldCap: meltMouldCapBacklog, FettlingStock: fettlingStock }
-  }, [openOrders, products, patterns, plans])
+    // FINISHED STOCK - global per-product, not per order like the tables
+    // above. product.stock has no memory of which order it came from (it's
+    // a single running count), so this is deliberately just one row per
+    // product: the current stock plus every rejection ever logged against
+    // it, resolved from every Inspection-stage plan across ALL orders
+    // (not just currently-open ones - inspection history shouldn't vanish
+    // once an order completes).
+    const rejectedByProduct = new Map<string, number>()
+    plans.filter(p => p.stage === 'Inspection').forEach(p => {
+      const planOrder = orders.find((o: any) => (o.id || o._id) === p.orderId)
+      const parts = String(p.itemId).split('-')
+      const idx = parseInt(parts[parts.length - 1], 10)
+      const cartItem = planOrder?.cart?.[idx]
+      if (!cartItem) return
+      const product = products.find((pr: any) => pr.name === cartItem.productName || pr.code === cartItem.product)
+      if (!product) return
+      rejectedByProduct.set(product.id, (rejectedByProduct.get(product.id) || 0) + (p.rejectedQuantity || 0))
+    })
+    const finishedStock = products
+      .filter((p: any) => (p.stock || 0) > 0 || rejectedByProduct.has(p.id))
+      .map((p: any) => ({
+        productId: p.id, productName: p.name,
+        finishedStock: p.stock || 0, totalRejected: rejectedByProduct.get(p.id) || 0
+      }))
+
+    return {
+      Core: coreBacklog, Mould: mouldBacklog, Melt: meltBacklog, Knockout: knockoutBacklog, Inspection: inspectionBacklog,
+      MeltMouldCap: meltMouldCapBacklog, FettlingStock: fettlingStock, FinishedStock: finishedStock
+    }
+  }, [openOrders, orders, products, patterns, plans])
 
   const totals = useMemo(() => {
     return {
@@ -386,7 +431,7 @@ export default function ProductionPlanningPage() {
           {/* TAB CONTENT */}
           <div className="space-y-6">
             <div className="inline-flex bg-[#F8FAFC] p-1.5 rounded-full overflow-x-auto shadow-inner border border-[#E2E8F0]">
-              {['Summary', 'Core', 'Mould', 'Melt', 'Pour', 'Knockout', 'FettlingStock'].map(tab => (
+              {['Summary', 'Core', 'Mould', 'Melt', 'Pour', 'Knockout', 'FettlingStock', 'Inspection', 'FinishedStock'].map(tab => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab as any)}
@@ -397,7 +442,7 @@ export default function ProductionPlanningPage() {
                       : "text-[#64748B] hover:text-[#4F46E5] hover:bg-[#EEF2FF]/50"
                   )}
                 >
-                  {tab === 'Summary' ? 'Summary' : tab === 'FettlingStock' ? 'Fettling Stock' : `${tab} Planning`}
+                  {tab === 'Summary' ? 'Summary' : tab === 'FettlingStock' ? 'Fettling Stock' : tab === 'Inspection' ? 'Inspection' : tab === 'FinishedStock' ? 'Finished Stock' : `${tab} Planning`}
                 </button>
               ))}
             </div>
@@ -600,12 +645,13 @@ export default function ProductionPlanningPage() {
                           <th className="px-6 py-4 text-center">Mould Quantity</th>
                           <th className="px-6 py-4 text-center">Poured Quantity</th>
                           <th className="px-6 py-4 text-center">Fettling Inward Quantity</th>
+                          <th className="px-6 py-4 text-center">Sent to Inspection</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[#E0E7FF]">
                         {backlogData.FettlingStock.length === 0 ? (
                           <tr>
-                            <td colSpan={6} className="px-6 py-8 text-center text-[#94A3B8] italic">Nothing moulded yet.</td>
+                            <td colSpan={7} className="px-6 py-8 text-center text-[#94A3B8] italic">Nothing moulded yet.</td>
                           </tr>
                         ) : (
                           backlogData.FettlingStock.map((row, index) => (
@@ -616,6 +662,46 @@ export default function ProductionPlanningPage() {
                               <td className="px-6 py-4 text-center font-mono">{row.mouldQuantity}</td>
                               <td className="px-6 py-4 text-center font-mono text-amber-600">{row.pouredQuantity}</td>
                               <td className="px-6 py-4 text-center font-mono font-semibold text-emerald-600">{row.fettlingInwardQuantity}</td>
+                              <td className="px-6 py-4 text-center font-mono text-[#7C3AED]">{row.sentToInspection}</td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'Inspection' && (
+                <InspectionTab inspectionBacklog={backlogData.Inspection} openOrders={openOrders} onRefetch={fetchData} />
+              )}
+
+              {activeTab === 'FinishedStock' && (
+                <div className="space-y-6 bg-white p-6 rounded-2xl border border-[#E0E7FF] shadow-lg">
+                  <div>
+                    <h3 className="text-[#172554] font-bold text-lg font-heading">Finished Stock</h3>
+                    <p className="text-[#64748B] text-xs mt-1">Total accepted-and-stocked quantity per product, across every order - not broken down by PO No, since stock itself isn't order-scoped.</p>
+                  </div>
+                  <div className="border border-[#E0E7FF] rounded-xl overflow-x-auto shadow-sm">
+                    <table className="w-full text-sm text-left whitespace-nowrap">
+                      <thead className="bg-[#F4F6FB] border-b border-[#E0E7FF] text-[#64748B] font-semibold text-xs uppercase tracking-wider">
+                        <tr>
+                          <th className="px-6 py-4">Product Name</th>
+                          <th className="px-6 py-4 text-center">Finished Stock</th>
+                          <th className="px-6 py-4 text-center">Total Rejected</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#E0E7FF]">
+                        {backlogData.FinishedStock.length === 0 ? (
+                          <tr>
+                            <td colSpan={3} className="px-6 py-8 text-center text-[#94A3B8] italic">Nothing inspected yet.</td>
+                          </tr>
+                        ) : (
+                          backlogData.FinishedStock.map((row) => (
+                            <tr key={row.productId} className="hover:bg-[#F8FAFC]">
+                              <td className="px-6 py-4 font-semibold text-[#172554]">{row.productName}</td>
+                              <td className="px-6 py-4 text-center font-mono font-semibold text-emerald-600">{row.finishedStock}</td>
+                              <td className="px-6 py-4 text-center font-mono text-red-500">{row.totalRejected}</td>
                             </tr>
                           ))
                         )}

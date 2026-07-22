@@ -3,7 +3,6 @@ import { eq } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
 import { productionPlans } from '@/infrastructure/database/schema'
 import { syncScheduleFromPlans } from '../_schedule-sync'
-import { syncKnockoutStock } from '../_knockout-stock-sync'
 
 export async function PUT(
   request: NextRequest,
@@ -21,11 +20,9 @@ export async function PUT(
     for (const [key, value] of Object.entries(rest)) {
       if (value !== undefined) updateData[key] = value
     }
-    const [existing] = await db.select().from(productionPlans).where(eq(productionPlans.id, id))
     const [plan] = await db.update(productionPlans).set(updateData).where(eq(productionPlans.id, id)).returning()
     if (!plan) return NextResponse.json({ error: 'Not found' }, { status: 404 })
     await syncScheduleFromPlans(plan.orderId, plan.date)
-    if (plan.stage === 'Knockout') await syncKnockoutStock(plan.itemId, plan.orderId, existing?.quantityScheduled || 0, plan.quantityScheduled)
     return NextResponse.json(plan)
   } catch (error) {
     console.error('PUT /api/production-plans/[id] error:', error)
@@ -42,7 +39,6 @@ export async function DELETE(
     const [deleted] = await db.delete(productionPlans).where(eq(productionPlans.id, id)).returning()
     if (deleted) {
       await syncScheduleFromPlans(deleted.orderId, deleted.date)
-      if (deleted.stage === 'Knockout') await syncKnockoutStock(deleted.itemId, deleted.orderId, deleted.quantityScheduled, 0)
     }
     return NextResponse.json({ success: true })
   } catch (error) {

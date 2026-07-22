@@ -5,6 +5,7 @@ export const productionPlanStageEnum = pgEnum('production_plan_stage', [
   'Mould',
   'Melt',
   'Knockout',
+  'Inspection',
 ])
 
 // Mirrors IProductionPlan. Dynamic-keyed maps (hourlyTargets/hourlyWorkers/hourlyEquipments/
@@ -38,6 +39,12 @@ export const productionPlans = pgTable('production_plans', {
   // heatNumber === 1 on every reload, since the user can move it after
   // deleting/reordering heats.
   isFirstHeat: boolean('is_first_heat').default(false),
+  // Inspection-specific: quantityScheduled holds the ACCEPTED quantity for
+  // this batch (same "scheduled = completed" convention as every other
+  // stage) - these two hold the rejected side of the same batch, with the
+  // reason mandatory whenever rejectedQuantity > 0.
+  rejectedQuantity: integer('rejected_quantity').default(0),
+  rejectionReason: text('rejection_reason'),
   hourlyTargets: jsonb('hourly_targets').$type<Record<string, number>>(),
   hourlyWorkers: jsonb('hourly_workers').$type<Record<string, number>>(),
   hourlyEquipments: jsonb('hourly_equipments').$type<Record<string, string>>(),
