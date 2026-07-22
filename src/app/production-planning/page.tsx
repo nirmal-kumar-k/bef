@@ -430,7 +430,7 @@ export default function ProductionPlanningPage() {
 
           {/* TAB CONTENT */}
           <div className="space-y-6">
-            <div className="inline-flex bg-[#F8FAFC] p-1.5 rounded-full overflow-x-auto shadow-inner border border-[#E2E8F0]">
+            <div className="flex w-full max-w-full bg-[#F8FAFC] p-1.5 rounded-full overflow-x-auto shadow-inner border border-[#E2E8F0]">
               {['Summary', 'Core', 'Mould', 'Melt', 'Pour', 'Knockout', 'FettlingStock', 'Inspection', 'FinishedStock'].map(tab => (
                 <button
                   key={tab}

@@ -23,9 +23,9 @@ export function AppLayout({ children, user }: AppLayoutProps) {
   return (
     <div className="flex">
       <Sidebar user={user} />
-      <div className="flex-1 md:ml-64">
+      <div className="flex-1 min-w-0 md:ml-64">
         <TopBar />
-        <main className="mt-[58px] p-6 min-h-screen bg-background">
+        <main className="mt-[58px] p-6 min-h-screen bg-background overflow-x-hidden">
           {children}
         </main>
       </div>
