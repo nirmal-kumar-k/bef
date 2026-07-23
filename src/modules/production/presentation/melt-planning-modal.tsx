@@ -706,7 +706,7 @@ export function MeltPlanningModal({
       const { totalRequired: mouldsProduced, totalScheduled: mouldsPoured } = getMouldCapAggregate(b.orderNo, b.patternRef)
       const mouldsAvailable = Math.max(0, mouldsProduced - mouldsPoured - sessionCommitted)
       const maxAllowed = Math.min(remainingMoulds, possibleMoulds, mouldsAvailable)
-      return { b, boxWeight, maxAllowed }
+      return { b, boxWeight, maxAllowed, remainingMoulds }
     })
     .filter(({ b }) => {
       const q = allocationSearch.trim().toLowerCase()
@@ -1084,24 +1084,26 @@ export function MeltPlanningModal({
                                   : 'No products match your search.'}
                               </div>
                             ) : (
-                              <Table>
+                              <Table className="table-fixed w-[890px] border-separate border-spacing-0">
                                 <TableHeader className="sticky top-0 bg-[#F8FAFC] z-10">
                                   <TableRow>
-                                    <TableHead>Product</TableHead>
-                                    <TableHead>Order</TableHead>
-                                    <TableHead className="text-right">Kg/Box</TableHead>
-                                    <TableHead className="text-right">Max</TableHead>
-                                    <TableHead className="text-right w-[110px]">Qty</TableHead>
-                                    <TableHead className="w-[70px]" />
+                                    <TableHead className="w-[260px] text-center">Product</TableHead>
+                                    <TableHead className="w-[105px] text-center">Order</TableHead>
+                                    <TableHead className="w-[105px] text-center">Kg/Box</TableHead>
+                                    <TableHead className="w-[105px] text-center" title="Total order backlog still left to melt, regardless of this heat's own space">Remaining</TableHead>
+                                    <TableHead className="w-[105px] text-center" title="How many of those this heat can actually take right now">Max</TableHead>
+                                    <TableHead className="w-[105px] text-center">Qty</TableHead>
+                                    <TableHead className="w-[105px] text-center" />
                                   </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                  {allocationRows.map(({ b, boxWeight, maxAllowed }) => (
+                                  {allocationRows.map(({ b, boxWeight, maxAllowed, remainingMoulds }) => (
                                     <AllocationTableRow
                                       key={b.itemId}
                                       backlogItem={b}
                                       boxWeight={boxWeight}
                                       maxAllowed={maxAllowed}
+                                      remainingMoulds={remainingMoulds}
                                       onAdd={(qty) => addPour(selectedHeat.id, b, qty)}
                                     />
                                   ))}
@@ -1168,7 +1170,7 @@ export function MeltPlanningModal({
   )
 }
 
-function AllocationTableRow({ backlogItem, boxWeight, maxAllowed, onAdd }: { backlogItem: BacklogItem, boxWeight: number, maxAllowed: number, onAdd: (qty: number) => void }) {
+function AllocationTableRow({ backlogItem, boxWeight, maxAllowed, remainingMoulds, onAdd }: { backlogItem: BacklogItem, boxWeight: number, maxAllowed: number, remainingMoulds: number, onAdd: (qty: number) => void }) {
   const [qty, setQty] = useState<string>('')
   const parsedQty = parseInt(qty, 10)
   const isValid = !isNaN(parsedQty) && parsedQty > 0 && parsedQty <= maxAllowed
@@ -1179,11 +1181,12 @@ function AllocationTableRow({ backlogItem, boxWeight, maxAllowed, onAdd }: { bac
 
   return (
     <TableRow>
-      <TableCell className="font-bold text-[#172554]">{backlogItem.productName || backlogItem.patternRef}</TableCell>
-      <TableCell className="text-[#64748B] text-xs">{backlogItem.orderNo}</TableCell>
-      <TableCell className="text-right font-mono text-xs">{boxWeight}</TableCell>
-      <TableCell className="text-right font-mono text-xs font-bold text-amber-600">{maxAllowed}</TableCell>
-      <TableCell>
+      <TableCell className="w-[260px] text-center font-bold text-[#172554]">{backlogItem.productName || backlogItem.patternRef}</TableCell>
+      <TableCell className="w-[105px] text-center tabular-nums text-[#64748B] text-xs">{backlogItem.orderNo}</TableCell>
+      <TableCell className="w-[105px] text-center tabular-nums font-mono text-xs">{boxWeight}</TableCell>
+      <TableCell className="w-[105px] text-center tabular-nums font-mono text-xs text-[#64748B]">{remainingMoulds}</TableCell>
+      <TableCell className="w-[105px] text-center tabular-nums font-mono text-xs font-bold text-amber-600">{maxAllowed}</TableCell>
+      <TableCell className="w-[105px] text-center">
         <Input
           type="number"
           min="1"
@@ -1191,11 +1194,11 @@ function AllocationTableRow({ backlogItem, boxWeight, maxAllowed, onAdd }: { bac
           value={qty}
           onChange={e => setQty(e.target.value)}
           placeholder="Qty"
-          className="w-20 h-7 text-xs font-mono text-center ml-auto focus-visible:ring-1 focus-visible:ring-amber-500"
+          className="h-9 w-16 mx-auto text-center text-xs font-mono rounded-md focus-visible:ring-1 focus-visible:ring-amber-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
         />
       </TableCell>
-      <TableCell>
-        <Button size="sm" onClick={handleAdd} disabled={!qty || !isValid} className="h-7 w-full bg-[#172554] hover:bg-[#1E293B] text-white text-[10px] px-2">
+      <TableCell className="w-[105px] text-center">
+        <Button size="sm" onClick={handleAdd} disabled={!qty || !isValid} className="h-9 w-20 bg-[#172554] hover:bg-[#1E293B] text-white text-xs rounded-md">
           Add
         </Button>
       </TableCell>
