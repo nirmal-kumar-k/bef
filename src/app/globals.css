@@ -142,3 +142,14 @@
     @apply font-sans antialiased;
   }
 }
+
+/* Hides the native scrollbar on horizontally-scrollable strips (tab bars,
+   process navigation) while keeping them scrollable via drag/trackpad/wheel -
+   the raw OS scrollbar looks out of place under a rounded pill-style bar. */
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

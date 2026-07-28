@@ -430,13 +430,13 @@ export default function ProductionPlanningPage() {
 
           {/* TAB CONTENT */}
           <div className="space-y-6">
-            <div className="flex w-full max-w-full bg-[#F8FAFC] p-1.5 rounded-full overflow-x-auto shadow-inner border border-[#E2E8F0]">
+            <div className="flex w-full max-w-full bg-white p-1.5 rounded-full shadow-[inset_0_2px_4px_0_rgba(0,0,0,0.05),0_1px_2px_0_rgba(0,0,0,0.05)] border border-[#D8DEE9]">
               {['Summary', 'Core', 'Mould', 'Melt', 'Pour', 'Knockout', 'FettlingStock', 'Inspection', 'FinishedStock'].map(tab => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab as any)}
                   className={cn(
-                    "px-8 py-2.5 text-sm font-bold transition-all duration-300 rounded-full whitespace-nowrap",
+                    "flex-1 px-2 py-2.5 text-sm font-bold text-center transition-all duration-300 rounded-full whitespace-nowrap",
                     activeTab === tab
                       ? "bg-[#4F46E5] text-white shadow-md shadow-[#4F46E5]/20"
                       : "text-[#64748B] hover:text-[#4F46E5] hover:bg-[#EEF2FF]/50"
@@ -639,30 +639,30 @@ export default function ProductionPlanningPage() {
                     <table className="w-full text-sm text-left whitespace-nowrap">
                       <thead className="bg-[#F4F6FB] border-b border-[#E0E7FF] text-[#64748B] font-semibold text-xs uppercase tracking-wider">
                         <tr>
-                          <th className="px-6 py-4">PO No</th>
-                          <th className="px-6 py-4">Product Name</th>
-                          <th className="px-6 py-4">Pattern</th>
-                          <th className="px-6 py-4 text-center">Mould Quantity</th>
-                          <th className="px-6 py-4 text-center">Poured Quantity</th>
-                          <th className="px-6 py-4 text-center">Fettling Inward Quantity</th>
-                          <th className="px-6 py-4 text-center">Sent to Inspection</th>
+                          <th className="px-3 py-3">PO No</th>
+                          <th className="px-3 py-3">Product Name</th>
+                          <th className="px-3 py-3">Pattern</th>
+                          <th className="px-3 py-3 text-center">Mould Quantity</th>
+                          <th className="px-3 py-3 text-center">Poured Quantity</th>
+                          <th className="px-3 py-3 text-center">Fettling Inward Quantity</th>
+                          <th className="px-3 py-3 text-center">Sent to Inspection</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[#E0E7FF]">
                         {backlogData.FettlingStock.length === 0 ? (
                           <tr>
-                            <td colSpan={7} className="px-6 py-8 text-center text-[#94A3B8] italic">Nothing moulded yet.</td>
+                            <td colSpan={7} className="px-3 py-8 text-center text-[#94A3B8] italic">Nothing moulded yet.</td>
                           </tr>
                         ) : (
                           backlogData.FettlingStock.map((row, index) => (
                             <tr key={index} className="hover:bg-[#F8FAFC]">
-                              <td className="px-6 py-4 font-mono text-[#4285F4]">{row.orderNo}</td>
-                              <td className="px-6 py-4 font-semibold text-[#172554]">{row.productName}</td>
-                              <td className="px-6 py-4 font-mono text-gray-500">{row.patternRef}</td>
-                              <td className="px-6 py-4 text-center font-mono">{row.mouldQuantity}</td>
-                              <td className="px-6 py-4 text-center font-mono text-amber-600">{row.pouredQuantity}</td>
-                              <td className="px-6 py-4 text-center font-mono font-semibold text-emerald-600">{row.fettlingInwardQuantity}</td>
-                              <td className="px-6 py-4 text-center font-mono text-[#7C3AED]">{row.sentToInspection}</td>
+                              <td className="px-3 py-3 font-mono text-[#4285F4]">{row.orderNo}</td>
+                              <td className="px-3 py-3 font-semibold text-[#172554]">{row.productName}</td>
+                              <td className="px-3 py-3 font-mono text-gray-500">{row.patternRef}</td>
+                              <td className="px-3 py-3 text-center font-mono">{row.mouldQuantity}</td>
+                              <td className="px-3 py-3 text-center font-mono text-amber-600">{row.pouredQuantity}</td>
+                              <td className="px-3 py-3 text-center font-mono font-semibold text-emerald-600">{row.fettlingInwardQuantity}</td>
+                              <td className="px-3 py-3 text-center font-mono text-[#7C3AED]">{row.sentToInspection}</td>
                             </tr>
                           ))
                         )}
