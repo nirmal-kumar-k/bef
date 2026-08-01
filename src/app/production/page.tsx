@@ -4,22 +4,26 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Input } from '@/shared/ui/input'
 import { cn, toLocalDateString } from '@/shared/lib/utils'
 import { TrackingStageList, type TrackingPlanRow } from '@/modules/production/presentation/tracking-stage-list'
+import { TrackingActualsModal } from '@/modules/production/presentation/tracking-actuals-modal'
 
 const STAGES: TrackingPlanRow['stage'][] = ['Core', 'Mould', 'Melt', 'Knockout']
 
 export default function ProductionTrackingPage() {
   const [plans, setPlans] = useState<TrackingPlanRow[]>([])
   const [orders, setOrders] = useState<any[]>([])
+  const [shifts, setShifts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [dateFilter, setDateFilter] = useState(() => toLocalDateString(new Date()))
   const [activeStage, setActiveStage] = useState<TrackingPlanRow['stage']>('Core')
+  const [actualsPlan, setActualsPlan] = useState<TrackingPlanRow | null>(null)
 
   const fetchData = useCallback(async () => {
     try {
       setLoading(true)
-      const [planRes, orderRes] = await Promise.all([fetch('/api/production-plans'), fetch('/api/orders')])
+      const [planRes, orderRes, shiftRes] = await Promise.all([fetch('/api/production-plans'), fetch('/api/orders'), fetch('/api/shifts')])
       if (planRes.ok) setPlans(await planRes.json())
       if (orderRes.ok) setOrders(await orderRes.json())
+      if (shiftRes.ok) setShifts(await shiftRes.json())
     } catch (err) {
       console.error('Failed to fetch tracking data:', err)
     } finally {
@@ -68,9 +72,16 @@ export default function ProductionTrackingPage() {
           stage={activeStage}
           plans={dayPlans}
           orders={orders}
-          onEnterActuals={() => {}}
+          onEnterActuals={setActualsPlan}
         />
       )}
+
+      <TrackingActualsModal
+        plan={actualsPlan}
+        shifts={shifts}
+        onClose={() => setActualsPlan(null)}
+        onSaved={fetchData}
+      />
     </div>
   )
 }
