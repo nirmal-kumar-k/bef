@@ -43,14 +43,16 @@ export function ViewProductModal({
   product: Product | null
   isOpen: boolean
   onClose: () => void
-  onSave?: (product: Product) => void
+  onSave?: (product: Product) => Promise<void>
   onDelete?: (id: string) => void
 }) {
   const { role } = useRole()
-  
+
   const [customerOpen, setCustomerOpen] = useState(false)
   const [selectedCustomer, setSelectedCustomer] = useState('')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  // Guards Save against being fired again while a save is still in flight.
+  const [isSaving, setIsSaving] = useState(false)
 
   // Fetched data from API
   const [customers, setCustomers] = useState<{ value: string; label: string }[]>([])
@@ -124,24 +126,30 @@ export function ViewProductModal({
     return '0.00'
   }, [weight, ratePerKg])
 
-  const handleSaveClick = () => {
+  const handleSaveClick = async () => {
+    if (isSaving) return
     if (!product || !code.trim() || !name.trim() || !onSave) return
 
     const customerLabel = customers.find(c => c.value === selectedCustomer)?.label || ''
     const w = Number(weight) || 0
 
-    onSave({
-      ...product,
-      code: code.trim(),
-      name: name.trim(),
-      customer: customerLabel,
-      grade: selectedGrade || undefined,
-      weight: w > 0 ? `${w} kg` : '-',
-      ratePerKg: ratePerKgToggle ? (Number(ratePerKg) || undefined) : undefined,
-      unitPrice: ratePerKgToggle ? Number(calculatedUnitPrice) : (Number(manualUnitPrice) || undefined),
-      remarks: remarks.trim() || undefined,
-      images: images.length > 0 ? images : undefined,
-    })
+    setIsSaving(true)
+    try {
+      await onSave({
+        ...product,
+        code: code.trim(),
+        name: name.trim(),
+        customer: customerLabel,
+        grade: selectedGrade || undefined,
+        weight: w > 0 ? `${w} kg` : '-',
+        ratePerKg: ratePerKgToggle ? (Number(ratePerKg) || undefined) : undefined,
+        unitPrice: ratePerKgToggle ? Number(calculatedUnitPrice) : (Number(manualUnitPrice) || undefined),
+        remarks: remarks.trim() || undefined,
+        images: images.length > 0 ? images : undefined,
+      })
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   if (!product) return null
@@ -375,8 +383,8 @@ export function ViewProductModal({
             Close
           </Button>
           {onSave && (
-            <Button onClick={handleSaveClick} disabled={!code.trim() || !name.trim()} className="bg-[#4F46E5] hover:bg-[#4F46E5] text-white disabled:opacity-50">
-              Save Changes
+            <Button onClick={handleSaveClick} disabled={!code.trim() || !name.trim() || isSaving} className="bg-[#4F46E5] hover:bg-[#4F46E5] text-white disabled:opacity-50">
+              {isSaving ? 'Saving...' : 'Save Changes'}
             </Button>
           )}
         </DialogFooter>

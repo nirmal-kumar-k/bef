@@ -11,7 +11,7 @@ interface CorePlanningTabProps {
   patterns: any[]
   openOrders: any[]
   dailyPlans: any[]
-  onSaveDayPlan: (date: string, plans: any[]) => void
+  onSaveDayPlan: (date: string, plans: any[]) => Promise<void>
 }
 
 export function CorePlanningTab({ coreBacklog, patterns, openOrders, dailyPlans, onSaveDayPlan }: CorePlanningTabProps) {

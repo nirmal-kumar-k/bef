@@ -45,7 +45,12 @@ export default function GradeMasterPage() {
 
   const handleSaveGrade = async (grade: Partial<Grade>) => {
     try {
-      if (grade.id) {
+      // New grades now also carry a client-generated id (so the create
+      // request can be idempotent) - "has an id" alone no longer means
+      // "this is an edit". An edit's id already exists in the loaded grades
+      // list; a freshly-generated one for a new grade never will.
+      const isEdit = grade.id && grades.some(g => g.id === grade.id)
+      if (isEdit) {
         const res = await fetch(`/api/grades/${grade.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },

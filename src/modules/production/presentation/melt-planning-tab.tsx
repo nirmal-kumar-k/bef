@@ -10,7 +10,7 @@ interface MeltPlanningTabProps {
   patterns: any[]
   dailyPlans: any[]
   mouldCapBacklog: BacklogItem[]
-  onSaveDayPlan: (date: string, plans: any[]) => void
+  onSaveDayPlan: (date: string, plans: any[]) => Promise<void>
 }
 
 export function MeltPlanningTab({ defaultMetalQty, openOrders, products, patterns, dailyPlans, mouldCapBacklog, onSaveDayPlan }: MeltPlanningTabProps) {
