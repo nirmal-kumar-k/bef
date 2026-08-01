@@ -76,10 +76,14 @@ export default function ProductsPage() {
 
   const handleSaveProduct = async (product: Omit<Product, 'id'>) => {
     try {
+      // Generated now, not left blank until the server assigns one - the
+      // create route upserts on this id, so even a double-submit of this
+      // exact request collapses into one product instead of creating two.
+      const payload = { ...product, id: crypto.randomUUID() }
       const res = await fetch('/api/products', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(product),
+        body: JSON.stringify(payload),
       })
       if (res.ok) {
         await fetchProducts()

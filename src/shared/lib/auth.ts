@@ -1,9 +1,11 @@
 import { jwtVerify } from 'jose'
 import { cookies } from 'next/headers'
 
-export const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'fallback_secret_for_development_only'
-)
+if (!process.env.JWT_SECRET) {
+  throw new Error('Please define the JWT_SECRET environment variable inside .env.local')
+}
+
+export const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET)
 
 export interface AuthTokenPayload {
   id: string

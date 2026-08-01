@@ -28,7 +28,7 @@ interface MouldPlanningModalProps {
   backlogData: BacklogItem[]
   dailyPlans: any[] // existing plans for this date and stage
   patterns: any[]
-  onSaveDayPlan: (date: string, plans: any[]) => void
+  onSaveDayPlan: (date: string, plans: any[]) => Promise<void>
   // Lets the header arrows step to the adjacent day without closing the
   // modal. Optional so the modal still works for any caller that hasn't
   // wired up day navigation.
@@ -60,6 +60,13 @@ interface PlannedRow {
   // modal opened - needed to compute how much MORE this row can take without
   // double-subtracting its own prior contribution from the remaining pending qty.
   originalQty: number
+  // True from the moment this row is added locally until the server has
+  // actually confirmed it exists (i.e. it was loaded back via dailyPlans).
+  // planId is generated client-side immediately on add, so it's always
+  // present - this flag is what buildPlansToSave/handleSaveDayPlan actually
+  // use to decide create-vs-update, since id-truthiness alone can no longer
+  // tell them apart.
+  isNew: boolean
 }
 
 export function MouldPlanningModal({
@@ -88,6 +95,12 @@ export function MouldPlanningModal({
   const [viewLabourers, setViewLabourers] = useState<boolean>(false)
   const [comboboxOpen, setComboboxOpen] = useState(false)
   const [capacityErrorLines, setCapacityErrorLines] = useState<string[] | null>(null)
+  // Guards Save/Save & Refresh against being fired again while a save is
+  // still in flight - onSaveDayPlan is a multi-request round trip (one
+  // fetch per row, then a refetch), and without this a second click before
+  // it resolves would re-submit every not-yet-persisted row as if it were
+  // new (no planId assigned yet), creating duplicate rows.
+  const [isSaving, setIsSaving] = useState(false)
 
   // Rows removed from the schedule via the trash icon this session - kept in
   // full (not just their id) because their originalQty must still be
@@ -253,7 +266,8 @@ export function MouldPlanningModal({
           hourlyTargets: p.hourlyTargets || {},
           hourlyWorkers: p.hourlyWorkers || {},
           isConfirmed: !!p.isConfirmed,
-          originalQty: p.quantityScheduled || 0
+          originalQty: p.quantityScheduled || 0,
+          isNew: false
         }
       })
       setPlannedRows(initRows)
@@ -319,6 +333,15 @@ export function MouldPlanningModal({
   const handleNavigateDate = (direction: 1 | -1) => {
     if (isDirty && !confirm('You have unsaved changes on this day. Discard them and switch days?')) return
     onNavigateDate?.(direction)
+  }
+
+  // Same guard as day-navigation, but for actually closing the modal - the
+  // Cancel button and the dialog's own X/backdrop-click previously closed
+  // immediately with no warning at all, silently discarding anything typed
+  // since the last save.
+  const handleClose = () => {
+    if (isDirty && !confirm('You have unsaved changes on this day. Close without saving?')) return
+    onClose()
   }
 
   // Real, equipment-derived ceiling for a machine this shift - the only
@@ -446,31 +469,46 @@ export function MouldPlanningModal({
         hourlyTargets: r.hourlyTargets,
         hourlyWorkers: r.hourlyWorkers,
         isConfirmed: r.isConfirmed,
-        possibleQuantity: possibleQtyToSave
+        possibleQuantity: possibleQtyToSave,
+        _isNew: r.isNew
       }
     })
 
     // Rows removed via the trash icon this session need an explicit delete
     // instruction - they're not in plansToSave at all, so without this their
-    // existing DB record would just sit there untouched forever.
-    const deletions = removedRows.filter(r => r.planId).map(r => ({ id: r.planId, _id: r.planId, _delete: true }))
+    // existing DB record would just sit there untouched forever. Rows that
+    // were added and removed again in the same session without ever being
+    // saved (still isNew) have nothing to delete server-side, so skip them.
+    const deletions = removedRows.filter(r => r.planId && !r.isNew).map(r => ({ id: r.planId, _id: r.planId, _delete: true }))
     return [...plansToSave, ...deletions]
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (isSaving) return
     const plans = buildPlansToSave()
     if (!plans) return
-    onSaveDayPlan(date, plans)
-    onClose()
+    setIsSaving(true)
+    try {
+      await onSaveDayPlan(date, plans)
+      onClose()
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   // Saves exactly like Save Day Plan, but keeps the modal open and re-loads
   // this shift's rows fresh from the just-saved backend state (the dailyPlans
   // prop update naturally re-triggers the init effect), instead of closing.
-  const handleSaveAndRefresh = () => {
+  const handleSaveAndRefresh = async () => {
+    if (isSaving) return
     const plans = buildPlansToSave()
     if (!plans) return
-    onSaveDayPlan(date, plans)
+    setIsSaving(true)
+    try {
+      await onSaveDayPlan(date, plans)
+    } finally {
+      setIsSaving(false)
+    }
   }
 
 
@@ -581,6 +619,10 @@ export function MouldPlanningModal({
 
       return [...prev, {
         id: Math.random().toString(),
+        // Generated now, not left blank until the server assigns one - this
+        // is what makes the eventual create request idempotent (see
+        // isNew's comment on the PlannedRow type).
+        planId: crypto.randomUUID(),
         orderId: order?.id || order?._id || '',
         orderNo: orderNo,
         // A patternRef always maps to exactly one cart-group within an order
@@ -594,7 +636,8 @@ export function MouldPlanningModal({
         hourlyTargets,
         hourlyWorkers,
         isConfirmed: false,
-        originalQty: 0
+        originalQty: 0,
+        isNew: true
       }]
     })
     setComboboxOpen(false)
@@ -612,6 +655,21 @@ export function MouldPlanningModal({
   const dateString = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
   
   const activeRows = plannedRows.filter(r => r.machineId === activeMachineId)
+
+  // Real per-slot conflict check: a slot is only actually over capacity when
+  // the SUM of every active row's hourly target in it exceeds the machine's
+  // own per-hour capacity - not just "more than one row happens to have a
+  // value there" (the previous check). Two patterns sharing a slot's
+  // leftover headroom is exactly what auto-fill/distributeQty is designed
+  // to produce, and was being flagged red as if it were an actual conflict.
+  const activeMachine = equipments.find(e => e.id === activeMachineId)
+  const activeMachineAvgProd = resolveAvgProductionRate(undefined, activeMachine?.avgPiecesPerHour)
+  const slotUsedTotal: Record<string, number> = {}
+  const slotCapacity: Record<string, number> = {}
+  TIME_SLOTS.forEach(slot => {
+    slotUsedTotal[slot.time] = activeRows.reduce((sum, r) => sum + (r.hourlyTargets[slot.time] || 0), 0)
+    slotCapacity[slot.time] = activeMachineAvgProd * slot.hours
+  })
 
   // Combobox options for backlog items needing scheduling
   const backlogOptions = useMemo(() => {
@@ -647,7 +705,7 @@ export function MouldPlanningModal({
 
   return (
     <>
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className={cn("w-full h-full max-w-full rounded-none sm:w-[98vw] sm:max-w-[98vw] sm:h-[95vh] sm:rounded-2xl text-foreground p-0 shadow-2xl flex flex-col transition-colors duration-500 ease-in-out", theme.dialog)}>
         <div className="flex flex-col w-full h-full">
           <DialogHeader className={cn("p-6 pb-4 border-b shrink-0 transition-colors duration-500 ease-in-out", theme.header)}>
@@ -658,10 +716,10 @@ export function MouldPlanningModal({
                     <button
                       type="button"
                       onClick={() => handleNavigateDate(-1)}
-                      className={cn("p-1 rounded-lg transition-colors", isNightShift ? "hover:bg-orange-100" : "hover:bg-[#EEF2FF]")}
+                      className={cn("p-2 rounded-lg transition-colors", isNightShift ? "hover:bg-orange-100" : "hover:bg-[#EEF2FF]")}
                       aria-label="Previous day"
                     >
-                      <CaretLeft size={20} weight="bold" />
+                      <CaretLeft size={28} weight="bold" />
                     </button>
                   )}
                   <span>{dateString} - Mould Planning</span>
@@ -669,10 +727,10 @@ export function MouldPlanningModal({
                     <button
                       type="button"
                       onClick={() => handleNavigateDate(1)}
-                      className={cn("p-1 rounded-lg transition-colors", isNightShift ? "hover:bg-orange-100" : "hover:bg-[#EEF2FF]")}
+                      className={cn("p-2 rounded-lg transition-colors", isNightShift ? "hover:bg-orange-100" : "hover:bg-[#EEF2FF]")}
                       aria-label="Next day"
                     >
-                      <CaretRight size={20} weight="bold" />
+                      <CaretRight size={28} weight="bold" />
                     </button>
                   )}
                 </DialogTitle>
@@ -870,9 +928,10 @@ export function MouldPlanningModal({
                                 </div>
                               </td>
                               {TIME_SLOTS.map(slot => {
-                                 // Check conflict across multiple rows on this machine
-                                 const otherActiveRowsInSlot = activeRows.filter(or => or.id !== row.id && (or.hourlyTargets[slot.time] || 0) > 0)
-                                 const isConflict = otherActiveRowsInSlot.length > 0 && (row.hourlyTargets[slot.time] || 0) > 0
+                                 // Only a real conflict if this slot's combined total across
+                                 // every row on this machine actually exceeds its capacity -
+                                 // not merely "another row also has a value here".
+                                 const isConflict = (row.hourlyTargets[slot.time] || 0) > 0 && slotUsedTotal[slot.time] > slotCapacity[slot.time]
 
                                  return (
                                   <td key={slot.time} className={cn("px-1 py-2 text-center border-r transition-colors duration-500 ease-in-out", theme.tableBorder, isConflict && "bg-red-50")}>
@@ -933,27 +992,27 @@ export function MouldPlanningModal({
           </div>
 
           <DialogFooter className={cn("m-0 p-5 border-t shrink-0 sm:justify-end rounded-b-2xl transition-colors duration-500 ease-in-out", theme.footer)}>
-            <Button variant="ghost" onClick={onClose} className={cn("transition-colors duration-500 ease-in-out", theme.cancelButton)}>Cancel</Button>
+            <Button variant="ghost" onClick={handleClose} className={cn("transition-colors duration-500 ease-in-out", theme.cancelButton)}>Cancel</Button>
             <Button
               variant="outline"
               onClick={handleSaveAndRefresh}
-              disabled={!isDirty}
+              disabled={!isDirty || isSaving}
               className={cn(
                 "h-10 px-6 text-sm transition-colors duration-500 ease-in-out disabled:opacity-40 disabled:cursor-not-allowed",
                 isNightShift ? "border-orange-500 text-orange-600 hover:bg-orange-50" : "border-[#4F46E5] text-[#4F46E5] hover:bg-[#4F46E5]/5"
               )}
             >
-              Save & Refresh
+              {isSaving ? 'Saving...' : 'Save & Refresh'}
             </Button>
             <Button
               onClick={handleSave}
-              disabled={!isDirty}
+              disabled={!isDirty || isSaving}
               className={cn(
                 "shadow-[0_4px_10px_-2px_rgba(79,70,229,0.3)] h-10 px-8 text-sm transition-colors duration-500 ease-in-out disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none",
                 isNightShift ? "bg-orange-500 text-white hover:bg-orange-500/90" : "bg-[#4F46E5] text-white hover:bg-[#4F46E5]/90"
               )}
             >
-              Save Day Plan
+              {isSaving ? 'Saving...' : 'Save Day Plan'}
             </Button>
           </DialogFooter>
         </div>

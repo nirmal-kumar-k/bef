@@ -18,7 +18,16 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const [row] = await db.insert(grades).values(body).returning()
+    const { id, ...insertData } = body
+    // A client-generated id (assigned the moment the grade is created in the
+    // UI) makes this idempotent - a double-click or slow-network retry of
+    // the same not-yet-confirmed create updates the same row instead of
+    // creating a duplicate grade.
+    const [row] = id
+      ? await db.insert(grades).values({ id, ...insertData })
+          .onConflictDoUpdate({ target: grades.id, set: insertData })
+          .returning()
+      : await db.insert(grades).values(insertData).returning()
     return NextResponse.json(row, { status: 201 })
   } catch (error) {
     console.error('POST /api/grades error:', error)

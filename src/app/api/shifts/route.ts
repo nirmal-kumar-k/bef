@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { eq } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
 import { shifts, shiftBreaks } from '@/infrastructure/database/schema'
 
@@ -24,10 +25,24 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { breaks, ...shiftData } = body
+    const { breaks, id, ...shiftData } = body
 
     const result = await db.transaction(async (tx) => {
-      const [shift] = await tx.insert(shifts).values(shiftData).returning()
+      // A client-generated id (assigned the moment the shift is created in
+      // the UI) makes this idempotent - a double-click or slow-network retry
+      // of the same not-yet-confirmed create updates the same row instead
+      // of creating a duplicate shift.
+      const [shift] = id
+        ? await tx.insert(shifts).values({ id, ...shiftData })
+            .onConflictDoUpdate({ target: shifts.id, set: shiftData })
+            .returning()
+        : await tx.insert(shifts).values(shiftData).returning()
+
+      // Same idempotency for the break rows tied to it.
+      if (id) {
+        await tx.delete(shiftBreaks).where(eq(shiftBreaks.shiftId, shift.id))
+      }
+
       const insertedBreaks = breaks?.length
         ? await tx.insert(shiftBreaks).values(
             breaks.map((b: { startTime: string; endTime: string }, i: number) => ({

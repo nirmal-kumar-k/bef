@@ -32,7 +32,15 @@ export async function POST(request: NextRequest) {
       linkedPattern: body.linkedPattern,
       stock: body.stock,
     }
-    const [row] = await db.insert(products).values(insertData).returning()
+    // A client-generated id (assigned the moment the product is created in
+    // the UI) makes this idempotent - a double-click or slow-network retry
+    // of the same not-yet-confirmed create updates the same row instead of
+    // creating a duplicate product.
+    const [row] = body.id
+      ? await db.insert(products).values({ id: body.id, ...insertData })
+          .onConflictDoUpdate({ target: products.id, set: insertData })
+          .returning()
+      : await db.insert(products).values(insertData).returning()
     return NextResponse.json(row, { status: 201 })
   } catch (error) {
     console.error('POST /api/products error:', error)

@@ -67,7 +67,11 @@ export default function OrdersPage() {
 
   const handleSaveOrder = async (order: Order | Omit<Order, 'id'>) => {
     try {
-      const isEdit = 'id' in order
+      // New orders now also carry a client-generated id (so the create
+      // request can be idempotent) - "has an id" alone no longer means
+      // "this is an edit". An edit's id already exists in the loaded orders
+      // list; a freshly-generated one for a new order never will.
+      const isEdit = 'id' in order && orders.some(o => o.id === (order as Order).id)
       const url = isEdit ? `/api/orders/${(order as Order).id}` : '/api/orders'
       const method = isEdit ? 'PUT' : 'POST'
       

@@ -74,7 +74,12 @@ export default function ShiftMasterPage() {
 
   const handleSaveShift = async (shift: Partial<Shift>) => {
     try {
-      if (shift.id) {
+      // New shifts now also carry a client-generated id (so the create
+      // request can be idempotent) - "has an id" alone no longer means
+      // "this is an edit". An edit's id already exists in the loaded shifts
+      // list; a freshly-generated one for a new shift never will.
+      const isEdit = shift.id && shifts.some(s => s.id === shift.id)
+      if (isEdit) {
         const res = await fetch(`/api/shifts/${shift.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },

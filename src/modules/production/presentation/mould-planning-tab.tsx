@@ -9,7 +9,7 @@ interface MouldPlanningTabProps {
   patterns: any[]
   openOrders: any[]
   dailyPlans: any[]
-  onSaveDayPlan: (date: string, plans: any[]) => void
+  onSaveDayPlan: (date: string, plans: any[]) => Promise<void>
 }
 
 export function MouldPlanningTab({ mouldBacklog, patterns, openOrders, dailyPlans, onSaveDayPlan }: MouldPlanningTabProps) {

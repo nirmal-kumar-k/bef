@@ -20,13 +20,17 @@ export function ShiftModal({
 }: {
   isOpen: boolean
   onClose: () => void
-  onSave: (shift: Partial<Shift>) => void
+  onSave: (shift: Partial<Shift>) => Promise<void>
   shift: Shift | null
 }) {
   const [name, setName] = useState('')
   const [startTime, setStartTime] = useState('')
   const [endTime, setEndTime] = useState('')
   const [breaks, setBreaks] = useState<{startTime: string, endTime: string}[]>([])
+  // Guards Save against being fired again while a save is still in flight -
+  // without this, a double-click before the first request's response lands
+  // submitted the same new shift twice.
+  const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
     if (shift) {
@@ -56,18 +60,27 @@ export function ShiftModal({
     setBreaks(newBreaks)
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (isSaving) return
     // Filter out empty breaks before saving
     const validBreaks = breaks.filter(b => b.startTime && b.endTime)
-    onSave({
-      ...(shift?.id ? { id: shift.id } : {}),
-      name,
-      startTime,
-      endTime,
-      breaks: validBreaks,
-      isActive: shift ? shift.isActive : true
-    })
-    onClose()
+    setIsSaving(true)
+    try {
+      await onSave({
+        // Generated now for a new shift, not left blank until the server
+        // assigns one - the create route upserts on this id, so even a
+        // double-submit collapses into one shift instead of creating two.
+        id: shift?.id || crypto.randomUUID(),
+        name,
+        startTime,
+        endTime,
+        breaks: validBreaks,
+        isActive: shift ? shift.isActive : true
+      })
+      onClose()
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   return (
@@ -163,8 +176,8 @@ export function ShiftModal({
           <Button variant="outline" onClick={onClose} className="border-[#E0E7FF] text-[#64748B] hover:text-[#172554]">
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={!name || !startTime || !endTime} className="bg-[#4F46E5] hover:bg-[#4F46E5]/90 text-white">
-            Save Shift
+          <Button onClick={handleSave} disabled={!name || !startTime || !endTime || isSaving} className="bg-[#4F46E5] hover:bg-[#4F46E5]/90 text-white">
+            {isSaving ? 'Saving...' : 'Save Shift'}
           </Button>
         </DialogFooter>
       </DialogContent>
