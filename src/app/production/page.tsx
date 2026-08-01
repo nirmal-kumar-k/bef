@@ -68,6 +68,38 @@ export default function ProductionTrackingPage() {
 
   const dayPlans = useMemo(() => plans.filter(p => p.date === dateFilter), [plans, dateFilter])
 
+  const [summaryView, setSummaryView] = useState<'calendar' | 'list'>('list')
+
+  const calendarDays = useMemo(() => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1)
+    const startOffset = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1
+    const startDate = new Date(firstDay)
+    startDate.setDate(firstDay.getDate() - startOffset)
+    return Array.from({ length: 42 }, (_, i) => {
+      const d = new Date(startDate)
+      d.setDate(startDate.getDate() + i)
+      return d
+    })
+  }, [])
+
+  const trackingByDate = useMemo(() => {
+    const map = new Map<string, Record<'Core' | 'Mould' | 'Melt' | 'Knockout', { planned: number; actual: number }>>()
+    plans.forEach(p => {
+      if (!STAGES.includes(p.stage)) return
+      if (!map.has(p.date)) {
+        map.set(p.date, { Core: { planned: 0, actual: 0 }, Mould: { planned: 0, actual: 0 }, Melt: { planned: 0, actual: 0 }, Knockout: { planned: 0, actual: 0 } })
+      }
+      const entry = map.get(p.date)!
+      entry[p.stage].planned += Number(p.quantityScheduled) || 0
+      entry[p.stage].actual += p.stage === 'Melt'
+        ? Number(p.actualQuantity) || 0
+        : Object.values(p.hourlyActuals || {}).reduce((s, v) => s + (Number(v) || 0), 0)
+    })
+    return map
+  }, [plans])
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -88,31 +120,76 @@ export default function ProductionTrackingPage() {
         </div>
       </div>
 
-      <div className="flex w-full max-w-xl bg-white p-1.5 rounded-full shadow-sm border border-[#D8DEE9]">
-        {STAGES.map(stage => (
-          <button
-            key={stage}
-            onClick={() => setActiveStage(stage)}
-            className={cn(
-              'flex-1 px-3 py-2 text-sm font-bold text-center transition-all duration-300 rounded-full',
-              activeStage === stage ? 'bg-[#4F46E5] text-white shadow-md' : 'text-[#64748B] hover:text-[#4F46E5]'
-            )}
-          >
-            {stage}
-          </button>
-        ))}
+      <div className="flex justify-end">
+        <div className="flex items-center gap-3 bg-white px-4 py-1.5 border border-[#E0E7FF] rounded-xl shadow-sm">
+          <button onClick={() => setSummaryView('calendar')} className={cn('text-sm font-semibold', summaryView === 'calendar' ? 'text-[#172554]' : 'text-[#94A3B8]')}>Calendar</button>
+          <button onClick={() => setSummaryView('list')} className={cn('text-sm font-semibold', summaryView === 'list' ? 'text-[#172554]' : 'text-[#94A3B8]')}>List</button>
+        </div>
       </div>
 
-      {loading ? (
-        <p className="text-[#64748B] text-center py-12 animate-pulse">Loading tracking data...</p>
-      ) : (
-        <TrackingStageList
-          stage={activeStage}
-          plans={dayPlans}
-          orders={orders}
-          onEnterActuals={isClosed ? () => {} : setActualsPlan}
-          disableActuals={isClosed}
-        />
+      {summaryView === 'list' && (
+        <>
+          <div className="flex w-full max-w-xl bg-white p-1.5 rounded-full shadow-sm border border-[#D8DEE9]">
+            {STAGES.map(stage => (
+              <button
+                key={stage}
+                onClick={() => setActiveStage(stage)}
+                className={cn(
+                  'flex-1 px-3 py-2 text-sm font-bold text-center transition-all duration-300 rounded-full',
+                  activeStage === stage ? 'bg-[#4F46E5] text-white shadow-md' : 'text-[#64748B] hover:text-[#4F46E5]'
+                )}
+              >
+                {stage}
+              </button>
+            ))}
+          </div>
+
+          {loading ? (
+            <p className="text-[#64748B] text-center py-12 animate-pulse">Loading tracking data...</p>
+          ) : (
+            <TrackingStageList
+              stage={activeStage}
+              plans={dayPlans}
+              orders={orders}
+              onEnterActuals={isClosed ? () => {} : setActualsPlan}
+              disableActuals={isClosed}
+            />
+          )}
+        </>
+      )}
+
+      {summaryView === 'calendar' && (
+        <div className="bg-[#F4F6FB] border border-[#E0E7FF] rounded-xl p-4 overflow-x-auto">
+          <div className="grid grid-cols-7 mt-2 mb-2 min-w-[800px]">
+            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
+              <div key={day} className="py-2 text-center text-xs font-semibold text-[#64748B] uppercase tracking-wider">{day}</div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7 gap-3 min-w-[800px]">
+            {calendarDays.map((date, i) => {
+              const dateStr = toLocalDateString(date)
+              const isToday = toLocalDateString(new Date()) === dateStr
+              const counts = trackingByDate.get(dateStr)
+              return (
+                <button
+                  key={i}
+                  onClick={() => { setDateFilter(dateStr); setSummaryView('list') }}
+                  className="min-h-[110px] bg-white p-2 rounded-[12px] border border-[#E0E7FF] flex flex-col gap-1 text-left hover:border-[#4F46E5] transition-colors"
+                >
+                  <span className={cn('text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full self-end', isToday ? 'bg-[#4F46E5] text-white' : 'text-[#64748B]')}>
+                    {date.getDate()}
+                  </span>
+                  {STAGES.map(stage => counts?.[stage]?.planned ? (
+                    <div key={stage} className="flex items-center justify-between px-1 text-[10.5px]">
+                      <span className="text-[#64748B]">{stage}</span>
+                      <span className="font-bold text-[#0F172A]">{counts[stage].actual} / {counts[stage].planned}</span>
+                    </div>
+                  ) : null)}
+                </button>
+              )
+            })}
+          </div>
+        </div>
       )}
 
       <TrackingActualsModal
