@@ -19,6 +19,7 @@ export function TrackingActualsModal({ plan, shifts, onClose, onSaved }: Trackin
   const [actuals, setActuals] = useState<Record<string, number>>({})
   const [meltActual, setMeltActual] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     if (plan) {
@@ -34,17 +35,24 @@ export function TrackingActualsModal({ plan, shifts, onClose, onSaved }: Trackin
 
   const handleSave = async () => {
     setIsSaving(true)
+    setError('')
     try {
       const body = plan.stage === 'Melt'
         ? { actualQuantity: meltActual === '' ? null : Number(meltActual) }
         : { hourlyActuals: actuals }
-      await fetch(`/api/production-plans/${plan.id}`, {
+      const res = await fetch(`/api/production-plans/${plan.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
+      if (!res.ok) {
+        setError('Failed to save actuals. Please try again.')
+        return
+      }
       await onSaved()
       onClose()
+    } catch {
+      setError('An error occurred while saving. Please try again.')
     } finally {
       setIsSaving(false)
     }
@@ -90,11 +98,14 @@ export function TrackingActualsModal({ plan, shifts, onClose, onSaved }: Trackin
           )}
         </div>
 
-        <div className="p-6 border-t border-sidebar-border bg-white rounded-b-xl flex justify-end gap-3">
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleSave} disabled={isSaving} className="bg-[#4F46E5] hover:bg-[#4F46E5]/90 text-white">
-            {isSaving ? 'Saving...' : 'Save Actuals'}
-          </Button>
+        <div className="p-6 border-t border-sidebar-border bg-white rounded-b-xl">
+          {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={onClose}>Cancel</Button>
+            <Button onClick={handleSave} disabled={isSaving} className="bg-[#4F46E5] hover:bg-[#4F46E5]/90 text-white">
+              {isSaving ? 'Saving...' : 'Save Actuals'}
+            </Button>
+          </div>
         </div>
       </div>
     </div>
