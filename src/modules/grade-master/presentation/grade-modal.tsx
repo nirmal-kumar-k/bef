@@ -12,7 +12,7 @@ import type { Grade } from '../domain/grade.types'
 interface GradeModalProps {
   isOpen: boolean
   onClose: () => void
-  onSave: (grade: Partial<Grade>) => void
+  onSave: (grade: Partial<Grade>) => Promise<void>
   grade: Grade | null
 }
 
@@ -25,6 +25,10 @@ export function GradeModal({ isOpen, onClose, onSave, grade }: GradeModalProps) 
   const [p, setP] = useState('')
   const [s, setS] = useState('')
   const [remarks, setRemarks] = useState('')
+  // Guards Save against being fired again while a save is still in flight -
+  // without this, a double-click before the first request's response lands
+  // submitted the same new grade twice.
+  const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
     if (grade) {
@@ -50,19 +54,28 @@ export function GradeModal({ isOpen, onClose, onSave, grade }: GradeModalProps) 
 
   if (!isOpen) return null
 
-  const handleSave = () => {
-    onSave({
-      id: grade?.id,
-      code,
-      name,
-      c,
-      si,
-      mn,
-      p,
-      s,
-      remarks,
-    })
-    onClose()
+  const handleSave = async () => {
+    if (isSaving) return
+    setIsSaving(true)
+    try {
+      await onSave({
+        // Generated now for a new grade, not left blank until the server
+        // assigns one - the create route upserts on this id, so even a
+        // double-submit collapses into one grade instead of creating two.
+        id: grade?.id || crypto.randomUUID(),
+        code,
+        name,
+        c,
+        si,
+        mn,
+        p,
+        s,
+        remarks,
+      })
+      onClose()
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   return (
@@ -190,12 +203,12 @@ export function GradeModal({ isOpen, onClose, onSave, grade }: GradeModalProps) 
           >
             Cancel
           </Button>
-          <Button 
+          <Button
             onClick={handleSave}
-            disabled={!code.trim() || !name.trim()}
+            disabled={!code.trim() || !name.trim() || isSaving}
             className="bg-[#4F46E5] hover:bg-[#4F46E5]/90 text-white font-semibold min-w-[120px]"
           >
-            Save Grade
+            {isSaving ? 'Saving...' : 'Save Grade'}
           </Button>
         </div>
       </div>

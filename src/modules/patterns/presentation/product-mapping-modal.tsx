@@ -44,6 +44,21 @@ interface MappingLine {
   selectedCoreBoxes: CoreBoxEntry[]
 }
 
+// Collapses duplicate entries for the same physical core box (same code)
+// into one. A pattern's core-box ids used to get regenerated on unrelated
+// edits, which could leave two independently-stale entries that both
+// eventually resolve to the same current core box - keeping only the first
+// occurrence stops that box's quantity from being silently counted twice
+// downstream in Core Planning.
+function dedupeByCode(entries: CoreBoxEntry[]): CoreBoxEntry[] {
+  const seen = new Set<string>()
+  return entries.filter(cb => {
+    if (seen.has(cb.coreBoxCode)) return false
+    seen.add(cb.coreBoxCode)
+    return true
+  })
+}
+
 export function ProductMappingModal({
   isOpen,
   onClose,
@@ -84,18 +99,26 @@ export function ProductMappingModal({
           productCode: matchedProd ? matchedProd.code : '',
           selectedProductId: matchedProd ? matchedProd.id : '',
           cavities: String(mp.cavities || ''),
-          selectedCoreBoxes: (mp.selectedCoreBoxes || []).map((cb: any) => {
-            if (cb.coreBoxId) return cb
-            // Fallback for old data: find matching core box from the pattern
-            const match = coreBoxes.find(c => c.code === cb.coreBoxCode)
-            return { ...cb, coreBoxId: match ? match.id : cb.coreBoxCode }
-          })
+          selectedCoreBoxes: dedupeByCode(
+            (mp.selectedCoreBoxes || []).map((cb: any) => {
+              // Trust the stored coreBoxId only if it still matches a real
+              // core box on this pattern. A pattern's core-box rows used to
+              // get wholesale replaced (fresh random ids, even for untouched
+              // boxes) on any edit - this re-resolves by code (the one
+              // identifier that actually survives that) whenever the id is
+              // stale, missing, or was never set, so old data self-heals
+              // instead of silently showing every box as unchecked.
+              if (cb.coreBoxId && coreBoxes.some(c => c.id === cb.coreBoxId)) return cb
+              const match = coreBoxes.find(c => c.code === cb.coreBoxCode)
+              return { ...cb, coreBoxId: match ? match.id : cb.coreBoxCode }
+            })
+          )
         }
       }))
     } else if (products.length > 0) {
       setLines([{ id: Date.now(), productCode: '', selectedProductId: '', cavities: '', selectedCoreBoxes: [] }])
     }
-  }, [isOpen, initialMappedProducts, products])
+  }, [isOpen, initialMappedProducts, products, coreBoxes])
 
   const handleProductCodeChange = (lineId: number, code: string) => {
     const matchedProduct = products.find(p => p.code.toLowerCase() === code.toLowerCase())
@@ -131,13 +154,17 @@ export function ProductMappingModal({
     setLines(lines.map(l => l.id === id ? { ...l, cavities: val } : l))
   }
 
-  // Toggle a core box on/off for a line; adds with qty=1 or removes it
+  // Toggle a core box on/off for a line; adds with qty=1 or removes it.
+  // Matches by code as well as id - if a stale/duplicate id ever slips
+  // through, this still recognizes it as the same physical core box instead
+  // of adding a second entry alongside it (which is what silently doubled a
+  // core box's counted quantity in Core Planning).
   const toggleCoreBox = (lineId: number, coreBoxId: string, coreBoxCode: string) => {
     setLines(lines.map(l => {
       if (l.id !== lineId) return l
-      const exists = l.selectedCoreBoxes.some(cb => cb.coreBoxId === coreBoxId)
+      const exists = l.selectedCoreBoxes.some(cb => cb.coreBoxId === coreBoxId || cb.coreBoxCode === coreBoxCode)
       if (exists) {
-        return { ...l, selectedCoreBoxes: l.selectedCoreBoxes.filter(cb => cb.coreBoxId !== coreBoxId) }
+        return { ...l, selectedCoreBoxes: l.selectedCoreBoxes.filter(cb => cb.coreBoxId !== coreBoxId && cb.coreBoxCode !== coreBoxCode) }
       } else {
         return { ...l, selectedCoreBoxes: [...l.selectedCoreBoxes, { coreBoxId, coreBoxCode, quantity: 1 }] }
       }

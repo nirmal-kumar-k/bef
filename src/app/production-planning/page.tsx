@@ -321,7 +321,21 @@ export default function ProductionPlanningPage() {
           if (id) await fetch(`/api/production-plans/${id}`, { method: 'DELETE' })
           continue
         }
-        if (id) {
+        // Rows added this session carry a client-generated id from the
+        // moment they're added (not left blank until the server assigns
+        // one), so `id` truthiness alone can no longer tell "new" from
+        // "existing" - _isNew is the explicit signal each modal sets.
+        // Routing every never-yet-confirmed row through the upsert-capable
+        // POST (keyed on its own id) makes a duplicate submission - e.g. a
+        // double-click before the first response lands - safely collapse
+        // into one row instead of creating two.
+        if (plan._isNew) {
+          await fetch('/api/production-plans', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...plan, id, date: plan.date || date })
+          })
+        } else if (id) {
           // Core/Mould/Knockout no longer have an Actual-entry field, so
           // `actualQuantity` can never be set for them again - treating an
           // unscheduled (0-hourly) row as "delete this plan" would wipe
@@ -341,7 +355,8 @@ export default function ProductionPlanningPage() {
             })
           }
         } else {
-          // Create
+          // Create (no client-generated id supplied - caller predates this
+          // convention or genuinely has none; falls back to the old path)
           await fetch('/api/production-plans', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

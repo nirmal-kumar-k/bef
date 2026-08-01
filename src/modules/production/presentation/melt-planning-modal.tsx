@@ -76,6 +76,13 @@ interface Pour {
   // when the modal opened - needed to compute how much MORE it can take
   // without double-subtracting its own prior contribution.
   originalQty: number
+  // True from the moment this pour is added locally until the server has
+  // actually confirmed it exists (i.e. it was loaded back via dailyPlans).
+  // planId is generated client-side immediately on add, so it's always
+  // present - this flag is what buildPlansToSave/handleSaveDayPlan actually
+  // use to decide create-vs-update, since id-truthiness alone can no longer
+  // tell them apart.
+  isNew: boolean
 }
 
 const parseTime = (timeStr: string) => {
@@ -92,11 +99,34 @@ const parseTime = (timeStr: string) => {
 }
 
 const formatTime = (mins: number) => {
-  const h = Math.floor(mins / 60)
-  const m = mins % 60
+  // Heats cascade by adding durations onto a running minute count that can
+  // exceed 1440 (crossing midnight) - wrap it back into a single 24h clock
+  // BEFORE deriving the hour, or an accumulated value like 1480 gives h=24,
+  // and "h >= 12 ? PM : AM" wrongly stays PM instead of correctly rolling
+  // over to AM (e.g. 11:50 PM + 50 min showed as "12:40 PM" instead of the
+  // correct "12:40 AM").
+  const wrapped = ((mins % (24 * 60)) + 24 * 60) % (24 * 60)
+  const h = Math.floor(wrapped / 60)
+  const m = wrapped % 60
   const ampm = h >= 12 ? 'PM' : 'AM'
   const h12 = h % 12 || 12
   return `${h12.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')} ${ampm}`
+}
+
+// Shared by the live chip/card indicator AND buildPlansToSave's Save-time
+// block, so the two can never disagree with each other. A heat's end
+// time-of-day at or before the shift's own start time-of-day means it
+// wrapped past midnight relative to the shift - same overnight
+// normalization convention used elsewhere (generateTimeSlots' breaks).
+const isHeatPastShiftEnd = (heat: { endTime: string }, shift: { startTime: string; endTime: string } | undefined) => {
+  if (!shift) return false
+  const shiftStartMins = parseTime(shift.startTime)
+  let shiftEndMins = parseTime(shift.endTime)
+  if (shiftEndMins <= shiftStartMins) shiftEndMins += 24 * 60
+
+  let heatEndMins = parseTime(heat.endTime)
+  if (heatEndMins <= shiftStartMins) heatEndMins += 24 * 60
+  return heatEndMins > shiftEndMins
 }
 
 const MONTH_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L']
@@ -165,9 +195,19 @@ export function MeltPlanningModal({
 
   // Add Heat flow: pick a grade first, then a heat code field appears
   const [addHeatOpen, setAddHeatOpen] = useState(false)
+  // Focused the instant the Add Heat popover opens, so the user can accept
+  // or edit the auto-generated code by typing straight away, no mouse click
+  // needed to get into "typing mode".
+  const heatCodeInputRef = useRef<HTMLInputElement>(null)
   const [capacityErrorLines, setCapacityErrorLines] = useState<string[] | null>(null)
   const [newHeatGrade, setNewHeatGrade] = useState('')
   const [newHeatCode, setNewHeatCode] = useState('')
+  // Guards Save/Save & Refresh against being fired again while a save is
+  // still in flight - onSaveDayPlan is a multi-request round trip (one
+  // fetch per row, then a refetch), and without this a second click before
+  // it resolves would re-submit every not-yet-persisted pour as if it were
+  // new (no planId assigned yet), creating duplicate rows.
+  const [isSaving, setIsSaving] = useState(false)
 
   // Snapshot of the fields that matter for saving, captured once when the
   // modal's heats/pours are (re)initialized - compared against current state
@@ -186,6 +226,10 @@ export function MeltPlanningModal({
   // right after switching to it.
   const allocationPanelRef = useRef<HTMLDivElement>(null)
   const scrollToAllocationNext = useRef(false)
+  // First row's Qty input in the Allocate table - focused the instant the
+  // table opens so the user can start typing immediately, no mouse click
+  // needed to get into "typing mode".
+  const firstAllocationInputRef = useRef<HTMLInputElement>(null)
 
   // Fetch Master Data
   useEffect(() => {
@@ -227,7 +271,7 @@ export function MeltPlanningModal({
   useEffect(() => {
     if (isOpen && dailyPlans && equipments.length > 0 && selectedShiftId) {
       const existingMelt = dailyPlans.filter(p => p.stage === 'Melt' && (!p.shiftId || p.shiftId === selectedShiftId))
-      
+
       const loadedHeats: Record<string, Heat> = {}
       const loadedPours: Pour[] = []
 
@@ -235,7 +279,7 @@ export function MeltPlanningModal({
         const eqId = p.equipmentId || equipments[0].id
         const hNum = p.heatNumber || 1
         const hId = `${eqId}-heat-${hNum}`
-        
+
         if (!loadedHeats[hId]) {
           loadedHeats[hId] = {
             id: hId,
@@ -284,7 +328,8 @@ export function MeltPlanningModal({
           mouldsScheduled: loadedMoulds,
           isConfirmed: !!p.isConfirmed,
           itemId: p.itemId,
-          originalQty: loadedMoulds
+          originalQty: loadedMoulds,
+          isNew: false
         })
       })
 
@@ -297,10 +342,10 @@ export function MeltPlanningModal({
         pours: loadedPours.map(toPourSnapshot)
       })
     }
-  // equipments.length (not equipments itself) is the dependency deliberately -
-  // this should only re-run when equipment data first loads, not every time
-  // its contents change (e.g. addHeat updating a furnace's heatSequence
-  // locally), which would otherwise wipe out any heat added but not yet saved.
+    // equipments.length (not equipments itself) is the dependency deliberately -
+    // this should only re-run when equipment data first loads, not every time
+    // its contents change (e.g. addHeat updating a furnace's heatSequence
+    // locally), which would otherwise wipe out any heat added but not yet saved.
   }, [isOpen, date, dailyPlans, equipments.length, openOrders, products, patterns, selectedShiftId])
 
   // Fields whose values determine what actually gets saved - used both for
@@ -346,11 +391,36 @@ export function MeltPlanningModal({
     }
   }, [allocationHeatId])
 
+  // Auto-focus the first row's Qty input the instant the Allocate table
+  // opens, so the user lands in "typing mode" without clicking anything.
+  // Double rAF (not single) - a single frame can still land before the
+  // browser has actually painted the freshly-mounted table, so the .focus()
+  // call hits an element that isn't interactive yet and silently fails to
+  // stick; waiting one extra frame reliably lands after paint.
+  useEffect(() => {
+    if (allocationHeatId) {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          firstAllocationInputRef.current?.focus()
+        })
+      })
+    }
+  }, [allocationHeatId])
+
   // Warn before discarding unsaved edits when hopping days via the header
   // arrows - otherwise just switch immediately.
   const handleNavigateDate = (direction: 1 | -1) => {
     if (isDirty && !confirm('You have unsaved changes on this day. Discard them and switch days?')) return
     onNavigateDate?.(direction)
+  }
+
+  // Same guard as day-navigation, but for actually closing the modal - the
+  // Cancel button and the dialog's own X/backdrop-click previously closed
+  // immediately with no warning at all, silently discarding anything typed
+  // since the last save.
+  const handleClose = () => {
+    if (isDirty && !confirm('You have unsaved changes on this day. Close without saving?')) return
+    onClose()
   }
 
   // Add a heat manually: grade is picked first, then a heat code is entered for it.
@@ -527,6 +597,23 @@ export function MeltPlanningModal({
       return null
     }
 
+    // Block Save if any heat's pour window runs past the shift's own end
+    // time - same "Cannot Save" pattern as the capacity checks above, not a
+    // live mid-edit block, so the user can freely add/adjust heats while
+    // working and only gets stopped (with a specific, actionable message)
+    // when they try to actually save something that overruns the shift.
+    const shift = shifts.find(s => s.id === selectedShiftId)
+    if (shift) {
+      const overShiftHeats = heats.filter(h => isHeatPastShiftEnd(h, shift))
+
+      if (overShiftHeats.length > 0) {
+        setCapacityErrorLines(overShiftHeats.map(h =>
+          `Heat ${h.heatNumber} (${h.heatCode}): ends at ${h.endTime}, after ${shift.name} ends at ${shift.endTime} - adjust its start time or duration`
+        ))
+        return null
+      }
+    }
+
     const plansToSave = pours.map(p => {
       const h = heats.find(ht => ht.id === p.heatId)
       return {
@@ -549,33 +636,48 @@ export function MeltPlanningModal({
         heatNo: h?.heatCode,
         heatSequenceNumber: h?.sequenceNumber,
         isFirstHeat: !!h?.isFirstHeat,
-        isConfirmed: p.isConfirmed
+        isConfirmed: p.isConfirmed,
+        _isNew: p.isNew
       }
     })
 
     // Heats/pours removed via the trash icon this session need an explicit
     // delete instruction - they're not in plansToSave at all, so without this
     // their existing DB record would sit there untouched forever, silently
-    // continuing to count against the mould cap on every future save.
-    const deletions = removedPours.filter(p => p.planId).map(p => ({ id: p.planId, _id: p.planId, _delete: true }))
+    // continuing to count against the mould cap on every future save. Pours
+    // that were added and removed again in the same session without ever
+    // being saved (still isNew) have nothing to delete server-side.
+    const deletions = removedPours.filter(p => p.planId && !p.isNew).map(p => ({ id: p.planId, _id: p.planId, _delete: true }))
     return [...plansToSave, ...deletions]
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (isSaving) return
     const plansToSave = buildPlansToSave()
     if (!plansToSave) return
-    onSaveDayPlan(date, plansToSave)
-    onClose()
+    setIsSaving(true)
+    try {
+      await onSaveDayPlan(date, plansToSave)
+      onClose()
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   // Saves exactly like Save Day Plan, but keeps the modal open and re-loads
   // this shift's heats/pours fresh from the just-saved backend state (the
   // dailyPlans prop update naturally re-triggers the init effect), instead
   // of closing.
-  const handleSaveAndRefresh = () => {
+  const handleSaveAndRefresh = async () => {
+    if (isSaving) return
     const plansToSave = buildPlansToSave()
     if (!plansToSave) return
-    onSaveDayPlan(date, plansToSave)
+    setIsSaving(true)
+    try {
+      await onSaveDayPlan(date, plansToSave)
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   // Adjust cascade heat timings
@@ -583,7 +685,7 @@ export function MeltPlanningModal({
     setHeats(prev => {
       const furnaceHeats = [...prev.filter(h => h.furnaceId === activeFurnaceId)].sort((a, b) => a.heatNumber - b.heatNumber)
       const otherHeats = prev.filter(h => h.furnaceId !== activeFurnaceId)
-      
+
       const targetIdx = furnaceHeats.findIndex(h => h.id === heatId)
       if (targetIdx === -1) return prev
 
@@ -592,7 +694,7 @@ export function MeltPlanningModal({
       const regDur = getHeatDurationMins(furnace, false)
 
       let currentMins = parseTime(newStartTime)
-      
+
       for (let i = targetIdx; i < furnaceHeats.length; i++) {
         const h = furnaceHeats[i]
         const dur = h.isFirstHeat ? firstDur : regDur
@@ -653,6 +755,10 @@ export function MeltPlanningModal({
 
     setPours(prev => [...prev, {
       id: Math.random().toString(),
+      // Generated now, not left blank until the server assigns one - this
+      // is what makes the eventual create request idempotent (see isNew's
+      // comment on the Pour type).
+      planId: crypto.randomUUID(),
       furnaceId: activeFurnaceId,
       heatId: heatId,
       orderId: order?.id || '',
@@ -664,9 +770,12 @@ export function MeltPlanningModal({
       mouldsScheduled: mouldsToPour,
       isConfirmed: false,
       itemId: backlogItem.itemId,
-      originalQty: 0
+      originalQty: 0,
+      isNew: true
     }])
-    setAllocationHeatId(null)
+    // Deliberately stays open (was setAllocationHeatId(null) before) - so
+    // the user can keep adding more products to this heat one after another
+    // via keyboard alone, instead of the view snapping shut after just one.
   }
 
   // Same as removeHeat - a removed pour's saved DB row (if it has a planId)
@@ -682,7 +791,7 @@ export function MeltPlanningModal({
 
   const dateObj = new Date(date || new Date())
   const dateString = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
-  
+
   const furnace = equipments.find(e => e.id === activeFurnaceId)
   const maxCapacity = furnace?.maxMeltCapacityKg || 150
 
@@ -720,463 +829,523 @@ export function MeltPlanningModal({
   // the same warm cream background wash used elsewhere, while the existing
   // amber buttons/badges stay as they are.
   const selectedShift = shifts.find(s => s.id === selectedShiftId)
+  const selectedHeatPastShiftEnd = selectedHeat ? isHeatPastShiftEnd(selectedHeat, selectedShift) : false
+  // Combined flag for general card/header styling, which should react to
+  // EITHER problem - kept separate from selectedHeatOverCapacity itself,
+  // which stays weight-specific for the Charge Weight readout/bar further
+  // down.
+  const selectedHeatHasError = selectedHeatOverCapacity || selectedHeatPastShiftEnd
   const isNightShift = selectedShift?.name === 'Night Shift'
   const warmBg = isNightShift ? 'bg-orange-50' : 'bg-[#F4F6FB]'
   const warmBorder = isNightShift ? 'border-orange-200' : 'border-[#E0E7FF]'
 
   return (
     <>
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className={cn("w-full h-full max-w-full rounded-none sm:w-[95vw] sm:max-w-[1440px] sm:h-[90vh] sm:rounded-2xl text-foreground p-0 shadow-2xl flex flex-col transition-colors duration-500 ease-in-out", warmBg, warmBorder)}>
-        <div className="flex flex-col w-full h-full">
-          {/* Header */}
-          <DialogHeader className={cn("p-6 pb-4 border-b shrink-0 bg-white transition-colors duration-500 ease-in-out", warmBorder)}>
-            <div className="flex items-center justify-between">
-              <div>
-                <DialogTitle className="flex items-center gap-2 text-2xl font-heading text-[#172554]">
-                  {onNavigateDate && (
-                    <button
-                      type="button"
-                      onClick={() => handleNavigateDate(-1)}
-                      className="p-1 rounded-lg transition-colors hover:bg-amber-100"
-                      aria-label="Previous day"
-                    >
-                      <CaretLeft size={20} weight="bold" />
-                    </button>
-                  )}
-                  <span>{dateString} - Melt Planning</span>
-                  {onNavigateDate && (
-                    <button
-                      type="button"
-                      onClick={() => handleNavigateDate(1)}
-                      className="p-1 rounded-lg transition-colors hover:bg-amber-100"
-                      aria-label="Next day"
-                    >
-                      <CaretRight size={20} weight="bold" />
-                    </button>
-                  )}
-                </DialogTitle>
-                <div className="flex items-center gap-3 mt-3">
-                  <span className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">Select Shift:</span>
-                  {shifts.length > 0 && (
-                    <Select value={selectedShiftId} onValueChange={setSelectedShiftId}>
-                      <SelectTrigger className="h-9 px-4 text-sm font-semibold rounded-lg border border-[#E0E7FF] bg-[#FFFFFF] text-[#172554] shadow-sm hover:bg-[#F8FAFC] w-48">
-                        <SelectValue placeholder="Select Shift">
-                          {(id: string) => {
-                            const s = shifts.find(sh => sh.id === id)
-                            return s ? `${s.name} (${s.startTime} - ${s.endTime})` : 'Select Shift'
-                          }}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {shifts.map(s => (
-                          <SelectItem key={s.id} value={s.id!} className="text-[#172554] text-sm">
-                            {s.name} ({s.startTime} - {s.endTime})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
+      <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+        <DialogContent className={cn("w-full h-full max-w-full rounded-none sm:w-[95vw] sm:max-w-[1440px] sm:h-[90vh] sm:rounded-2xl text-foreground p-0 shadow-2xl flex flex-col transition-colors duration-500 ease-in-out", warmBg, warmBorder)}>
+          <div className="flex flex-col w-full h-full">
+            {/* Header */}
+            <DialogHeader className={cn("p-6 pb-4 border-b shrink-0 bg-white transition-colors duration-500 ease-in-out", warmBorder)}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <DialogTitle className="flex items-center gap-2 text-2xl font-heading text-[#172554]">
+                    {onNavigateDate && (
+                      <button
+                        type="button"
+                        onClick={() => handleNavigateDate(-1)}
+                        className="p-2 rounded-lg transition-colors hover:bg-amber-100"
+                        aria-label="Previous day"
+                      >
+                        <CaretLeft size={28} weight="bold" />
+                      </button>
+                    )}
+                    <span>{dateString} - Melt Planning</span>
+                    {onNavigateDate && (
+                      <button
+                        type="button"
+                        onClick={() => handleNavigateDate(1)}
+                        className="p-2 rounded-lg transition-colors hover:bg-amber-100"
+                        aria-label="Next day"
+                      >
+                        <CaretRight size={28} weight="bold" />
+                      </button>
+                    )}
+                  </DialogTitle>
+                  <div className="flex items-center gap-3 mt-3">
+                    <span className="text-[#64748B] text-xs font-semibold uppercase tracking-wider">Select Shift:</span>
+                    {shifts.length > 0 && (
+                      <Select value={selectedShiftId} onValueChange={setSelectedShiftId}>
+                        <SelectTrigger className="h-9 px-4 text-sm font-semibold rounded-lg border border-[#E0E7FF] bg-[#FFFFFF] text-[#172554] shadow-sm hover:bg-[#F8FAFC] w-48">
+                          <SelectValue placeholder="Select Shift">
+                            {(id: string) => {
+                              const s = shifts.find(sh => sh.id === id)
+                              return s ? `${s.name} (${s.startTime} - ${s.endTime})` : 'Select Shift'
+                            }}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {shifts.map(s => (
+                            <SelectItem key={s.id} value={s.id!} className="text-[#172554] text-sm">
+                              {s.name} ({s.startTime} - {s.endTime})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          </DialogHeader>
+            </DialogHeader>
 
-          {/* Body */}
-          <div className="flex-1 overflow-y-auto min-h-0 p-6 space-y-6">
-            {/* Furnace Tabs */}
-            <div className={cn("flex gap-2 overflow-x-auto pb-2 border-b transition-colors duration-500 ease-in-out", warmBorder)}>
-              {equipments.map(eq => (
-                <Button
-                  key={eq.id}
-                  variant={activeFurnaceId === eq.id ? "default" : "outline"}
-                  className={cn(
-                    "h-11 px-8 text-sm font-bold transition-all rounded-t-xl rounded-b-none border-b-0",
-                    activeFurnaceId === eq.id
-                      ? "bg-amber-500 text-white shadow-[0_-4px_10px_-2px_rgba(245,158,11,0.2)] hover:bg-amber-600"
-                      : cn("bg-[#FFFFFF] text-[#64748B] hover:bg-amber-50 hover:text-amber-700", warmBorder)
-                  )}
-                  onClick={() => setActiveFurnaceId(eq.id)}
-                >
-                  <Fire weight={activeFurnaceId === eq.id ? "fill" : "regular"} className="w-5 h-5 mr-2" />
-                  {eq.name}
-                </Button>
-              ))}
-            </div>
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto min-h-0 p-6 space-y-6">
+              {/* Furnace Tabs */}
+              <div className={cn("flex gap-2 overflow-x-auto pb-2 border-b transition-colors duration-500 ease-in-out", warmBorder)}>
+                {equipments.map(eq => (
+                  <Button
+                    key={eq.id}
+                    variant={activeFurnaceId === eq.id ? "default" : "outline"}
+                    className={cn(
+                      "h-11 px-8 text-sm font-bold transition-all rounded-t-xl rounded-b-none border-b-0",
+                      activeFurnaceId === eq.id
+                        ? "bg-amber-500 text-white shadow-[0_-4px_10px_-2px_rgba(245,158,11,0.2)] hover:bg-amber-600"
+                        : cn("bg-[#FFFFFF] text-[#64748B] hover:bg-amber-50 hover:text-amber-700", warmBorder)
+                    )}
+                    onClick={() => setActiveFurnaceId(eq.id)}
+                  >
+                    <Fire weight={activeFurnaceId === eq.id ? "fill" : "regular"} className="w-5 h-5 mr-2" />
+                    {eq.name}
+                  </Button>
+                ))}
+              </div>
 
-            {/* Furnace Schedule */}
-            {activeFurnaceId && (
-              <div className="space-y-4">
-                <div className={cn("flex flex-col lg:flex-row lg:items-center gap-6 bg-white rounded-xl border p-5 transition-colors duration-500 ease-in-out", warmBorder)}>
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-6">
-                    <h3 className="font-bold text-[#172554] text-base shrink-0">Heat Schedule</h3>
-                    <div className={cn("hidden sm:block h-8 w-px transition-colors duration-500 ease-in-out", warmBorder)} />
-                    <div className="flex items-center gap-6 flex-wrap">
-                      {furnace?.avgPiecesPerHour && (
-                        <div className="flex flex-col gap-0.5">
-                          <span className="text-[9px] font-bold uppercase tracking-wider text-[#94A3B8]">Avg Heats/Hr</span>
-                          <span className="text-sm font-bold text-amber-600 font-mono leading-none">{furnace.avgPiecesPerHour}</span>
-                        </div>
-                      )}
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-[9px] font-bold uppercase tracking-wider text-[#94A3B8]">First / Regular</span>
-                        <span className="text-sm font-bold text-amber-600 font-mono leading-none">{getHeatDurationMins(furnace, true)}m / {getHeatDurationMins(furnace, false)}m</span>
-                      </div>
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-[9px] font-bold uppercase tracking-wider text-[#94A3B8]">Max Capacity</span>
-                        <span className="text-sm font-bold text-amber-600 font-mono leading-none">{maxCapacity} kg</span>
-                      </div>
-                      <div className="flex flex-col gap-0.5">
-                        <label className="text-[9px] font-bold uppercase tracking-wider text-[#94A3B8]">Grade</label>
-                        <Select value={newHeatGrade} onValueChange={setNewHeatGrade}>
-                          <SelectTrigger className="h-7 w-[120px] px-2.5 text-xs border border-amber-200 rounded-md bg-white shadow-none font-bold text-[#172554] focus:border-amber-400 focus:ring-1 focus:ring-amber-400 focus-visible:border-amber-400 focus-visible:ring-1 focus-visible:ring-amber-400">
-                            <SelectValue placeholder="Select grade" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {grades.map(g => (
-                              <SelectItem key={g.id} value={g.code}>{g.code} - {g.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </div>
-                  <Popover open={addHeatOpen} onOpenChange={(open) => {
-                    setAddHeatOpen(open)
-                    if (open) {
-                      const furnaceHeats = heats.filter(h => h.furnaceId === activeFurnaceId)
-                      setNewHeatCode(buildDefaultHeatCode(date, furnaceHeats.length + 1))
-                    } else {
-                      setNewHeatCode('')
-                    }
-                  }}>
-                    <PopoverTrigger
-                      disabled={!newHeatGrade}
-                      title={!newHeatGrade ? 'Select a grade first' : undefined}
-                      className={cn(buttonVariants({ variant: "default" }), "h-9 px-4 bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold disabled:opacity-50 disabled:pointer-events-none shrink-0 w-full lg:w-auto")}
-                    >
-                      <Plus className="w-4 h-4 mr-1" /> Add Heat
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[280px] p-4 shadow-2xl border-[#E0E7FF] rounded-xl" side="bottom" align="end">
-                      <div className="space-y-3">
-                        <div className="text-xs text-[#64748B]">Grade: <span className="font-bold text-amber-600">{newHeatGrade}</span></div>
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]">Heat Code</label>
-                          <Input
-                            value={newHeatCode}
-                            onChange={e => setNewHeatCode(e.target.value)}
-                            placeholder="e.g. H001"
-                            className="h-9 text-sm font-mono"
-                          />
-                        </div>
-                        <Button
-                          onClick={addHeat}
-                          disabled={!newHeatGrade || !newHeatCode.trim()}
-                          className="w-full h-9 bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold disabled:opacity-50"
-                        >
-                          Add Heat
-                        </Button>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                </div>
-
-                {activeHeats.length === 0 && (
-                  <div className={cn("p-10 text-center text-[#94A3B8] text-sm italic bg-white rounded-xl border border-dashed transition-colors duration-500 ease-in-out", warmBorder)}>
-                    No heats added yet for this furnace. Click &quot;Add Heat&quot; to create one.
-                  </div>
-                )}
-
-                {/* Compact chip grid - one small box per heat, click shows its full card in the panel below */}
-                <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-2.5">
-                  {activeHeats.map(heat => {
-                    const heatPours = pours.filter(p => p.heatId === heat.id)
-                    const totalWeight = heatPours.reduce((sum, p) => sum + (p.mouldsScheduled * p.mouldWeight), 0)
-                    const isOverCapacity = totalWeight > maxCapacity
-                    const isSelected = selectedHeat?.id === heat.id
-
-                    return (
-                      <button
-                        key={heat.id}
-                        onClick={() => { setDetailHeatId(heat.id); setAllocationHeatId(null); setAllocationSearch('') }}
-                        className={cn(
-                          "w-full text-left bg-white p-3 rounded-[12px] border shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:-translate-y-[2px] hover:shadow-[0_4px_14px_rgba(79,70,229,0.08)] transition-all duration-300 ease-out",
-                          isOverCapacity ? "border-red-300 hover:border-red-400" : cn(warmBorder, "hover:border-amber-400"),
-                          isSelected && "ring-2 ring-amber-300 border-amber-400"
-                        )}
-                      >
-                        <div className="flex items-center justify-between gap-2 min-w-0">
-                          <span className="font-mono font-bold text-xs text-[#172554] whitespace-nowrap truncate min-w-0">{heat.heatCode || `Heat ${heat.heatNumber}`}</span>
-                          <span
-                            title="Furnace's running heat count - never resets on its own (reset in Equipment Master)"
-                            className="font-mono text-xs font-bold text-amber-700 bg-amber-100 px-2 py-1 rounded shrink-0"
-                          >
-                            #{heat.sequenceNumber ?? heat.heatNumber}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between mt-1">
-                          <span className="text-[10px] font-semibold text-[#64748B]">{heat.grade}</span>
-                          {heat.isFirstHeat && (
-                            <span className="text-[8px] font-bold uppercase tracking-wide text-amber-700 bg-amber-100 px-1 py-0.5 rounded shrink-0">First</span>
-                          )}
-                        </div>
-                        {isOverCapacity && (
-                          <div className="text-[9px] font-bold text-red-600 mt-1.5 flex items-center gap-0.5">
-                            <WarningCircle weight="fill" className="w-2.5 h-2.5" /> Over
+              {/* Furnace Schedule */}
+              {activeFurnaceId && (
+                <div className="space-y-4">
+                  <div className={cn("flex flex-col lg:flex-row lg:items-center gap-6 bg-white rounded-xl border p-5 transition-colors duration-500 ease-in-out", warmBorder)}>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-6">
+                      <h3 className="font-bold text-[#172554] text-base shrink-0">Heat Schedule</h3>
+                      <div className={cn("hidden sm:block h-8 w-px transition-colors duration-500 ease-in-out", warmBorder)} />
+                      <div className="flex items-center gap-6 flex-wrap">
+                        {furnace?.avgPiecesPerHour && (
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-[9px] font-bold uppercase tracking-wider text-[#94A3B8]">Avg Heats/Hr</span>
+                            <span className="text-sm font-bold text-amber-600 font-mono leading-none">{furnace.avgPiecesPerHour}</span>
                           </div>
                         )}
-                      </button>
-                    )
-                  })}
-                </div>
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[9px] font-bold uppercase tracking-wider text-[#94A3B8]">First / Regular</span>
+                          <span className="text-sm font-bold text-amber-600 font-mono leading-none">{getHeatDurationMins(furnace, true)}m / {getHeatDurationMins(furnace, false)}m</span>
+                        </div>
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[9px] font-bold uppercase tracking-wider text-[#94A3B8]">Max Capacity</span>
+                          <span className="text-sm font-bold text-amber-600 font-mono leading-none">{maxCapacity} kg</span>
+                        </div>
+                        <div className="flex flex-col gap-0.5">
+                          <label className="text-[9px] font-bold uppercase tracking-wider text-[#94A3B8]">Grade</label>
+                          <Select value={newHeatGrade} onValueChange={setNewHeatGrade}>
+                            <SelectTrigger className="h-7 w-[120px] px-2.5 text-xs border border-amber-200 rounded-md bg-white shadow-none font-bold text-[#172554] focus:border-amber-400 focus:ring-1 focus:ring-amber-400 focus-visible:border-amber-400 focus-visible:ring-1 focus-visible:ring-amber-400">
+                              <SelectValue placeholder="Select grade" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {grades.map(g => (
+                                <SelectItem key={g.id} value={g.code}>{g.code} - {g.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </div>
+                    <Popover open={addHeatOpen} onOpenChange={(open) => {
+                      setAddHeatOpen(open)
+                      if (open) {
+                        const furnaceHeats = heats.filter(h => h.furnaceId === activeFurnaceId)
+                        setNewHeatCode(buildDefaultHeatCode(date, furnaceHeats.length + 1))
+                        // Popovers auto-focus their content wrapper by
+                        // default, not the input inside it - grab the input
+                        // itself once it's actually mounted. Double rAF, not
+                        // single: one frame can still land before the
+                        // browser has painted it, so .focus() silently
+                        // fails to stick.
+                        requestAnimationFrame(() => {
+                          requestAnimationFrame(() => {
+                            heatCodeInputRef.current?.focus()
+                            heatCodeInputRef.current?.select()
+                          })
+                        })
+                      } else {
+                        setNewHeatCode('')
+                      }
+                    }}>
+                      <PopoverTrigger
+                        disabled={!newHeatGrade}
+                        title={!newHeatGrade ? 'Select a grade first' : undefined}
+                        className={cn(buttonVariants({ variant: "default" }), "h-9 px-4 bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold disabled:opacity-50 disabled:pointer-events-none shrink-0 w-full lg:w-auto")}
+                      >
+                        <Plus className="w-4 h-4 mr-1" /> Add Heat
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[280px] p-4 shadow-2xl border-[#E0E7FF] rounded-xl" side="bottom" align="end">
+                        <div className="space-y-3">
+                          <div className="text-xs text-[#64748B]">Grade: <span className="font-bold text-amber-600">{newHeatGrade}</span></div>
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]">Heat Code</label>
+                            <Input
+                              ref={heatCodeInputRef}
+                              value={newHeatCode}
+                              onChange={e => setNewHeatCode(e.target.value)}
+                              onKeyDown={e => { if (e.key === 'Enter' && newHeatGrade && newHeatCode.trim()) { e.preventDefault(); addHeat() } }}
+                              placeholder="e.g. H001"
+                              className="h-9 text-sm font-mono"
+                            />
+                          </div>
+                          <Button
+                            onClick={addHeat}
+                            disabled={!newHeatGrade || !newHeatCode.trim()}
+                            className="w-full h-9 bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold disabled:opacity-50"
+                          >
+                            Add Heat
+                          </Button>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
 
-                {/* Selected heat's full detail card, shown inline below the chip grid.
+                  {activeHeats.length === 0 && (
+                    <div className={cn("p-10 text-center text-[#94A3B8] text-sm italic bg-white rounded-xl border border-dashed transition-colors duration-500 ease-in-out", warmBorder)}>
+                      No heats added yet for this furnace. Click &quot;Add Heat&quot; to create one.
+                    </div>
+                  )}
+
+                  {/* Compact chip grid - one small box per heat, click shows its full card in the panel below */}
+                  <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-2.5">
+                    {activeHeats.map(heat => {
+                      const heatPours = pours.filter(p => p.heatId === heat.id)
+                      const totalWeight = heatPours.reduce((sum, p) => sum + (p.mouldsScheduled * p.mouldWeight), 0)
+                      const isOverCapacity = totalWeight > maxCapacity
+                      const isPastShiftEnd = isHeatPastShiftEnd(heat, selectedShift)
+                      const isSelected = selectedHeat?.id === heat.id
+                      // A heat with at least one pour allocated gets a
+                      // visibly different (tinted) background from an empty
+                      // one, so scanning the grid shows at a glance which
+                      // heats still need moulds assigned.
+                      const hasPours = heatPours.length > 0
+
+                      return (
+                        <button
+                          key={heat.id}
+                          onClick={() => { setDetailHeatId(heat.id); setAllocationHeatId(null); setAllocationSearch('') }}
+                          className={cn(
+                            "w-full text-left p-3 rounded-[12px] border shadow-[0_1px_3px_rgba(0,0,0,0.02)] hover:-translate-y-[2px] hover:shadow-[0_4px_14px_rgba(79,70,229,0.08)] transition-all duration-300 ease-out",
+                            (isOverCapacity || isPastShiftEnd) ? "bg-white border-red-300 hover:border-red-400" : hasPours ? "bg-amber-50/80" : "bg-white",
+                            !(isOverCapacity || isPastShiftEnd) && cn(warmBorder, "hover:border-amber-400"),
+                            isSelected && "ring-2 ring-amber-300 border-amber-400"
+                          )}
+                        >
+                          <div className="flex items-center justify-between gap-2 min-w-0">
+                            <span className="font-mono font-bold text-xs text-[#172554] whitespace-nowrap truncate min-w-0">{heat.heatCode || `Heat ${heat.heatNumber}`}</span>
+                            <span
+                              title="Furnace's running heat count - never resets on its own (reset in Equipment Master)"
+                              className="font-mono text-xs font-bold text-amber-700 bg-amber-100 px-2 py-1 rounded shrink-0"
+                            >
+                              #{heat.sequenceNumber ?? heat.heatNumber}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between mt-1">
+                            <span className="text-[10px] font-semibold text-[#64748B]">{heat.grade}</span>
+                            {heat.isFirstHeat && (
+                              <span className="text-[8px] font-bold uppercase tracking-wide text-amber-700 bg-amber-100 px-1 py-0.5 rounded shrink-0">First</span>
+                            )}
+                          </div>
+                          {isOverCapacity && (
+                            <div className="text-[9px] font-bold text-red-600 mt-1.5 flex items-center gap-0.5">
+                              <WarningCircle weight="fill" className="w-2.5 h-2.5" /> Over
+                            </div>
+                          )}
+                          {isPastShiftEnd && (
+                            <div title="This heat's pour window ends after the shift itself ends - it will be blocked at Save until adjusted" className="text-[9px] font-bold text-red-600 mt-1.5 flex items-center gap-0.5">
+                              <Clock weight="fill" className="w-2.5 h-2.5" /> Past Shift
+                            </div>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  {/* Selected heat's full detail card, shown inline below the chip grid.
                     A soft, barely-tinted warm-cream surface (not the plain white the
                     chip grid and the rest of the page use) so it reads as a distinct
                     "detail" surface without the harsh, saturated block a full amber
                     fill would create. */}
-                {selectedHeat && (
-                  <div ref={detailCardRef} className={cn(
-                    "bg-[#FFFDF8] rounded-xl border shadow-[0_8px_24px_-10px_rgba(180,130,40,0.25)] flex flex-col overflow-hidden transition-all",
-                    selectedHeatOverCapacity ? "border-red-300 ring-1 ring-red-300" : "border-[#F0E2C4]"
-                  )}>
-                    {/* Heat Header - identity row */}
-                    <div className={cn(
-                      "px-4 py-3 border-b flex items-center gap-2.5 transition-colors duration-500 ease-in-out",
-                      selectedHeatOverCapacity ? "bg-red-50 border-red-200" : "bg-gradient-to-r from-[#FBF3E2] to-[#FFFDF8] border-[#F0E2C4]"
+                  {selectedHeat && (
+                    <div ref={detailCardRef} className={cn(
+                      "bg-[#FFFDF8] rounded-xl border shadow-[0_8px_24px_-10px_rgba(180,130,40,0.25)] flex flex-col overflow-hidden transition-all",
+                      selectedHeatHasError ? "border-red-300 ring-1 ring-red-300" : "border-[#F0E2C4]"
                     )}>
+                      {/* Heat Header - identity row */}
                       <div className={cn(
-                        "w-9 h-9 rounded-lg flex items-center justify-center shrink-0",
-                        selectedHeatOverCapacity ? "bg-red-100" : "bg-[#FBF3E2]"
+                        "px-4 py-3 border-b flex items-center gap-2.5 transition-colors duration-500 ease-in-out",
+                        selectedHeatHasError ? "bg-red-50 border-red-200" : "bg-gradient-to-r from-[#FBF3E2] to-[#FFFDF8] border-[#F0E2C4]"
                       )}>
-                        <Fire weight="fill" className={cn("w-5 h-5", selectedHeatOverCapacity ? "text-red-500" : "text-amber-600")} />
-                      </div>
-                      <div className="flex flex-col min-w-0 flex-1">
-                        <span className="font-mono font-black text-base text-[#172554] leading-tight truncate">{selectedHeat.heatCode || `Heat ${selectedHeat.heatNumber}`}</span>
-                        <span className="text-[11px] font-semibold text-[#64748B] truncate mt-0.5">{selectedHeat.grade}</span>
-                      </div>
-                      <label
-                        title={`First heat of the day for this furnace runs ${getHeatDurationMins(equipments.find(e => e.id === selectedHeat.furnaceId), true)} min (furnace startup); only one heat per furnace can be marked first`}
-                        className="flex items-center gap-1.5 shrink-0 cursor-pointer select-none bg-white border border-[#F0E2C4] rounded-lg px-2 py-1"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedHeat.isFirstHeat}
-                          onChange={() => toggleFirstHeat(selectedHeat.id)}
-                          className="h-3.5 w-3.5 accent-amber-600 cursor-pointer"
-                        />
-                        <span className="text-[10px] font-bold uppercase tracking-wide text-amber-800/80">First Heat</span>
-                      </label>
-                      <span
-                        title="Furnace's running heat count - never resets on its own (reset in Equipment Master)"
-                        className="font-mono text-[10px] font-bold text-amber-700/80 bg-[#FBF3E2] px-1.5 py-0.5 rounded shrink-0"
-                      >
-                        #{selectedHeat.sequenceNumber ?? selectedHeat.heatNumber}
-                      </span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeHeat(selectedHeat.id)}
-                        title="Delete heat"
-                        className="h-7 w-7 shrink-0 text-[#94A3B8] hover:text-red-600 hover:bg-red-50"
-                      >
-                        <Trash className="w-4 h-4" />
-                      </Button>
-                    </div>
-
-                    {/* Heat Header - metrics strip (fixed 3-column grid so values never wrap/orphan) */}
-                    <div className={cn(
-                      "grid grid-cols-3 divide-x border-b transition-colors duration-500 ease-in-out",
-                      selectedHeatOverCapacity ? "divide-red-200 bg-red-50/50 border-red-200" : cn("bg-[#F8FAFC]", warmBorder, isNightShift ? "divide-orange-200" : "divide-[#E0E7FF]")
-                    )}>
-                      <div className="px-2 py-2.5 flex flex-col items-center gap-1">
-                        <span className="text-[9px] font-bold uppercase tracking-wider text-[#94A3B8] flex items-center gap-1">
-                          <Clock className="w-3 h-3" /> Pour Window
-                        </span>
-                        <div className="flex items-center gap-1">
-                          <Input
-                            value={selectedHeat.startTime}
-                            onChange={e => handleHeatTimeChange(selectedHeat.id, e.target.value)}
-                            className="w-[62px] h-6 px-1 py-0 text-[11px] font-mono border-none bg-transparent text-center shadow-none focus-visible:ring-1 focus-visible:ring-amber-500"
-                          />
-                          <span className="text-[#CBD5E1] text-xs shrink-0">→</span>
-                          <span className="w-[62px] text-center text-[11px] font-mono text-[#64748B] shrink-0">{selectedHeat.endTime}</span>
+                        <div className={cn(
+                          "w-9 h-9 rounded-lg flex items-center justify-center shrink-0",
+                          selectedHeatHasError ? "bg-red-100" : "bg-[#FBF3E2]"
+                        )}>
+                          <Fire weight="fill" className={cn("w-5 h-5", selectedHeatHasError ? "text-red-500" : "text-amber-600")} />
                         </div>
-                      </div>
-
-                      <div className="px-2 py-2.5 flex flex-col items-center gap-1">
-                        <span className="text-[9px] font-bold uppercase tracking-wider text-[#94A3B8]">Charge Weight</span>
-                        <span className={cn("font-mono font-bold text-xs whitespace-nowrap", selectedHeatOverCapacity ? "text-red-600" : "text-[#172554]")}>
-                          {selectedHeatWeight.toFixed(1)} <span className="text-[#94A3B8] font-normal">/ {maxCapacity} kg</span>
-                        </span>
-                        <div className="w-full max-w-[84px] h-1 rounded-full bg-[#E2E8F0] overflow-hidden">
-                          <div
-                            className={cn("h-full rounded-full transition-all", selectedHeatOverCapacity ? "bg-red-500" : "bg-emerald-500")}
-                            style={{ width: `${Math.min(100, (selectedHeatWeight / (maxCapacity || 1)) * 100)}%` }}
-                          />
+                        <div className="flex flex-col min-w-0 flex-1">
+                          <span className="font-mono font-black text-base text-[#172554] leading-tight truncate">{selectedHeat.heatCode || `Heat ${selectedHeat.heatNumber}`}</span>
+                          <span className="text-[11px] font-semibold text-[#64748B] truncate mt-0.5">{selectedHeat.grade}</span>
                         </div>
+                        <label
+                          title={`First heat of the day for this furnace runs ${getHeatDurationMins(equipments.find(e => e.id === selectedHeat.furnaceId), true)} min (furnace startup); only one heat per furnace can be marked first`}
+                          className="flex items-center gap-1.5 shrink-0 cursor-pointer select-none bg-white border border-[#F0E2C4] rounded-lg px-2 py-1"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedHeat.isFirstHeat}
+                            onChange={() => toggleFirstHeat(selectedHeat.id)}
+                            className="h-3.5 w-3.5 accent-amber-600 cursor-pointer"
+                          />
+                          <span className="text-[10px] font-bold uppercase tracking-wide text-amber-800/80">First Heat</span>
+                        </label>
+                        <span
+                          title="Furnace's running heat count - never resets on its own (reset in Equipment Master)"
+                          className="font-mono text-[10px] font-bold text-amber-700/80 bg-[#FBF3E2] px-1.5 py-0.5 rounded shrink-0"
+                        >
+                          #{selectedHeat.sequenceNumber ?? selectedHeat.heatNumber}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeHeat(selectedHeat.id)}
+                          title="Delete heat"
+                          className="h-7 w-7 shrink-0 text-[#94A3B8] hover:text-red-600 hover:bg-red-50"
+                        >
+                          <Trash className="w-4 h-4" />
+                        </Button>
                       </div>
 
-                      <div className="px-2 py-2.5 flex flex-col items-center gap-1">
-                        <span className="text-[9px] font-bold uppercase tracking-wider text-[#4285F4]">Actual Melt</span>
-                        <Input
-                          type="number"
-                          min="0"
-                          value={selectedHeat.actualMeltWeight ?? ''}
-                          onChange={e => handleActualMeltChange(selectedHeat.id, e.target.value)}
-                          className="w-20 h-6 text-[11px] font-mono text-center px-1 bg-white border-[#C7D2FE] focus-visible:ring-1 focus-visible:ring-[#4285F4]"
-                          placeholder="kg"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Heat Body */}
-                    <div className="p-4 flex-1 flex flex-col gap-3 min-h-0">
-                      {allocationHeatId === selectedHeat.id ? (
-                        <div ref={allocationPanelRef} className="flex flex-col gap-3 flex-1 min-h-0">
-                          {/* Allocation view header - swaps in for the pours list, same card, no overlay */}
-                          <div className="flex items-center gap-2.5">
-                            <button
-                              type="button"
-                              onClick={() => { setAllocationHeatId(null); setAllocationSearch('') }}
-                              className="flex items-center gap-1 text-xs font-bold text-amber-700 hover:text-amber-900 shrink-0"
-                            >
-                              <CaretLeft className="w-3.5 h-3.5" weight="bold" /> Back
-                            </button>
-                            <div className="h-4 w-px bg-[#F0E2C4] shrink-0" />
-                            <h4 className="font-bold text-[#172554] text-sm flex items-center gap-1.5 min-w-0 truncate">
-                              <Fire className="w-4 h-4 text-amber-500 shrink-0" /> Allocate to Heat {selectedHeat.heatNumber}
-                            </h4>
-                            <span className="text-[10px] text-[#94A3B8] shrink-0">Grade: <span className="font-bold text-amber-600">{selectedHeat.grade}</span> - only matching moulds shown</span>
-                          </div>
-
-                          {/* Live capacity bar */}
-                          <div className="flex items-center gap-3 bg-[#F8FAFC] border border-[#E0E7FF] rounded-lg px-3 py-2 shrink-0">
-                            <span className="text-[9px] font-bold uppercase tracking-wider text-[#94A3B8] shrink-0">Allocated</span>
-                            <div className="flex-1 h-1.5 rounded-full bg-[#E2E8F0] overflow-hidden">
-                              <div
-                                className={cn("h-full rounded-full transition-all", selectedHeatOverCapacity ? "bg-red-500" : "bg-emerald-500")}
-                                style={{ width: `${Math.min(100, (selectedHeatWeight / (maxCapacity || 1)) * 100)}%` }}
-                              />
-                            </div>
-                            <span className={cn("font-mono font-bold text-xs whitespace-nowrap shrink-0", selectedHeatOverCapacity ? "text-red-600" : "text-[#172554]")}>
-                              {selectedHeatWeight.toFixed(1)} / {maxCapacity} kg
-                            </span>
-                          </div>
-
-                          {/* Search */}
-                          <div className="relative shrink-0">
-                            <MagnifyingGlass className="w-3.5 h-3.5 text-[#94A3B8] absolute left-2.5 top-1/2 -translate-y-1/2" />
-                            <Input
-                              value={allocationSearch}
-                              onChange={e => setAllocationSearch(e.target.value)}
-                              placeholder="Search products or orders..."
-                              className="h-8 pl-8 text-xs"
-                            />
-                          </div>
-
-                          {/* Table - full width of the card, no cramped popover box */}
-                          <div className="flex-1 min-h-0 max-h-[360px] overflow-y-auto border border-[#E0E7FF] rounded-lg bg-white">
-                            {allocationRows.length === 0 ? (
-                              <div className="h-full min-h-[120px] flex items-center justify-center text-xs text-[#94A3B8] italic">
-                                {(backlogByGrade.get(selectedHeat.grade) || []).length === 0
-                                  ? `No pending moulds for grade ${selectedHeat.grade}.`
-                                  : 'No products match your search.'}
-                              </div>
+                      {/* Heat Header - metrics strip (fixed 3-column grid so values never wrap/orphan) */}
+                      <div className={cn(
+                        "grid grid-cols-3 divide-x border-b transition-colors duration-500 ease-in-out",
+                        selectedHeatHasError ? "divide-red-200 bg-red-50/50 border-red-200" : cn("bg-[#F8FAFC]", warmBorder, isNightShift ? "divide-orange-200" : "divide-[#E0E7FF]")
+                      )}>
+                        <div className="px-2 py-2.5 flex flex-col items-center gap-1">
+                          <span className="text-[9px] font-bold uppercase tracking-wider text-[#94A3B8] flex items-center gap-1">
+                            <Clock className="w-3 h-3" /> Pour Window
+                          </span>
+                          <div className="flex items-center gap-1">
+                            {selectedHeat.isFirstHeat ? (
+                              <span
+                                title="The first heat of the day always starts exactly when the shift starts - uncheck 'First Heat' on another heat to free this up for editing"
+                                className="w-[74px] text-center text-[11px] font-mono text-[#64748B] shrink-0"
+                              >
+                                {selectedHeat.startTime}
+                              </span>
                             ) : (
-                              <Table className="table-fixed w-[890px] border-separate border-spacing-0">
-                                <TableHeader className="sticky top-0 bg-[#F8FAFC] z-10">
-                                  <TableRow>
-                                    <TableHead className="w-[260px] text-center">Product</TableHead>
-                                    <TableHead className="w-[105px] text-center">Order</TableHead>
-                                    <TableHead className="w-[105px] text-center">Kg/Box</TableHead>
-                                    <TableHead className="w-[105px] text-center" title="Total order backlog still left to melt, regardless of this heat's own space">Remaining</TableHead>
-                                    <TableHead className="w-[105px] text-center" title="How many of those this heat can actually take right now">Max</TableHead>
-                                    <TableHead className="w-[105px] text-center">Qty</TableHead>
-                                    <TableHead className="w-[105px] text-center" />
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {allocationRows.map(({ b, boxWeight, maxAllowed, remainingMoulds }) => (
-                                    <AllocationTableRow
-                                      key={b.itemId}
-                                      backlogItem={b}
-                                      boxWeight={boxWeight}
-                                      maxAllowed={maxAllowed}
-                                      remainingMoulds={remainingMoulds}
-                                      onAdd={(qty) => addPour(selectedHeat.id, b, qty)}
-                                    />
-                                  ))}
-                                </TableBody>
-                              </Table>
+                              <Input
+                                value={selectedHeat.startTime}
+                                onChange={e => handleHeatTimeChange(selectedHeat.id, e.target.value)}
+                                className="w-[74px] h-6 px-1 py-0 text-[11px] font-mono border-none bg-transparent text-center shadow-none focus-visible:ring-1 focus-visible:ring-amber-500"
+                              />
                             )}
+                            <span className="text-[#CBD5E1] text-xs shrink-0">→</span>
+                            <span className={cn("w-[74px] text-center text-[11px] font-mono shrink-0", selectedHeatPastShiftEnd ? "text-red-600 font-bold" : "text-[#64748B]")}>{selectedHeat.endTime}</span>
                           </div>
-                        </div>
-                      ) : (
-                        <>
-                          {selectedHeatPours.length === 0 ? (
-                            <div className="flex-1 flex items-center justify-center text-[#94A3B8] text-sm italic py-4">
-                              No moulds allocated to this heat yet.
-                            </div>
-                          ) : (
-                            <div className="space-y-2">
-                              {selectedHeatPours.map(pour => (
-                                <div key={pour.id} className={cn("group flex items-center justify-between p-2.5 rounded-lg border transition-colors duration-500 ease-in-out", warmBg, warmBorder)}>
-                                  <div className="flex flex-col gap-1 min-w-0">
-                                    <div className="flex items-center gap-2">
-                                      <span className="font-bold text-sm text-[#172554] truncate">{pour.patternRef}</span>
-                                      <span className="text-[9px] font-bold uppercase tracking-wide text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded shrink-0">{pour.grade}</span>
-                                    </div>
-                                    <span className="text-[10px] text-[#94A3B8]">{pour.orderNo} · {pour.mouldWeight} kg/mould</span>
-                                  </div>
-                                  <div className="flex items-center gap-3 shrink-0">
-                                    <span className="font-mono font-bold text-amber-600 text-sm">{pour.mouldsScheduled} <span className="font-normal text-[#94A3B8] text-xs">moulds</span></span>
-                                    <Button variant="ghost" size="icon" onClick={() => removePour(pour.id)} className="h-6 w-6 text-[#CBD5E1] opacity-0 group-hover:opacity-100 hover:text-red-600 hover:bg-red-50 transition-all">
-                                      <Trash className="w-4 h-4" />
-                                    </Button>
-                                  </div>
-                                </div>
-                              ))}
+                          {selectedHeatPastShiftEnd && (
+                            <div title="Ends after the shift itself ends - will be blocked at Save until adjusted" className="text-[9px] font-bold text-red-600 flex items-center gap-0.5">
+                              <WarningCircle weight="fill" className="w-2.5 h-2.5" /> Past shift end
                             </div>
                           )}
+                        </div>
 
-                          <Button
-                            variant="outline"
-                            onClick={() => { setAllocationHeatId(selectedHeat.id); setAllocationSearch(''); scrollToAllocationNext.current = true }}
-                            className="w-full mt-auto border-dashed border-amber-300 text-amber-600 hover:bg-amber-50 hover:text-amber-700 font-semibold h-9"
-                          >
-                            <Plus className="w-4 h-4 mr-2" /> Add Pouring Allocation
-                          </Button>
-                        </>
-                      )}
+                        <div className="px-2 py-2.5 flex flex-col items-center gap-1">
+                          <span className="text-[9px] font-bold uppercase tracking-wider text-[#94A3B8]">Charge Weight</span>
+                          <span className={cn("font-mono font-bold text-xs whitespace-nowrap", selectedHeatOverCapacity ? "text-red-600" : "text-[#172554]")}>
+                            {selectedHeatWeight.toFixed(1)} <span className="text-[#94A3B8] font-normal">/ {maxCapacity} kg</span>
+                          </span>
+                          <div className="w-full max-w-[84px] h-1 rounded-full bg-[#E2E8F0] overflow-hidden">
+                            <div
+                              className={cn("h-full rounded-full transition-all", selectedHeatOverCapacity ? "bg-red-500" : "bg-emerald-500")}
+                              style={{ width: `${Math.min(100, (selectedHeatWeight / (maxCapacity || 1)) * 100)}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="px-2 py-2.5 flex flex-col items-center gap-1">
+                          <span className="text-[9px] font-bold uppercase tracking-wider text-[#4285F4]">Actual Melt</span>
+                          <Input
+                            type="number"
+                            min="0"
+                            value={selectedHeat.actualMeltWeight ?? ''}
+                            onChange={e => handleActualMeltChange(selectedHeat.id, e.target.value)}
+                            className="w-20 h-6 text-[11px] font-mono text-center px-1 bg-white border-[#C7D2FE] focus-visible:ring-1 focus-visible:ring-[#4285F4]"
+                            placeholder="kg"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Heat Body */}
+                      <div className="p-4 flex-1 flex flex-col gap-3 min-h-0">
+                        {allocationHeatId === selectedHeat.id ? (
+                          <div ref={allocationPanelRef} className="flex flex-col gap-3 flex-1 min-h-0">
+                            {/* Allocation view header - swaps in for the pours list, same card, no overlay */}
+                            <div className="flex items-center gap-2.5">
+                              <button
+                                type="button"
+                                onClick={() => { setAllocationHeatId(null); setAllocationSearch('') }}
+                                className="flex items-center gap-1 text-xs font-bold text-amber-700 hover:text-amber-900 shrink-0"
+                              >
+                                <CaretLeft className="w-3.5 h-3.5" weight="bold" /> Back
+                              </button>
+                              <div className="h-4 w-px bg-[#F0E2C4] shrink-0" />
+                              <h4 className="font-bold text-[#172554] text-sm flex items-center gap-1.5 min-w-0 truncate">
+                                <Fire className="w-4 h-4 text-amber-500 shrink-0" /> Allocate to Heat {selectedHeat.heatNumber}
+                              </h4>
+                              <span className="text-[10px] text-[#94A3B8] shrink-0">Grade: <span className="font-bold text-amber-600">{selectedHeat.grade}</span> - only matching moulds shown</span>
+                            </div>
+
+                            {/* Live capacity bar */}
+                            <div className="flex items-center gap-3 bg-[#F8FAFC] border border-[#E0E7FF] rounded-lg px-3 py-2 shrink-0">
+                              <span className="text-[9px] font-bold uppercase tracking-wider text-[#94A3B8] shrink-0">Allocated</span>
+                              <div className="flex-1 h-1.5 rounded-full bg-[#E2E8F0] overflow-hidden">
+                                <div
+                                  className={cn("h-full rounded-full transition-all", selectedHeatOverCapacity ? "bg-red-500" : "bg-emerald-500")}
+                                  style={{ width: `${Math.min(100, (selectedHeatWeight / (maxCapacity || 1)) * 100)}%` }}
+                                />
+                              </div>
+                              <span className={cn("font-mono font-bold text-xs whitespace-nowrap shrink-0", selectedHeatOverCapacity ? "text-red-600" : "text-[#172554]")}>
+                                {selectedHeatWeight.toFixed(1)} / {maxCapacity} kg
+                              </span>
+                            </div>
+
+                            {/* Search */}
+                            <div className="relative shrink-0">
+                              <MagnifyingGlass className="w-3.5 h-3.5 text-[#94A3B8] absolute left-2.5 top-1/2 -translate-y-1/2" />
+                              <Input
+                                value={allocationSearch}
+                                onChange={e => setAllocationSearch(e.target.value)}
+                                placeholder="Search products or orders..."
+                                className="h-8 pl-8 text-xs"
+                              />
+                            </div>
+
+                            {/* Table - full width of the card, no cramped popover box */}
+                            <div className="flex-1 min-h-0 max-h-[360px] overflow-y-auto border border-[#E0E7FF] rounded-lg bg-white">
+                              {allocationRows.length === 0 ? (
+                                <div className="h-full min-h-[120px] flex items-center justify-center text-xs text-[#94A3B8] italic">
+                                  {(backlogByGrade.get(selectedHeat.grade) || []).length === 0
+                                    ? `No pending moulds for grade ${selectedHeat.grade}.`
+                                    : 'No products match your search.'}
+                                </div>
+                              ) : (
+                                <Table className="table-fixed w-[890px] border-separate border-spacing-0">
+                                  <TableHeader className="sticky top-0 bg-[#F8FAFC] z-10">
+                                    <TableRow>
+                                      <TableHead className="w-[260px] text-center">Product</TableHead>
+                                      <TableHead className="w-[105px] text-center">Order</TableHead>
+                                      <TableHead className="w-[105px] text-center">Kg/Box</TableHead>
+                                      <TableHead className="w-[105px] text-center" title="Total order backlog still left to melt, regardless of this heat's own space">Remaining</TableHead>
+                                      <TableHead className="w-[105px] text-center" title="How many of those this heat can actually take right now">Max</TableHead>
+                                      <TableHead className="w-[105px] text-center">Qty</TableHead>
+                                      <TableHead className="w-[105px] text-center" />
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {allocationRows.map(({ b, boxWeight, maxAllowed, remainingMoulds }, idx) => (
+                                      <AllocationTableRow
+                                        key={b.itemId}
+                                        backlogItem={b}
+                                        boxWeight={boxWeight}
+                                        maxAllowed={maxAllowed}
+                                        remainingMoulds={remainingMoulds}
+                                        onAdd={(qty) => addPour(selectedHeat.id, b, qty)}
+                                        inputRef={idx === 0 ? firstAllocationInputRef : undefined}
+                                      />
+                                    ))}
+                                  </TableBody>
+                                </Table>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            {selectedHeatPours.length === 0 ? (
+                              <div className="flex-1 flex items-center justify-center text-[#94A3B8] text-sm italic py-4">
+                                No moulds allocated to this heat yet.
+                              </div>
+                            ) : (
+                              <div className="space-y-2">
+                                {selectedHeatPours.map(pour => (
+                                  <div key={pour.id} className="group flex items-center justify-between gap-3 p-3 rounded-xl border border-[#F0E2C4] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)] hover:shadow-[0_2px_10px_rgba(180,130,40,0.12)] transition-all duration-200">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                      <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
+                                        <Fire weight="fill" className="w-4 h-4 text-amber-500" />
+                                      </div>
+                                      <div className="flex flex-col gap-0.5 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                          <span className="font-bold text-sm text-[#172554] truncate">{pour.patternRef}</span>
+                                          <span className="text-[9px] font-bold uppercase tracking-wide text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded shrink-0">{pour.grade}</span>
+                                        </div>
+                                        <span className="text-[11px] text-[#94A3B8] truncate">{pour.orderNo} · {pour.mouldWeight} kg/mould</span>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                      <div className="flex flex-col items-end leading-none">
+                                        <span className="font-mono font-bold text-amber-600 text-base tabular-nums">{pour.mouldsScheduled}</span>
+                                        <span className="text-[9px] font-semibold uppercase tracking-wide text-[#94A3B8] mt-0.5">moulds</span>
+                                      </div>
+                                      <Button variant="ghost" size="icon" onClick={() => removePour(pour.id)} className="h-7 w-7 text-[#CBD5E1] opacity-0 group-hover:opacity-100 hover:text-red-600 hover:bg-red-50 transition-all">
+                                        <Trash className="w-4 h-4" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            <Button
+                              variant="outline"
+                              onClick={() => { setAllocationHeatId(selectedHeat.id); setAllocationSearch(''); scrollToAllocationNext.current = true }}
+                              className="w-full mt-auto border-dashed border-amber-300 text-amber-600 hover:bg-amber-50 hover:text-amber-700 font-semibold h-9"
+                            >
+                              <Plus className="w-4 h-4 mr-2" /> Add Pouring Allocation
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+                  )}
+                </div>
+              )}
+            </div>
 
-          {/* Footer */}
-          <DialogFooter className={cn("m-0 p-5 border-t bg-[#FFFFFF] shrink-0 sm:justify-end rounded-b-2xl transition-colors duration-500 ease-in-out", warmBorder)}>
-            <Button variant="ghost" onClick={onClose} className="text-[#64748B] hover:text-[#172554] hover:bg-[#F8FAFC]">Cancel</Button>
-            <Button variant="outline" onClick={handleSaveAndRefresh} className="border-amber-500 text-amber-600 hover:bg-amber-50 h-10 px-6 text-sm font-bold">Save & Refresh</Button>
-            <Button onClick={handleSave} className="bg-amber-500 text-white hover:bg-amber-600 shadow-md h-10 px-8 text-sm font-bold">Save Day Plan</Button>
-          </DialogFooter>
-        </div>
-      </DialogContent>
-    </Dialog>
-    <CapacityErrorDialog lines={capacityErrorLines} onClose={() => setCapacityErrorLines(null)} />
+            {/* Footer */}
+            <DialogFooter className={cn("m-0 p-5 border-t bg-[#FFFFFF] shrink-0 sm:justify-end rounded-b-2xl transition-colors duration-500 ease-in-out", warmBorder)}>
+              <Button variant="ghost" onClick={handleClose} className="text-[#64748B] hover:text-[#172554] hover:bg-[#F8FAFC]">Cancel</Button>
+              <Button variant="outline" onClick={handleSaveAndRefresh} className="border-amber-500 text-amber-600 hover:bg-amber-50 h-10 px-6 text-sm font-bold">Save & Refresh</Button>
+              <Button onClick={handleSave} className="bg-amber-500 text-white hover:bg-amber-600 shadow-md h-10 px-8 text-sm font-bold">Save Day Plan</Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
+      <CapacityErrorDialog lines={capacityErrorLines} onClose={() => setCapacityErrorLines(null)} />
     </>
   )
 }
 
-function AllocationTableRow({ backlogItem, boxWeight, maxAllowed, remainingMoulds, onAdd }: { backlogItem: BacklogItem, boxWeight: number, maxAllowed: number, remainingMoulds: number, onAdd: (qty: number) => void }) {
+function AllocationTableRow({ backlogItem, boxWeight, maxAllowed, remainingMoulds, onAdd, inputRef }: { backlogItem: BacklogItem, boxWeight: number, maxAllowed: number, remainingMoulds: number, onAdd: (qty: number) => void, inputRef?: React.RefObject<HTMLInputElement | null> }) {
   const [qty, setQty] = useState<string>('')
   const parsedQty = parseInt(qty, 10)
   const isValid = !isNaN(parsedQty) && parsedQty > 0 && parsedQty <= maxAllowed
 
   const handleAdd = () => {
-    if (isValid) onAdd(parsedQty)
+    if (!isValid) return
+    onAdd(parsedQty)
+    // Row stays on screen (the allocation view no longer auto-closes after
+    // one add) - clear the field so a stale number isn't left sitting there
+    // if the user tabs back to this row later.
+    setQty('')
   }
 
   return (
@@ -1188,17 +1357,23 @@ function AllocationTableRow({ backlogItem, boxWeight, maxAllowed, remainingMould
       <TableCell className="w-[105px] text-center tabular-nums font-mono text-xs font-bold text-amber-600">{maxAllowed}</TableCell>
       <TableCell className="w-[105px] text-center">
         <Input
+          ref={inputRef}
           type="number"
           min="1"
           max={maxAllowed}
           value={qty}
           onChange={e => setQty(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAdd() } }}
           placeholder="Qty"
           className="h-9 w-16 mx-auto text-center text-xs font-mono rounded-md focus-visible:ring-1 focus-visible:ring-amber-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
         />
       </TableCell>
       <TableCell className="w-[105px] text-center">
-        <Button size="sm" onClick={handleAdd} disabled={!qty || !isValid} className="h-9 w-20 bg-[#172554] hover:bg-[#1E293B] text-white text-xs rounded-md">
+        {/* tabIndex={-1}: Tab from the Qty input skips straight to the NEXT
+            row's Qty input instead of stopping on this button - Enter above
+            already covers "add via keyboard", so the button stays mouse/click
+            reachable without being part of the keyboard flow. */}
+        <Button size="sm" tabIndex={-1} onClick={handleAdd} disabled={!qty || !isValid} className="h-9 w-20 bg-[#172554] hover:bg-[#1E293B] text-white text-xs rounded-md">
           Add
         </Button>
       </TableCell>

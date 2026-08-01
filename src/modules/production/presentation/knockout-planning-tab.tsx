@@ -8,7 +8,7 @@ interface KnockoutPlanningTabProps {
   knockoutBacklog: BacklogItem[] // pieces, not moulds - required = poured moulds x cavities
   openOrders: any[]
   dailyPlans: any[]
-  onSaveDayPlan: (date: string, plans: any[]) => void
+  onSaveDayPlan: (date: string, plans: any[]) => Promise<void>
 }
 
 export function KnockoutPlanningTab({ knockoutBacklog, openOrders, dailyPlans, onSaveDayPlan }: KnockoutPlanningTabProps) {

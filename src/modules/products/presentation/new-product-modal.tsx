@@ -39,11 +39,15 @@ export function NewProductModal({
 }: {
   isOpen: boolean
   onClose: () => void
-  onSave: (product: Omit<Product, 'id'>) => void
+  onSave: (product: Omit<Product, 'id'>) => Promise<void>
 }) {
   const { role } = useRole()
   const [customerOpen, setCustomerOpen] = useState(false)
   const [selectedCustomer, setSelectedCustomer] = useState('')
+  // Guards Save against being fired again while a save is still in flight -
+  // without this, a double-click before the first request's response lands
+  // submitted the same new product twice.
+  const [isSaving, setIsSaving] = useState(false)
 
   // Fetched data from API
   const [customers, setCustomers] = useState<{ value: string; label: string }[]>([])
@@ -91,25 +95,31 @@ export function NewProductModal({
     setImages([])
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (isSaving) return
     if (!code.trim() || !name.trim()) return
 
     const customerLabel = customers.find(c => c.value === selectedCustomer)?.label || ''
     const w = Number(weight) || 0
 
-    onSave({
-      code: code.trim(),
-      name: name.trim(),
-      customer: customerLabel,
-      grade: selectedGrade || undefined,
-      weight: w > 0 ? `${w} kg` : '-',
-      cavities: 0,
-      ratePerKg: ratePerKgToggle ? (Number(ratePerKg) || undefined) : undefined,
-      unitPrice: ratePerKgToggle ? Number(calculatedUnitPrice) : (Number(manualUnitPrice) || undefined),
-      remarks: remarks.trim() || undefined,
-      images: images.length > 0 ? images : undefined,
-    })
-    resetForm()
+    setIsSaving(true)
+    try {
+      await onSave({
+        code: code.trim(),
+        name: name.trim(),
+        customer: customerLabel,
+        grade: selectedGrade || undefined,
+        weight: w > 0 ? `${w} kg` : '-',
+        cavities: 0,
+        ratePerKg: ratePerKgToggle ? (Number(ratePerKg) || undefined) : undefined,
+        unitPrice: ratePerKgToggle ? Number(calculatedUnitPrice) : (Number(manualUnitPrice) || undefined),
+        remarks: remarks.trim() || undefined,
+        images: images.length > 0 ? images : undefined,
+      })
+      resetForm()
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const handleClose = () => {
@@ -326,8 +336,8 @@ export function NewProductModal({
           <Button variant="ghost" onClick={handleClose} className="text-[#64748B] hover:text-[#172554] hover:bg-[#EEF2FF]">
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={!code.trim() || !name.trim()} className="bg-[#4F46E5] hover:bg-[#4F46E5] text-white disabled:opacity-50">
-            Save Product
+          <Button onClick={handleSave} disabled={!code.trim() || !name.trim() || isSaving} className="bg-[#4F46E5] hover:bg-[#4F46E5] text-white disabled:opacity-50">
+            {isSaving ? 'Saving...' : 'Save Product'}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -76,7 +76,7 @@ export function NewOrderModal({
 }: {
   isOpen: boolean
   onClose: () => void
-  onSave: (order: Order | Omit<Order, 'id'>) => void
+  onSave: (order: Order | Omit<Order, 'id'>) => Promise<void>
   initialData?: Order | null
   existingOrders?: Order[]
 }) {
@@ -99,6 +99,10 @@ export function NewOrderModal({
   const [cart, setCart] = useState<CartItem[]>([])
   const [itemToDelete, setItemToDelete] = useState<string | null>(null)
   const [gstPercent, setGstPercent] = useState<string>('18')
+  // Guards Create/Save Order against being fired again while a save is
+  // still in flight - without this, a double-click before the first
+  // request's response lands submitted the same new order twice.
+  const [isSaving, setIsSaving] = useState(false)
 
   // Fetched data from API
   const [customers, setCustomers] = useState<{ value: string; label: string }[]>([])
@@ -168,9 +172,10 @@ export function NewOrderModal({
   }
 
   const handleCreateOrder = async () => {
+    if (isSaving) return
     if (!customerOrderNo.trim() || cart.length === 0) return
     const customerLabel = customers.find(c => c.value === selectedCustomer)?.label || ''
-    
+
     const orderPayload = {
       customerOrderNo: customerOrderNo.trim(),
       internalOrderNo: internalOrderNo.trim(),
@@ -186,13 +191,20 @@ export function NewOrderModal({
       cart: [...cart],
     }
 
-    if (initialData) {
-      onSave({ ...orderPayload, id: initialData.id })
-    } else {
-      onSave(orderPayload)
+    setIsSaving(true)
+    try {
+      if (initialData) {
+        await onSave({ ...orderPayload, id: initialData.id })
+      } else {
+        // Generated now, not left blank until the server assigns one - the
+        // create route upserts on this id, so even a double-submit of this
+        // exact request collapses into one order instead of creating two.
+        await onSave({ ...orderPayload, id: crypto.randomUUID() })
+      }
+      resetForm()
+    } finally {
+      setIsSaving(false)
     }
-    
-    resetForm()
   }
 
   const handleClose = () => {
@@ -587,8 +599,8 @@ export function NewOrderModal({
           <Button variant="ghost" onClick={handleClose} className="text-[#64748B] hover:text-[#172554] hover:bg-[#EEF2FF] h-12 px-6">
             Cancel
           </Button>
-          <Button onClick={handleCreateOrder} disabled={!customerOrderNo.trim() || cart.length === 0} className="bg-[#4F46E5] hover:bg-[#4F46E5] text-white h-12 px-8 font-semibold text-[15px] disabled:opacity-50">
-            {initialData ? 'Save Order' : 'Create Order'}
+          <Button onClick={handleCreateOrder} disabled={!customerOrderNo.trim() || cart.length === 0 || isSaving} className="bg-[#4F46E5] hover:bg-[#4F46E5] text-white h-12 px-8 font-semibold text-[15px] disabled:opacity-50">
+            {isSaving ? 'Saving...' : (initialData ? 'Save Order' : 'Create Order')}
           </Button>
         </div>
       </DialogContent>

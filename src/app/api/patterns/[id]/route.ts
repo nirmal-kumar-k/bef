@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { eq } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
 import { patterns, patternCoreBoxes, patternProducts } from '@/infrastructure/database/schema'
 
@@ -51,19 +51,38 @@ export async function PUT(
       // sent that field - otherwise leave the existing rows untouched.
       let finalCoreBoxes
       if (sharedCoreBoxes !== undefined) {
-        await tx.delete(patternCoreBoxes).where(eq(patternCoreBoxes.patternId, id))
-        finalCoreBoxes = sharedCoreBoxes.length
-          ? await tx.insert(patternCoreBoxes).values(
-              sharedCoreBoxes.map((cb: any) => ({
-                patternId: id,
-                code: cb.code,
-                owner: cb.owner,
-                images: cb.images,
-                typeOfCore: cb.typeOfCore,
-                coreWeight: cb.coreWeight != null ? String(cb.coreWeight) : null,
-              }))
-            ).returning()
-          : []
+        // Reconcile in place instead of delete-all-then-reinsert - a wholesale
+        // replace hands every core box a brand new random id on every save,
+        // even ones the user didn't touch, permanently orphaning every
+        // product mapping's stored coreBoxId reference to them. That's what
+        // made previously-selected core boxes look unchecked (and, once
+        // re-toggled to "fix" it, double-counted) after any unrelated edit
+        // to the pattern's core-box list, like adding one new box.
+        const existingRows = await tx.select().from(patternCoreBoxes).where(eq(patternCoreBoxes.patternId, id))
+        const existingIds = new Set(existingRows.map(r => r.id))
+        const keepIds = new Set(sharedCoreBoxes.filter((cb: any) => cb.id && existingIds.has(cb.id)).map((cb: any) => cb.id))
+        const idsToRemove = existingRows.filter(r => !keepIds.has(r.id)).map(r => r.id)
+        if (idsToRemove.length > 0) {
+          await tx.delete(patternCoreBoxes).where(inArray(patternCoreBoxes.id, idsToRemove))
+        }
+
+        finalCoreBoxes = []
+        for (const cb of sharedCoreBoxes) {
+          const values = {
+            code: cb.code,
+            owner: cb.owner,
+            images: cb.images,
+            typeOfCore: cb.typeOfCore,
+            coreWeight: cb.coreWeight != null ? String(cb.coreWeight) : null,
+          }
+          if (cb.id && existingIds.has(cb.id)) {
+            const [row] = await tx.update(patternCoreBoxes).set(values).where(eq(patternCoreBoxes.id, cb.id)).returning()
+            finalCoreBoxes.push(row)
+          } else {
+            const [row] = await tx.insert(patternCoreBoxes).values({ patternId: id, ...values }).returning()
+            finalCoreBoxes.push(row)
+          }
+        }
       } else {
         finalCoreBoxes = await tx.select().from(patternCoreBoxes).where(eq(patternCoreBoxes.patternId, id))
       }
