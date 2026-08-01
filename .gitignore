@@ -18,3 +18,6 @@ node_modules
 
 # Private keys
 *.pem
+
+# Drizzle generated migrations
+drizzle/

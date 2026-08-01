@@ -20,21 +20,32 @@ export async function POST(request: NextRequest) {
 
     const carryForwards = computeCarryForwards(rows as unknown as PlanRow[])
 
-    if (carryForwards.length > 0) {
-      await db.insert(productionPlans).values(carryForwards.map(cf => ({
-        orderId: cf.orderId,
-        itemId: cf.itemId,
-        stage: cf.stage,
-        date: cf.date,
-        quantityScheduled: cf.quantityScheduled,
-        coreBoxCode: cf.coreBoxCode || '',
-        shiftId: cf.shiftId,
-        isPending: true,
-        carriedForwardFromDate: cf.carriedForwardFromDate,
-      })))
-    }
+    try {
+      await db.transaction(async (tx) => {
+        if (carryForwards.length > 0) {
+          await tx.insert(productionPlans).values(carryForwards.map(cf => ({
+            orderId: cf.orderId,
+            itemId: cf.itemId,
+            stage: cf.stage,
+            date: cf.date,
+            quantityScheduled: cf.quantityScheduled,
+            coreBoxCode: cf.coreBoxCode || '',
+            shiftId: cf.shiftId,
+            isPending: true,
+            carriedForwardFromDate: cf.carriedForwardFromDate,
+          })))
+        }
 
-    await db.insert(productionDayClosures).values({ date })
+        await tx.insert(productionDayClosures).values({ date })
+      })
+    } catch (error) {
+      // Handle TOCTOU race: two concurrent requests both passed the existingClosure check
+      // and tried to insert the same date. The second will hit unique constraint violation.
+      if ((error as any).code === '23505') {
+        return NextResponse.json({ error: 'This date is already closed' }, { status: 409 })
+      }
+      throw error
+    }
 
     return NextResponse.json({ closed: true, carriedForward: carryForwards })
   } catch (error) {

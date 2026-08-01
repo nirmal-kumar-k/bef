@@ -38,9 +38,9 @@ export function shortfallForRow(row: PlanRow): number {
 }
 
 export function nextDateString(date: string): string {
-  const d = new Date(date + 'T00:00:00')
-  d.setDate(d.getDate() + 1)
-  return d.toISOString().slice(0, 10)
+  const [year, month, day] = date.split('-').map(Number)
+  const utcMs = Date.UTC(year, month - 1, day + 1)
+  return new Date(utcMs).toISOString().slice(0, 10)
 }
 
 export function computeCarryForwards(rows: PlanRow[]): CarryForwardInput[] {
