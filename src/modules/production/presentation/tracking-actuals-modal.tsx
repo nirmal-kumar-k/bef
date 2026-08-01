@@ -25,6 +25,7 @@ export function TrackingActualsModal({ plan, shifts, onClose, onSaved }: Trackin
     if (plan) {
       setActuals((plan.hourlyActuals as Record<string, number>) || {})
       setMeltActual(plan.actualQuantity != null ? String(plan.actualQuantity) : '')
+      setError('')
     }
   }, [plan])
 
