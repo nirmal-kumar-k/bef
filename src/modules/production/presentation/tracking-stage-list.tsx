@@ -24,6 +24,7 @@ interface TrackingStageListProps {
   plans: TrackingPlanRow[]
   orders: any[]
   onEnterActuals: (plan: TrackingPlanRow) => void
+  disableActuals?: boolean
 }
 
 function actualSumFor(plan: TrackingPlanRow): number {
@@ -31,7 +32,7 @@ function actualSumFor(plan: TrackingPlanRow): number {
   return Object.values(plan.hourlyActuals || {}).reduce((s, v) => s + (Number(v) || 0), 0)
 }
 
-export function TrackingStageList({ stage, plans, orders, onEnterActuals }: TrackingStageListProps) {
+export function TrackingStageList({ stage, plans, orders, onEnterActuals, disableActuals }: TrackingStageListProps) {
   const rows = plans
     .filter(p => p.stage === stage)
     // Pending (carried-forward) rows surface first so operators clear backlog before new work.
@@ -80,7 +81,7 @@ export function TrackingStageList({ stage, plans, orders, onEnterActuals }: Trac
                   )}
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <Button size="sm" variant="outline" onClick={() => onEnterActuals(plan)} className="border-[#E0E7FF] text-[#4F46E5] hover:bg-[#EEF2FF]">
+                  <Button size="sm" variant="outline" onClick={() => onEnterActuals(plan)} disabled={disableActuals} className="border-[#E0E7FF] text-[#4F46E5] hover:bg-[#EEF2FF]">
                     Enter Actuals
                   </Button>
                 </td>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Input } from '@/shared/ui/input'
+import { Button } from '@/shared/ui/button'
 import { cn, toLocalDateString } from '@/shared/lib/utils'
 import { TrackingStageList, type TrackingPlanRow } from '@/modules/production/presentation/tracking-stage-list'
 import { TrackingActualsModal } from '@/modules/production/presentation/tracking-actuals-modal'
@@ -16,6 +17,8 @@ export default function ProductionTrackingPage() {
   const [dateFilter, setDateFilter] = useState(() => toLocalDateString(new Date()))
   const [activeStage, setActiveStage] = useState<TrackingPlanRow['stage']>('Core')
   const [actualsPlan, setActualsPlan] = useState<TrackingPlanRow | null>(null)
+  const [isClosed, setIsClosed] = useState(false)
+  const [isClosing, setIsClosing] = useState(false)
 
   const fetchData = useCallback(async () => {
     try {
@@ -33,6 +36,36 @@ export default function ProductionTrackingPage() {
 
   useEffect(() => { fetchData() }, [fetchData])
 
+  useEffect(() => {
+    fetch(`/api/production-day-closures?date=${dateFilter}`)
+      .then(res => res.ok ? res.json() : { closed: false })
+      .then(data => setIsClosed(!!data.closed))
+      .catch(() => setIsClosed(false))
+  }, [dateFilter])
+
+  const handleCloseDay = async () => {
+    if (!confirm(`Close ${dateFilter}? This carries forward any shortfall to tomorrow and locks further edits for this date.`)) return
+    setIsClosing(true)
+    try {
+      const res = await fetch('/api/production-plans/close-day', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: dateFilter }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        alert(`Day closed. ${data.carriedForward.length} item(s) carried forward to tomorrow.`)
+        setIsClosed(true)
+        await fetchData()
+      } else {
+        const err = await res.json()
+        alert(err.error || 'Failed to close day')
+      }
+    } finally {
+      setIsClosing(false)
+    }
+  }
+
   const dayPlans = useMemo(() => plans.filter(p => p.date === dateFilter), [plans, dateFilter])
 
   return (
@@ -42,12 +75,17 @@ export default function ProductionTrackingPage() {
           <h1 className="text-3xl font-bold text-[#172554] font-heading tracking-tight">Production Tracking</h1>
           <p className="text-[#64748B] mt-1 text-sm">Read-only view of planned quantities, with actuals entry per item</p>
         </div>
-        <Input
-          type="date"
-          value={dateFilter}
-          onChange={e => setDateFilter(e.target.value)}
-          className="w-40 bg-[#FFFFFF] border-[#E0E7FF] text-[#172554]"
-        />
+        <div className="flex gap-2">
+          <Input
+            type="date"
+            value={dateFilter}
+            onChange={e => setDateFilter(e.target.value)}
+            className="w-40 bg-[#FFFFFF] border-[#E0E7FF] text-[#172554]"
+          />
+          <Button onClick={handleCloseDay} disabled={isClosed || isClosing} className="bg-[#4F46E5] hover:bg-[#4F46E5]/90 text-white">
+            {isClosed ? 'Day Closed' : isClosing ? 'Closing...' : 'Close Day'}
+          </Button>
+        </div>
       </div>
 
       <div className="flex w-full max-w-xl bg-white p-1.5 rounded-full shadow-sm border border-[#D8DEE9]">
@@ -72,7 +110,8 @@ export default function ProductionTrackingPage() {
           stage={activeStage}
           plans={dayPlans}
           orders={orders}
-          onEnterActuals={setActualsPlan}
+          onEnterActuals={isClosed ? () => {} : setActualsPlan}
+          disableActuals={isClosed}
         />
       )}
 
