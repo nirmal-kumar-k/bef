@@ -94,7 +94,7 @@ export default function ProductionTrackingPage() {
 
   const dayPlans = useMemo(() => plans.filter(p => p.date === dateFilter), [plans, dateFilter])
 
-  const [summaryView, setSummaryView] = useState<'calendar' | 'list'>('list')
+  const [summaryView, setSummaryView] = useState<'calendar' | 'list'>('calendar')
 
   const calendarDays = useMemo(() => {
     const today = new Date()
