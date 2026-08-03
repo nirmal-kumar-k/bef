@@ -1,7 +1,8 @@
 'use client'
 
-import { Button } from '@/shared/ui/button'
+import { useState } from 'react'
 import { Badge } from '@/shared/ui/badge'
+import { Input } from '@/shared/ui/input'
 import { cn } from '@/shared/lib/utils'
 
 export interface TrackingPlanRow {
@@ -23,7 +24,7 @@ interface TrackingStageListProps {
   stage: 'Core' | 'Mould' | 'Melt' | 'Knockout'
   plans: TrackingPlanRow[]
   orders: any[]
-  onEnterActuals: (plan: TrackingPlanRow) => void
+  onSaved: () => Promise<void>
   disableActuals?: boolean
 }
 
@@ -32,7 +33,45 @@ function actualSumFor(plan: TrackingPlanRow): number {
   return Object.values(plan.hourlyActuals || {}).reduce((s, v) => s + (Number(v) || 0), 0)
 }
 
-export function TrackingStageList({ stage, plans, orders, onEnterActuals, disableActuals }: TrackingStageListProps) {
+// Melt's actual is a single field (no hourly breakdown), so it stays
+// inline-editable directly in List - Core/Mould/Knockout only ever get
+// edited through TrackingDayModal's hourly grid, so the two entry points
+// can't disagree about what "the actual" is for the same row.
+function MeltActualInput({ plan, onSaved }: { plan: TrackingPlanRow; onSaved: () => Promise<void> }) {
+  const [value, setValue] = useState(plan.actualQuantity != null ? String(plan.actualQuantity) : '')
+  const [isSaving, setIsSaving] = useState(false)
+
+  const handleBlur = async () => {
+    const original = plan.actualQuantity != null ? String(plan.actualQuantity) : ''
+    if (value === original) return
+    setIsSaving(true)
+    try {
+      await fetch(`/api/production-plans/${plan.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ actualQuantity: value === '' ? null : Number(value) }),
+      })
+      await onSaved()
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  return (
+    <Input
+      type="number"
+      min="0"
+      value={value}
+      disabled={isSaving}
+      onChange={e => setValue(e.target.value)}
+      onBlur={handleBlur}
+      className="w-24 h-8 text-center text-sm bg-white border-[#E0E7FF] mx-auto"
+      placeholder="0"
+    />
+  )
+}
+
+export function TrackingStageList({ stage, plans, orders, onSaved, disableActuals }: TrackingStageListProps) {
   const rows = plans
     .filter(p => p.stage === stage)
     // Pending (carried-forward) rows surface first so operators clear backlog before new work.
@@ -51,9 +90,8 @@ export function TrackingStageList({ stage, plans, orders, onEnterActuals, disabl
             <th className="px-4 py-3">Product</th>
             {stage === 'Core' && <th className="px-4 py-3">Core Box</th>}
             <th className="px-4 py-3 text-center">Planned</th>
-            <th className="px-4 py-3 text-center">Actual (so far)</th>
+            <th className="px-4 py-3 text-center">{stage === 'Melt' ? 'Actual Quantity' : 'Actual (so far)'}</th>
             <th className="px-4 py-3 text-center">Status</th>
-            <th className="px-4 py-3 text-right">Actuals Entry</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-[#E0E7FF]">
@@ -70,7 +108,11 @@ export function TrackingStageList({ stage, plans, orders, onEnterActuals, disabl
                 <td className="px-4 py-3 font-semibold text-[#172554]">{productName}</td>
                 {stage === 'Core' && <td className="px-4 py-3 font-mono text-indigo-600">{plan.coreBoxCode || '-'}</td>}
                 <td className="px-4 py-3 text-center font-mono font-semibold">{plan.quantityScheduled}</td>
-                <td className="px-4 py-3 text-center font-mono">{actual}</td>
+                <td className="px-4 py-3 text-center font-mono">
+                  {stage === 'Melt' ? (
+                    disableActuals ? actual : <MeltActualInput plan={plan} onSaved={onSaved} />
+                  ) : actual}
+                </td>
                 <td className="px-4 py-3 text-center">
                   {plan.isPending ? (
                     <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/20 text-[10px]">
@@ -79,11 +121,6 @@ export function TrackingStageList({ stage, plans, orders, onEnterActuals, disabl
                   ) : (
                     <span className="text-[#94A3B8] text-xs">-</span>
                   )}
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <Button size="sm" variant="outline" onClick={() => onEnterActuals(plan)} disabled={disableActuals} className="border-[#E0E7FF] text-[#4F46E5] hover:bg-[#EEF2FF]">
-                    Enter Actuals
-                  </Button>
                 </td>
               </tr>
             )

@@ -159,7 +159,7 @@ export default function ProductionTrackingPage() {
               stage={activeStage}
               plans={dayPlans}
               orders={orders}
-              onEnterActuals={isClosed ? () => {} : setActualsPlan}
+              onSaved={fetchData}
               disableActuals={isClosed}
             />
           )}
