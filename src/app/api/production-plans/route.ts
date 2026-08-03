@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { asc } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
 import { productionPlans } from '@/infrastructure/database/schema'
-import { syncScheduleFromPlans } from './_schedule-sync'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,7 +32,6 @@ export async function POST(request: NextRequest) {
           .onConflictDoUpdate({ target: productionPlans.id, set: insertData })
           .returning()
       : await db.insert(productionPlans).values(insertData).returning()
-    await syncScheduleFromPlans(row.orderId, row.date)
     return NextResponse.json(row, { status: 201 })
   } catch (error) {
     console.error('POST /api/production-plans error:', error)
