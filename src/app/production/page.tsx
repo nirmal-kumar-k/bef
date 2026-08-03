@@ -5,7 +5,6 @@ import { Input } from '@/shared/ui/input'
 import { Button } from '@/shared/ui/button'
 import { cn, toLocalDateString } from '@/shared/lib/utils'
 import { TrackingStageList, type TrackingPlanRow } from '@/modules/production/presentation/tracking-stage-list'
-import { TrackingActualsModal } from '@/modules/production/presentation/tracking-actuals-modal'
 import { TrackingDayModal } from '@/modules/production/presentation/tracking-day-modal'
 
 const STAGES: TrackingPlanRow['stage'][] = ['Core', 'Mould', 'Melt', 'Knockout']
@@ -23,7 +22,6 @@ export default function ProductionTrackingPage() {
   const [loading, setLoading] = useState(true)
   const [dateFilter, setDateFilter] = useState(() => toLocalDateString(new Date()))
   const [activeStage, setActiveStage] = useState<TrackingPlanRow['stage']>('Core')
-  const [actualsPlan, setActualsPlan] = useState<TrackingPlanRow | null>(null)
   const [isClosed, setIsClosed] = useState(false)
   const [isClosing, setIsClosing] = useState(false)
   const [openDayModalDate, setOpenDayModalDate] = useState<string | null>(null)
@@ -208,13 +206,6 @@ export default function ProductionTrackingPage() {
           </div>
         </div>
       )}
-
-      <TrackingActualsModal
-        plan={actualsPlan}
-        shifts={shifts}
-        onClose={() => setActualsPlan(null)}
-        onSaved={fetchData}
-      />
 
       <TrackingDayModal
         date={openDayModalDate}
