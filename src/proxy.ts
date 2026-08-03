@@ -9,7 +9,12 @@ export async function proxy(request: NextRequest) {
   const token = request.cookies.get('auth_token')?.value
   const payload = token ? await verifyAuthToken(token) : null
 
+  const isApiPath = pathname.startsWith('/api')
   const isPublicPath = PUBLIC_PATHS.includes(pathname)
+
+  if (!payload && isApiPath) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
 
   if (!payload && !isPublicPath) {
     const loginUrl = new URL('/login', request.url)
@@ -30,5 +35,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|api).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 }
