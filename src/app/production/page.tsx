@@ -6,8 +6,15 @@ import { Button } from '@/shared/ui/button'
 import { cn, toLocalDateString } from '@/shared/lib/utils'
 import { TrackingStageList, type TrackingPlanRow } from '@/modules/production/presentation/tracking-stage-list'
 import { TrackingActualsModal } from '@/modules/production/presentation/tracking-actuals-modal'
+import { TrackingDayModal } from '@/modules/production/presentation/tracking-day-modal'
 
 const STAGES: TrackingPlanRow['stage'][] = ['Core', 'Mould', 'Melt', 'Knockout']
+const STAGE_DOTS: { stage: TrackingPlanRow['stage']; color: string }[] = [
+  { stage: 'Core', color: 'bg-yellow-400' },
+  { stage: 'Mould', color: 'bg-[#4F46E5]' },
+  { stage: 'Melt', color: 'bg-orange-400' },
+  { stage: 'Knockout', color: 'bg-emerald-400' },
+]
 
 export default function ProductionTrackingPage() {
   const [plans, setPlans] = useState<TrackingPlanRow[]>([])
@@ -19,6 +26,7 @@ export default function ProductionTrackingPage() {
   const [actualsPlan, setActualsPlan] = useState<TrackingPlanRow | null>(null)
   const [isClosed, setIsClosed] = useState(false)
   const [isClosing, setIsClosing] = useState(false)
+  const [openDayModalDate, setOpenDayModalDate] = useState<string | null>(null)
 
   const fetchData = useCallback(async () => {
     try {
@@ -173,18 +181,27 @@ export default function ProductionTrackingPage() {
               return (
                 <button
                   key={i}
-                  onClick={() => { setDateFilter(dateStr); setSummaryView('list') }}
-                  className="min-h-[110px] bg-white p-2 rounded-[12px] border border-[#E0E7FF] flex flex-col gap-1 text-left hover:border-[#4F46E5] transition-colors"
+                  onClick={() => setOpenDayModalDate(dateStr)}
+                  className="min-h-[130px] bg-white p-2 rounded-[12px] border border-[#E0E7FF] flex flex-col gap-1 text-left hover:border-[#4F46E5] transition-colors"
                 >
-                  <span className={cn('text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full self-end', isToday ? 'bg-[#4F46E5] text-white' : 'text-[#64748B]')}>
-                    {date.getDate()}
-                  </span>
-                  {STAGES.map(stage => counts?.[stage]?.planned ? (
-                    <div key={stage} className="flex items-center justify-between px-1 text-[10.5px]">
-                      <span className="text-[#64748B]">{stage}</span>
-                      <span className="font-bold text-[#0F172A]">{counts[stage].actual} / {counts[stage].planned}</span>
-                    </div>
-                  ) : null)}
+                  <div className="flex justify-end w-full">
+                    <span className={cn('text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full', isToday ? 'bg-[#4F46E5] text-white' : 'text-[#64748B]')}>
+                      {date.getDate()}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1 mt-1">
+                    {STAGE_DOTS.map(({ stage, color }) => counts?.[stage]?.planned ? (
+                      <div key={stage} className="flex items-center justify-between px-1.5 py-0.5 rounded-md">
+                        <div className="flex items-center gap-1.5">
+                          <div className={cn('w-1.5 h-1.5 rounded-full', color)} />
+                          <span className="text-[10.5px] font-medium text-[#64748B]">{stage}</span>
+                        </div>
+                        <span className="text-[10.5px] font-bold text-[#0F172A]">
+                          {counts[stage].actual} <span className="text-[#94A3B8] font-normal mx-0.5">/</span> {counts[stage].planned}
+                        </span>
+                      </div>
+                    ) : null)}
+                  </div>
                 </button>
               )
             })}
@@ -196,6 +213,15 @@ export default function ProductionTrackingPage() {
         plan={actualsPlan}
         shifts={shifts}
         onClose={() => setActualsPlan(null)}
+        onSaved={fetchData}
+      />
+
+      <TrackingDayModal
+        date={openDayModalDate}
+        plans={plans}
+        orders={orders}
+        shifts={shifts}
+        onClose={() => setOpenDayModalDate(null)}
         onSaved={fetchData}
       />
     </div>
