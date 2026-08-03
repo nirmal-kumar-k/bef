@@ -143,47 +143,46 @@ export function TrackingDayModal({ date, plans, orders, shifts, onClose, onSaved
             ))}
           </div>
 
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-semibold uppercase tracking-wider text-[#64748B]">Shift:</span>
+            {shifts.length > 0 && (
+              <Select value={selectedShiftId} onValueChange={setSelectedShiftId}>
+                <SelectTrigger className="h-9 px-4 text-sm font-semibold rounded-lg border border-[#E0E7FF] bg-white shadow-sm">
+                  <SelectValue placeholder="Select Shift">
+                    {(id: string) => {
+                      const s = shifts.find((sh: any) => sh.id === id)
+                      return s ? `${s.name} (${s.startTime} - ${s.endTime})` : 'Select Shift'
+                    }}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {shifts.map((s: any) => (
+                    <SelectItem key={s.id} value={s.id!} className="text-sm">
+                      {s.name} ({s.startTime} - {s.endTime})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+
           {activeStage === 'Melt' ? (
             <TrackingMeltActualsTable
-              rows={stageRows}
+              rows={shiftFilteredRows}
               orders={orders}
               onDirtyChange={setIsDirty}
               onSaved={onSaved}
               disabled={isClosed}
             />
           ) : (
-            <>
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-semibold uppercase tracking-wider text-[#64748B]">Shift:</span>
-                {shifts.length > 0 && (
-                  <Select value={selectedShiftId} onValueChange={setSelectedShiftId}>
-                    <SelectTrigger className="h-9 px-4 text-sm font-semibold rounded-lg border border-[#E0E7FF] bg-white shadow-sm">
-                      <SelectValue placeholder="Select Shift">
-                        {(id: string) => {
-                          const s = shifts.find((sh: any) => sh.id === id)
-                          return s ? `${s.name} (${s.startTime} - ${s.endTime})` : 'Select Shift'
-                        }}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {shifts.map((s: any) => (
-                        <SelectItem key={s.id} value={s.id!} className="text-sm">
-                          {s.name} ({s.startTime} - {s.endTime})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-              <TrackingHourlyGrid
-                rows={shiftFilteredRows}
-                orders={orders}
-                timeSlots={timeSlots}
-                onDirtyChange={setIsDirty}
-                onSaved={onSaved}
-                disabled={isClosed}
-              />
-            </>
+            <TrackingHourlyGrid
+              rows={shiftFilteredRows}
+              orders={orders}
+              timeSlots={timeSlots}
+              onDirtyChange={setIsDirty}
+              onSaved={onSaved}
+              disabled={isClosed}
+            />
           )}
         </div>
       </DialogContent>
