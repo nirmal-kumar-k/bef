@@ -74,58 +74,56 @@ export function TrackingHourlyGrid({ rows, orders, timeSlots, onDirtyChange, onS
 
   return (
     <div className="space-y-3">
-      <div className="border border-[#E0E7FF] rounded-xl overflow-x-auto shadow-sm">
-        <table className="w-full text-sm text-left whitespace-nowrap">
-          <thead className="bg-[#F4F6FB] border-b border-[#E0E7FF] text-[#64748B] font-semibold text-xs uppercase tracking-wider">
-            <tr>
-              <th className="px-3 py-3">PO No</th>
-              <th className="px-3 py-3">Product</th>
-              <th className="px-3 py-3 text-center">Planned</th>
-              {timeSlots.map(slot => (
-                <th key={slot.time} className="px-2 py-3 text-center border-l border-[#E0E7FF]">{slot.time}</th>
-              ))}
-              <th className="px-3 py-3 text-center">Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[#E0E7FF]">
-            {sortedRows.map(row => {
-              const order = orders.find((o: any) => (o.id || o._id) === row.orderId)
-              const parts = String(row.itemId).split('-')
-              const idx = parseInt(parts[parts.length - 1], 10)
-              const productName = order?.cart?.[idx]?.productName || '-'
+      <div className="space-y-3">
+        {sortedRows.map(row => {
+          const order = orders.find((o: any) => (o.id || o._id) === row.orderId)
+          const parts = String(row.itemId).split('-')
+          const idx = parseInt(parts[parts.length - 1], 10)
+          const productName = order?.cart?.[idx]?.productName || '-'
 
-              return (
-                <tr key={row.id} className={cn('hover:bg-[#F8FAFC]', row.isPending && 'bg-red-50')}>
-                  <td className="px-3 py-2 font-mono text-[#4285F4]">{order?.customerOrderNo || '-'}</td>
-                  <td className="px-3 py-2 font-semibold text-[#172554]">{productName}</td>
-                  <td className="px-3 py-2 text-center font-mono font-semibold">{row.quantityScheduled}</td>
-                  {timeSlots.map(slot => (
-                    <td key={slot.time} className="px-1 py-1.5 border-l border-[#E0E7FF]">
-                      <Input
-                        type="number"
-                        min="0"
-                        disabled={disabled}
-                        value={valueFor(row, slot.time) || ''}
-                        onChange={e => handleChange(row.id, slot.time, e.target.value)}
-                        className="w-16 h-8 text-center text-sm bg-white border-[#E0E7FF] mx-auto"
-                        placeholder="0"
-                      />
-                    </td>
-                  ))}
-                  <td className="px-3 py-2 text-center">
-                    {row.isPending ? (
-                      <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/20 text-[10px]">
-                        Pending{row.carriedForwardFromDate ? ` (from ${row.carriedForwardFromDate})` : ''}
-                      </Badge>
-                    ) : (
-                      <span className="text-[#94A3B8] text-xs">-</span>
-                    )}
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
+          return (
+            <div key={row.id} className={cn('border border-[#E0E7FF] rounded-xl p-4 bg-white shadow-sm space-y-3', row.isPending && 'bg-red-50 border-red-200')}>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-4">
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]">PO No</p>
+                    <p className="font-mono text-[#4285F4] font-semibold">{order?.customerOrderNo || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]">Product</p>
+                    <p className="font-semibold text-[#172554]">{productName}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]">Planned</p>
+                    <p className="font-mono font-bold text-[#172554]">{row.quantityScheduled}</p>
+                  </div>
+                </div>
+                {row.isPending ? (
+                  <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/20 text-[10px]">
+                    Pending{row.carriedForwardFromDate ? ` (from ${row.carriedForwardFromDate})` : ''}
+                  </Badge>
+                ) : null}
+              </div>
+
+              <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
+                {timeSlots.map(slot => (
+                  <div key={slot.time} className="flex flex-col items-center gap-1 p-2 rounded-lg border border-[#E0E7FF] bg-[#F8FAFC] aspect-square justify-center">
+                    <span className="text-[9.5px] font-semibold text-[#64748B] text-center leading-tight">{slot.time}</span>
+                    <Input
+                      type="number"
+                      min="0"
+                      disabled={disabled}
+                      value={valueFor(row, slot.time) || ''}
+                      onChange={e => handleChange(row.id, slot.time, e.target.value)}
+                      className="w-full h-8 text-center text-sm bg-white border-[#E0E7FF] px-1"
+                      placeholder="0"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        })}
       </div>
       <div className="flex justify-end">
         <Button onClick={handleSave} disabled={!hasEdits || isSaving || disabled} className="bg-[#4F46E5] hover:bg-[#4F46E5]/90 text-white">

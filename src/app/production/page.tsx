@@ -6,6 +6,7 @@ import { Button } from '@/shared/ui/button'
 import { cn, toLocalDateString } from '@/shared/lib/utils'
 import { TrackingStageList, type TrackingPlanRow } from '@/modules/production/presentation/tracking-stage-list'
 import { TrackingDayModal } from '@/modules/production/presentation/tracking-day-modal'
+import { ConfirmDialog, type ConfirmDialogState } from '@/shared/ui/confirm-dialog'
 
 const STAGES: TrackingPlanRow['stage'][] = ['Core', 'Mould', 'Melt', 'Knockout']
 const STAGE_DOTS: { stage: TrackingPlanRow['stage']; color: string }[] = [
@@ -25,6 +26,7 @@ export default function ProductionTrackingPage() {
   const [isClosed, setIsClosed] = useState(false)
   const [isClosing, setIsClosing] = useState(false)
   const [openDayModalDate, setOpenDayModalDate] = useState<string | null>(null)
+  const [dialog, setDialog] = useState<ConfirmDialogState | null>(null)
 
   const fetchData = useCallback(async () => {
     try {
@@ -49,8 +51,7 @@ export default function ProductionTrackingPage() {
       .catch(() => setIsClosed(false))
   }, [dateFilter])
 
-  const handleCloseDay = async () => {
-    if (!confirm(`Close ${dateFilter}? This carries forward any shortfall to tomorrow and locks further edits for this date.`)) return
+  const performCloseDay = async () => {
     setIsClosing(true)
     try {
       const res = await fetch('/api/production-plans/close-day', {
@@ -60,16 +61,35 @@ export default function ProductionTrackingPage() {
       })
       if (res.ok) {
         const data = await res.json()
-        alert(`Day closed. ${data.carriedForward.length} item(s) carried forward to tomorrow.`)
         setIsClosed(true)
         await fetchData()
+        setDialog({
+          title: 'Day Closed',
+          description: `${data.carriedForward.length} item(s) carried forward to tomorrow.`,
+          tone: 'info',
+          onConfirm: () => {},
+        })
       } else {
         const err = await res.json()
-        alert(err.error || 'Failed to close day')
+        setDialog({
+          title: 'Could Not Close Day',
+          description: err.error || 'Failed to close day',
+          onConfirm: () => {},
+        })
       }
     } finally {
       setIsClosing(false)
     }
+  }
+
+  const handleCloseDay = () => {
+    setDialog({
+      title: 'Close this day?',
+      description: `Close ${dateFilter}? This carries forward any shortfall to tomorrow and locks further edits for this date.`,
+      confirmLabel: 'Close Day',
+      cancelLabel: 'Cancel',
+      onConfirm: performCloseDay,
+    })
   }
 
   const dayPlans = useMemo(() => plans.filter(p => p.date === dateFilter), [plans, dateFilter])
@@ -215,6 +235,8 @@ export default function ProductionTrackingPage() {
         onClose={() => setOpenDayModalDate(null)}
         onSaved={fetchData}
       />
+
+      <ConfirmDialog state={dialog} onClose={() => setDialog(null)} />
     </div>
   )
 }

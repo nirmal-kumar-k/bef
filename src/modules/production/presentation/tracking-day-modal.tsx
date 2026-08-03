@@ -9,6 +9,7 @@ import {
 } from '@/shared/ui/dialog'
 import { Button } from '@/shared/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
+import { ConfirmDialog, type ConfirmDialogState } from '@/shared/ui/confirm-dialog'
 import { cn, generateTimeSlots } from '@/shared/lib/utils'
 import { TrackingHourlyGrid } from './tracking-hourly-grid'
 import { TrackingMeltActualsTable } from './tracking-melt-actuals-table'
@@ -31,6 +32,7 @@ export function TrackingDayModal({ date, plans, orders, shifts, onClose, onSaved
   const [isDirty, setIsDirty] = useState(false)
   const [isClosed, setIsClosed] = useState(false)
   const [isClosing, setIsClosing] = useState(false)
+  const [dialog, setDialog] = useState<ConfirmDialogState | null>(null)
 
   useEffect(() => {
     if (!date) return
@@ -54,13 +56,21 @@ export function TrackingDayModal({ date, plans, orders, shifts, onClose, onSaved
   const shiftFilteredRows = stageRows.filter(r => !r.shiftId || r.shiftId === selectedShiftId)
 
   const handleClose = () => {
-    if (isDirty && !confirm('You have unsaved actuals. Discard and close?')) return
-    onClose()
+    if (!isDirty) {
+      onClose()
+      return
+    }
+    setDialog({
+      title: 'Discard unsaved actuals?',
+      description: 'You have unsaved actuals entered. Closing now will discard them.',
+      confirmLabel: 'Discard & Close',
+      cancelLabel: 'Keep Editing',
+      onConfirm: onClose,
+    })
   }
 
-  const handleCloseDay = async () => {
+  const performCloseDay = async () => {
     if (!date) return
-    if (!confirm(`Close ${date}? This carries forward any shortfall to tomorrow and locks further edits for this date.`)) return
     setIsClosing(true)
     try {
       const res = await fetch('/api/production-plans/close-day', {
@@ -70,24 +80,45 @@ export function TrackingDayModal({ date, plans, orders, shifts, onClose, onSaved
       })
       if (res.ok) {
         const data = await res.json()
-        alert(`Day closed. ${data.carriedForward.length} item(s) carried forward to tomorrow.`)
         setIsClosed(true)
         await onSaved()
+        setDialog({
+          title: 'Day Closed',
+          description: `${data.carriedForward.length} item(s) carried forward to tomorrow.`,
+          tone: 'info',
+          onConfirm: () => {},
+        })
       } else {
         const err = await res.json()
-        alert(err.error || 'Failed to close day')
+        setDialog({
+          title: 'Could Not Close Day',
+          description: err.error || 'Failed to close day',
+          onConfirm: () => {},
+        })
       }
     } finally {
       setIsClosing(false)
     }
   }
 
+  const handleCloseDay = () => {
+    if (!date) return
+    setDialog({
+      title: 'Close this day?',
+      description: `Close ${date}? This carries forward any shortfall to tomorrow and locks further edits for this date.`,
+      confirmLabel: 'Close Day',
+      cancelLabel: 'Cancel',
+      onConfirm: performCloseDay,
+    })
+  }
+
   if (!date) return null
 
   return (
+    <>
     <Dialog open={!!date} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="w-full h-full max-w-full rounded-none sm:w-[95vw] sm:max-w-[1200px] sm:h-[90vh] sm:rounded-2xl bg-[#F4F6FB] text-foreground p-0 shadow-2xl flex flex-col overflow-hidden">
-        <DialogHeader className="p-6 pb-4 border-b border-[#E0E7FF] bg-white shrink-0">
+        <DialogHeader className="p-6 pb-4 pr-14 border-b border-[#E0E7FF] bg-white shrink-0">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <DialogTitle className="text-xl font-heading text-[#172554]">{date}</DialogTitle>
             <Button onClick={handleCloseDay} disabled={isClosed || isClosing} className="bg-[#4F46E5] hover:bg-[#4F46E5]/90 text-white">
@@ -157,5 +188,7 @@ export function TrackingDayModal({ date, plans, orders, shifts, onClose, onSaved
         </div>
       </DialogContent>
     </Dialog>
+    <ConfirmDialog state={dialog} onClose={() => setDialog(null)} />
+    </>
   )
 }
