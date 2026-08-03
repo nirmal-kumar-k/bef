@@ -34,7 +34,7 @@ import {
   PopoverTrigger,
 } from '@/shared/ui/popover'
 import { Check, CaretUpDown } from '@phosphor-icons/react'
-import { cn, handleEnterToTab, toLocalDateString } from '@/shared/lib/utils'
+import { cn, handleEnterToTab } from '@/shared/lib/utils'
 import { type Order } from '@/modules/orders/domain/order.types'
 import { useRole } from '@/shared/context/role-context'
 
@@ -173,7 +173,7 @@ export function NewOrderModal({
 
   const handleCreateOrder = async () => {
     if (isSaving) return
-    if (!customerOrderNo.trim() || cart.length === 0) return
+    if (!customerOrderNo.trim() || cart.length === 0 || !orderDate || !deliveryDate) return
     const customerLabel = customers.find(c => c.value === selectedCustomer)?.label || ''
 
     const orderPayload = {
@@ -181,8 +181,8 @@ export function NewOrderModal({
       internalOrderNo: internalOrderNo.trim(),
       customer: customerLabel,
       product: cart[0]?.productName || '',
-      orderDate: orderDate || toLocalDateString(new Date()),
-      deliveryDate: deliveryDate || '',
+      orderDate,
+      deliveryDate,
       status: initialData ? initialData.status : 'Received',
       gstPercent: Number(gstPercent) || 0,
       subtotal,
@@ -599,7 +599,7 @@ export function NewOrderModal({
           <Button variant="ghost" onClick={handleClose} className="text-[#64748B] hover:text-[#172554] hover:bg-[#EEF2FF] h-12 px-6">
             Cancel
           </Button>
-          <Button onClick={handleCreateOrder} disabled={!customerOrderNo.trim() || cart.length === 0 || isSaving} className="bg-[#4F46E5] hover:bg-[#4F46E5] text-white h-12 px-8 font-semibold text-[15px] disabled:opacity-50">
+          <Button onClick={handleCreateOrder} disabled={!customerOrderNo.trim() || cart.length === 0 || !orderDate || !deliveryDate || isSaving} className="bg-[#4F46E5] hover:bg-[#4F46E5] text-white h-12 px-8 font-semibold text-[15px] disabled:opacity-50">
             {isSaving ? 'Saving...' : (initialData ? 'Save Order' : 'Create Order')}
           </Button>
         </div>
