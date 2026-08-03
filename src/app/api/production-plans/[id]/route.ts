@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { eq } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
 import { productionPlans } from '@/infrastructure/database/schema'
-import { syncScheduleFromPlans } from '../_schedule-sync'
 import { syncInspectionStock } from '../_inspection-stock-sync'
 
 export async function PUT(
@@ -24,7 +23,6 @@ export async function PUT(
     const [existing] = await db.select().from(productionPlans).where(eq(productionPlans.id, id))
     const [plan] = await db.update(productionPlans).set(updateData).where(eq(productionPlans.id, id)).returning()
     if (!plan) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-    await syncScheduleFromPlans(plan.orderId, plan.date)
     // Correcting a past Inspection batch's accepted quantity (e.g. fixing a
     // mistyped rejected count) must adjust product.stock by the difference -
     // that stock was already incremented once when the batch was submitted.
@@ -44,7 +42,6 @@ export async function DELETE(
     const { id } = await params
     const [deleted] = await db.delete(productionPlans).where(eq(productionPlans.id, id)).returning()
     if (deleted) {
-      await syncScheduleFromPlans(deleted.orderId, deleted.date)
       // Undoing a mistaken Inspection batch entirely must reverse the stock
       // it added - the deleted row's own quantity becomes available to
       // inspect fresh again automatically, since it's no longer counted in
