@@ -18,3 +18,9 @@ node_modules
 
 # Private keys
 *.pem
+
+# Drizzle generated migrations
+drizzle/
+
+# Local Claude Code settings (worktree-specific, not shared)
+.claude/

@@ -59,6 +59,10 @@ export const productionPlans = pgTable('production_plans', {
   actuals: jsonb('actuals').$type<{ pigIron?: number; scrap?: number; feMn?: number; carburizer?: number }>(),
   allocations: jsonb('allocations').$type<unknown[]>().default([]),
   isPending: boolean('is_pending').default(false),
+  // Set only on rows created by the Close Day carry-forward process (Production
+  // Tracking) - the origin date this row's shortfall came from, purely for
+  // display ("Carried forward from Jul 31"). Never set by Production Planning.
+  carriedForwardFromDate: text('carried_forward_from_date'),
   isConfirmed: boolean('is_confirmed').default(false),
   possibleQuantity: numeric('possible_quantity').default('0'),
   plannedCharge: jsonb('planned_charge').$type<{ pigIron?: number; scrap?: number; feMn?: number; carburizer?: number }>(),
