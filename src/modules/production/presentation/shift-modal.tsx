@@ -10,6 +10,7 @@ import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
 import { Plus, X } from '@phosphor-icons/react'
+import { generateId } from '@/shared/lib/utils'
 import type { Shift } from './shift-master-page'
 
 export function ShiftModal({
@@ -70,7 +71,7 @@ export function ShiftModal({
         // Generated now for a new shift, not left blank until the server
         // assigns one - the create route upserts on this id, so even a
         // double-submit collapses into one shift instead of creating two.
-        id: shift?.id || crypto.randomUUID(),
+        id: shift?.id || generateId(),
         name,
         startTime,
         endTime,

@@ -8,7 +8,7 @@ import { ViewProductModal } from '@/modules/products/presentation/view-product-m
 import type { Product } from '@/modules/products/domain/product.types'
 import { useRole } from '@/shared/context/role-context'
 import { ShieldWarning, Funnel, Check, CaretUpDown, X, MagnifyingGlass, Trash, PencilSimple } from '@phosphor-icons/react'
-import { cn } from '@/shared/lib/utils'
+import { cn, generateId } from '@/shared/lib/utils'
 import { ConfirmDeleteDialog } from '@/shared/ui/confirm-delete-dialog'
 import {
   Popover,
@@ -79,7 +79,7 @@ export default function ProductsPage() {
       // Generated now, not left blank until the server assigns one - the
       // create route upserts on this id, so even a double-submit of this
       // exact request collapses into one product instead of creating two.
-      const payload = { ...product, id: crypto.randomUUID() }
+      const payload = { ...product, id: generateId() }
       const res = await fetch('/api/products', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

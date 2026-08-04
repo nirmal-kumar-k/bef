@@ -5,6 +5,35 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+// `crypto.randomUUID()` only exists in SECURE contexts (HTTPS, or localhost) -
+// on a plain-HTTP deployment (e.g. a bare-IP server with no TLS) it is simply
+// undefined, and calling it throws "crypto.randomUUID is not a function",
+// crashing the React render that needed an id. Local dev never hits this
+// because localhost always counts as secure, so it only ever breaks in
+// production. Prefer the native implementation where available; fall back to
+// crypto.getRandomValues (available in non-secure contexts too) built into a
+// spec-shaped v4 UUID, and finally to Math.random for ancient environments.
+export function generateId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+
+  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+    const bytes = crypto.getRandomValues(new Uint8Array(16))
+    // Set the version (4) and variant (RFC 4122) bits the spec requires.
+    bytes[6] = (bytes[6] & 0x0f) | 0x40
+    bytes[8] = (bytes[8] & 0x3f) | 0x80
+    const hex = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
+  }
+
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = (Math.random() * 16) | 0
+    const v = c === 'x' ? r : (r & 0x3) | 0x8
+    return v.toString(16)
+  })
+}
+
 // Formats a Date's LOCAL calendar day as YYYY-MM-DD. Deliberately not
 // `date.toISOString().split('T')[0]` - toISOString renders in UTC, so for any
 // timezone ahead of UTC (e.g. IST, UTC+5:30) a local midnight Date converts to
