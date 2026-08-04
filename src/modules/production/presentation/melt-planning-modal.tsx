@@ -623,7 +623,16 @@ export function MeltPlanningModal({
         itemId: p.itemId,
         stage: 'Melt',
         patternRef: p.patternRef,
-        quantityScheduled: p.mouldsScheduled * p.mouldWeight,
+        // quantity_scheduled is an INTEGER column, but a pour's weight is
+        // moulds x kg-per-mould, which is routinely fractional (e.g. 27 x 5.4
+        // = 145.8). Sending the raw decimal made Postgres reject the whole row
+        // ("invalid input syntax for type integer"), so that pour silently
+        // failed to save and its heat vanished on the next refresh - while
+        // pours that happened to land on a whole number saved fine. Rounding
+        // loses nothing recoverable: mouldsScheduled (exact) and the pattern's
+        // mouldWeight are both persisted, so the precise weight is always
+        // re-derivable.
+        quantityScheduled: Math.round(p.mouldsScheduled * p.mouldWeight),
         mouldsScheduled: p.mouldsScheduled,
         shiftId: selectedShiftId,
         laborersAssigned: 1,

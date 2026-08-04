@@ -41,7 +41,7 @@ export function ConfirmDialog({ state, onClose }: { state: ConfirmDialogState | 
                 <DialogTitle className="text-lg font-heading text-[#172554]">{state.title}</DialogTitle>
               </div>
             </DialogHeader>
-            <p className="text-sm text-[#64748B] py-2">{state.description}</p>
+            <p className="text-sm text-[#64748B] py-2 whitespace-pre-line max-h-[50vh] overflow-y-auto">{state.description}</p>
             <DialogFooter>
               {!isInfo && (
                 <Button variant="outline" onClick={onClose}>{state.cancelLabel}</Button>
