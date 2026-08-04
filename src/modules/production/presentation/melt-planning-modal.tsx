@@ -14,7 +14,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { CapacityErrorDialog } from '@/shared/ui/capacity-error-dialog'
 import { BacklogItem } from './daily-planning-modal'
 import { Fire, Trash, Plus, Clock, WarningCircle, CaretLeft, CaretRight, MagnifyingGlass } from '@phosphor-icons/react'
-import { cn } from '@/shared/lib/utils'
+import { cn, generateId } from '@/shared/lib/utils'
 import type { Shift } from './shift-master-page'
 
 interface MeltPlanningModalProps {
@@ -758,7 +758,7 @@ export function MeltPlanningModal({
       // Generated now, not left blank until the server assigns one - this
       // is what makes the eventual create request idempotent (see isNew's
       // comment on the Pour type).
-      planId: crypto.randomUUID(),
+      planId: generateId(),
       furnaceId: activeFurnaceId,
       heatId: heatId,
       orderId: order?.id || '',

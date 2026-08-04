@@ -6,7 +6,7 @@ import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
 import { Textarea } from '@/shared/ui/textarea'
-import { handleEnterToTab } from '@/shared/lib/utils'
+import { handleEnterToTab, generateId } from '@/shared/lib/utils'
 import type { Grade } from '../domain/grade.types'
 
 interface GradeModalProps {
@@ -62,7 +62,7 @@ export function GradeModal({ isOpen, onClose, onSave, grade }: GradeModalProps) 
         // Generated now for a new grade, not left blank until the server
         // assigns one - the create route upserts on this id, so even a
         // double-submit collapses into one grade instead of creating two.
-        id: grade?.id || crypto.randomUUID(),
+        id: grade?.id || generateId(),
         code,
         name,
         c,

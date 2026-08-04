@@ -16,7 +16,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { CapacityErrorDialog } from '@/shared/ui/capacity-error-dialog'
 import { BacklogItem } from './daily-planning-modal'
 import { CubeTransparent, Trash, CaretDown, CaretLeft, CaretRight, MagicWand } from '@phosphor-icons/react'
-import { cn } from '@/shared/lib/utils'
+import { cn, generateId } from '@/shared/lib/utils'
 import { generateTimeSlots, TimeSlot, resolveAvgProductionRate } from '@/shared/lib/utils'
 import type { Shift } from './shift-master-page'
 
@@ -622,7 +622,7 @@ export function MouldPlanningModal({
         // Generated now, not left blank until the server assigns one - this
         // is what makes the eventual create request idempotent (see
         // isNew's comment on the PlannedRow type).
-        planId: crypto.randomUUID(),
+        planId: generateId(),
         orderId: order?.id || order?._id || '',
         orderNo: orderNo,
         // A patternRef always maps to exactly one cart-group within an order
