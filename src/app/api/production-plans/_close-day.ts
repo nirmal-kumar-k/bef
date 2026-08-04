@@ -28,13 +28,19 @@ export interface CarryForwardInput {
 // against quantityScheduled (which already equals sum(hourlyTargets) at save
 // time in every planning modal). Only positive shortfalls carry forward -
 // overachievement is out of scope (see plan's Global Constraints).
+// The shortfall is written straight into quantity_scheduled, an INTEGER
+// column, so it must be rounded here: Melt's actualQuantity is numeric and
+// routinely fractional (kg), which would otherwise produce a fractional
+// shortfall and make Postgres reject the carry-forward insert outright.
+// Rounding before the caller's `> 0` filter also stops a sub-1 remainder
+// (e.g. 0.4 kg) from creating a pointless carry-forward row of quantity 0.
 export function shortfallForRow(row: PlanRow): number {
   if (row.stage === 'Melt') {
     const actual = Number(row.actualQuantity) || 0
-    return Math.max(0, row.quantityScheduled - actual)
+    return Math.max(0, Math.round(row.quantityScheduled - actual))
   }
   const actualSum = Object.values(row.hourlyActuals || {}).reduce((s, v) => s + (Number(v) || 0), 0)
-  return Math.max(0, row.quantityScheduled - actualSum)
+  return Math.max(0, Math.round(row.quantityScheduled - actualSum))
 }
 
 export function nextDateString(date: string): string {

@@ -8,6 +8,7 @@ import { Label } from '@/shared/ui/label'
 import { useRole } from '@/shared/context/role-context'
 import { cn, toLocalDateString } from '@/shared/lib/utils'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
+import { ConfirmDialog, type ConfirmDialogState } from '@/shared/ui/confirm-dialog'
 
 import { BacklogItem } from '@/modules/production/presentation/daily-planning-modal'
 import { CorePlanningTab } from '@/modules/production/presentation/core-planning-tab'
@@ -30,6 +31,7 @@ export default function ProductionPlanningPage() {
   const [activeTab, setActiveTab] = useState<'Summary' | 'Core' | 'Mould' | 'Melt' | 'Pour' | 'Knockout' | 'FettlingStock' | 'Inspection' | 'FinishedStock'>('Summary')
   const [splitUpStage, setSplitUpStage] = useState<'Core' | 'Mould' | 'Melt' | null>(null)
   const [summaryView, setSummaryView] = useState<'calendar' | 'list'>('calendar')
+  const [saveErrorDialog, setSaveErrorDialog] = useState<ConfirmDialogState | null>(null)
 
   const fetchData = useCallback(async () => {
     try {
@@ -312,13 +314,26 @@ export default function ProductionPlanningPage() {
   }, [plans])
 
   const handleSaveDayPlan = async (date: string, newPlans: any[]) => {
+    // Every request's result used to be discarded, so a row the server
+    // rejected (e.g. a 500) vanished silently: the modal closed reporting
+    // success, and the row simply wasn't there on the next refresh. Track
+    // failures and surface them instead of losing work without a word.
+    const failures: string[] = []
+    const check = async (res: Response, what: string) => {
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        failures.push(`${what}: ${body.error || `HTTP ${res.status}`}`)
+      }
+    }
+
     try {
       for (const plan of newPlans) {
         const id = plan._id || plan.id
+        const label = `${plan.stage || 'Plan'}${plan.heatNo ? ` heat ${plan.heatNo}` : ''}${plan.coreBoxCode ? ` (${plan.coreBoxCode})` : ''}`
         if (plan._delete) {
           // Row was removed via the trash icon in the modal - it carries no
           // scheduled quantity to check, just delete its existing record.
-          if (id) await fetch(`/api/production-plans/${id}`, { method: 'DELETE' })
+          if (id) await check(await fetch(`/api/production-plans/${id}`, { method: 'DELETE' }), `Delete ${label}`)
           continue
         }
         // Rows added this session carry a client-generated id from the
@@ -330,11 +345,11 @@ export default function ProductionPlanningPage() {
         // double-click before the first response lands - safely collapse
         // into one row instead of creating two.
         if (plan._isNew) {
-          await fetch('/api/production-plans', {
+          await check(await fetch('/api/production-plans', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ...plan, id, date: plan.date || date })
-          })
+          }), `Save ${label}`)
         } else if (id) {
           // Core/Mould/Knockout no longer have an Actual-entry field, so
           // `actualQuantity` can never be set for them again - treating an
@@ -345,26 +360,26 @@ export default function ProductionPlanningPage() {
           const usesActualSafetyValve = plan.stage !== 'Core' && plan.stage !== 'Mould' && plan.stage !== 'Knockout'
           if (usesActualSafetyValve && plan.quantityScheduled === 0 && !plan.actualQuantity) {
             // Delete
-            await fetch(`/api/production-plans/${id}`, { method: 'DELETE' })
+            await check(await fetch(`/api/production-plans/${id}`, { method: 'DELETE' }), `Delete ${label}`)
           } else {
             // Update
-            await fetch(`/api/production-plans/${id}`, {
+            await check(await fetch(`/api/production-plans/${id}`, {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ ...plan, date: plan.date || date })
-            })
+            }), `Update ${label}`)
           }
         } else {
           // Create (no client-generated id supplied - caller predates this
           // convention or genuinely has none; falls back to the old path)
-          await fetch('/api/production-plans', {
+          await check(await fetch('/api/production-plans', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ...plan, date: plan.date || date })
-          })
+          }), `Save ${label}`)
         }
       }
-      
+
       // Re-fetch all plans to keep frontend perfectly in sync with backend
       const res = await fetch('/api/production-plans')
       if (res.ok) {
@@ -372,6 +387,15 @@ export default function ProductionPlanningPage() {
       }
     } catch (err) {
       console.error('Failed to save day plan:', err)
+      failures.push(err instanceof Error ? err.message : 'Unexpected error while saving')
+    }
+
+    if (failures.length > 0) {
+      setSaveErrorDialog({
+        title: 'Some rows could not be saved',
+        description: `${failures.length} row(s) failed to save and are NOT stored:\n\n${failures.slice(0, 8).join('\n')}${failures.length > 8 ? `\n...and ${failures.length - 8} more` : ''}`,
+        onConfirm: () => {},
+      })
     }
   }
 
@@ -803,6 +827,8 @@ export default function ProductionPlanningPage() {
           </Dialog>
         </>
       )}
+
+      <ConfirmDialog state={saveErrorDialog} onClose={() => setSaveErrorDialog(null)} />
     </div>
   )
 }
