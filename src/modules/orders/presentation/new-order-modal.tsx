@@ -34,7 +34,7 @@ import {
   PopoverTrigger,
 } from '@/shared/ui/popover'
 import { Check, CaretUpDown } from '@phosphor-icons/react'
-import { cn, handleEnterToTab } from '@/shared/lib/utils'
+import { cn, handleEnterToTab, generateId } from '@/shared/lib/utils'
 import { type Order } from '@/modules/orders/domain/order.types'
 import { useRole } from '@/shared/context/role-context'
 
@@ -199,7 +199,7 @@ export function NewOrderModal({
         // Generated now, not left blank until the server assigns one - the
         // create route upserts on this id, so even a double-submit of this
         // exact request collapses into one order instead of creating two.
-        await onSave({ ...orderPayload, id: crypto.randomUUID() })
+        await onSave({ ...orderPayload, id: generateId() })
       }
       resetForm()
     } finally {
