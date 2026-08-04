@@ -10,15 +10,18 @@ import { users } from '@/infrastructure/database/schema'
 import { JWT_SECRET } from '@/shared/lib/auth'
 
 // `NODE_ENV === 'production'` isn't the same thing as "served over HTTPS" - a
-// production build sitting behind a plain-HTTP reverse proxy (e.g. Nginx with
-// no TLS yet) would mark the cookie Secure and browsers silently refuse to
-// store it, breaking login with no visible error. Nginx forwards the real
-// scheme via X-Forwarded-Proto, so trust that instead; falls back to
-// NODE_ENV when there's no proxy in front (e.g. local dev/`next start` direct).
+// production build with no reverse proxy in front (direct `next start`, e.g.
+// a bare IP with no TLS) would mark the cookie Secure and browsers silently
+// refuse to store it, breaking login with no visible error. Nginx (or any
+// TLS-terminating proxy) forwards the real scheme via X-Forwarded-Proto, so
+// trust that when present; without it, there is no positive evidence the
+// connection is HTTPS, so default to non-secure rather than guessing from
+// NODE_ENV. Once a real HTTPS proxy is added in front, X-Forwarded-Proto
+// starts arriving and this automatically switches back to Secure cookies -
+// no further code change needed then.
 async function isRequestSecure() {
   const proto = (await headers()).get('x-forwarded-proto')
-  if (proto) return proto === 'https'
-  return process.env.NODE_ENV === 'production'
+  return proto === 'https'
 }
 
 async function issueSession(user: { id: string; role: string; name: string; username: string }) {
