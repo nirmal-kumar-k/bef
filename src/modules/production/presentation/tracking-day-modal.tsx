@@ -14,7 +14,7 @@ import { Lock } from '@phosphor-icons/react'
 import { cn, generateTimeSlots } from '@/shared/lib/utils'
 import { TrackingHourlyGrid } from './tracking-hourly-grid'
 import { TrackingMeltActualsTable } from './tracking-melt-actuals-table'
-import type { TrackingPlanRow } from './tracking-stage-list'
+import type { TrackingPlanRow } from './tracking-types'
 
 const STAGES: TrackingPlanRow['stage'][] = ['Core', 'Mould', 'Melt', 'Knockout']
 
