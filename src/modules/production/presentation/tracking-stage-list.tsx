@@ -76,7 +76,7 @@ function MeltActualInput({ plan, onSaved }: { plan: TrackingPlanRow; onSaved: ()
       disabled={isSaving}
       onChange={e => setValue(e.target.value)}
       onBlur={handleBlur}
-      className="w-24 h-8 text-center text-sm bg-white border-[#E0E7FF] mx-auto"
+      className="w-24 h-9 text-center text-sm bg-white border-[#E0E7FF] mx-auto [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
       placeholder="0"
     />
   )

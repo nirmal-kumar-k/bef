@@ -156,14 +156,14 @@ export function TrackingHourlyGrid({ rows, orders, timeSlots, stage, onDirtyChan
       <div className="rounded-xl border border-[#E8EDFB] bg-white shadow-sm overflow-hidden">
         <div className="w-full overflow-x-auto">
           <table className="w-full min-w-[720px] table-fixed text-sm text-left">
-            <thead className="bg-[#F8FAFF] border-b border-[#E8EDFB] text-[#8494B4] uppercase tracking-wider font-bold text-[11px]">
+            <thead className="bg-[#E8EEF9] border-b border-[#D3DDEF] text-[#3F4E6B] uppercase tracking-wider font-bold text-[12px]">
               <tr>
-                <th className="px-3 py-3 w-[190px]">{stage === 'Core' ? 'Core Box Details' : 'Item Details'}</th>
-                <th className="px-1.5 py-3 text-center border-x border-[#E8EDFB] w-[124px]">Quantity Info</th>
+                <th className="px-3 py-3.5 w-[190px]">{stage === 'Core' ? 'Core Box Details' : 'Item Details'}</th>
+                <th className="px-1.5 py-3.5 text-center border-x border-[#D3DDEF] w-[124px]">Quantity Info</th>
                 {visibleSlots.map(slot => (
-                  <th key={slot.time} className="px-1 py-3 text-center border-r border-[#E8EDFB] leading-tight">
+                  <th key={slot.time} className="px-1 py-3.5 text-center border-r border-[#D3DDEF] leading-tight">
                     <div>{slot.time}</div>
-                    <div className="text-[9px] font-normal normal-case text-[#A9B4CC]">to {slot.endTime}</div>
+                    <div className="text-[10px] font-semibold normal-case text-[#6B7A99] mt-0.5">to {slot.endTime}</div>
                   </th>
                 ))}
               </tr>
@@ -270,7 +270,7 @@ export function TrackingHourlyGrid({ rows, orders, timeSlots, stage, onDirtyChan
                             <span
                               title={planned > 0 ? `Planned ${planned} this hour` : 'Nothing planned this hour'}
                               className={cn(
-                                'w-full max-w-[56px] mx-auto h-[20px] flex items-center justify-center rounded-md border font-mono text-[11px] font-semibold',
+                                'w-[62px] mx-auto h-[22px] flex items-center justify-center rounded-md border font-mono text-[12px] font-semibold',
                                 planned > 0
                                   ? 'border-[#E2E8F5] bg-[#F4F7FD] text-[#5A6B8C]'
                                   : 'border-transparent bg-transparent text-[#D7DEEC]'
@@ -287,7 +287,12 @@ export function TrackingHourlyGrid({ rows, orders, timeSlots, stage, onDirtyChan
                               placeholder="-"
                               title="Actual produced this hour"
                               className={cn(
-                                'w-full max-w-[56px] mx-auto h-8 text-center font-mono text-xs px-1 transition-all shadow-none',
+                                'w-[62px] mx-auto h-9 text-center font-mono text-sm px-0 transition-all shadow-none',
+                                // Number inputs render browser spin buttons that
+                                // occupy space on the right, so text-center
+                                // lands visibly left of true centre. Suppressing
+                                // them is what actually centres the figure.
+                                '[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none',
                                 'bg-transparent border-transparent hover:border-[#E0E7FF] focus:border-[#4F46E5] focus:bg-white',
                                 // Output in an hour with no target is neither
                                 // "short" nor "met" - it is unplanned recovery

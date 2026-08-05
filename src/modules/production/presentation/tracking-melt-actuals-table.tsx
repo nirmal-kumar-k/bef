@@ -241,7 +241,7 @@ export function TrackingMeltActualsTable({ rows, orders, onDirtyChange, onSaved,
                                 disabled={disabled}
                                 value={valueFor(row)}
                                 onChange={e => handleChange(row.id, e.target.value)}
-                                className="w-28 h-8 text-center text-sm bg-white border-[#E0E7FF] mx-auto"
+                                className="w-28 h-9 text-center text-sm bg-white border-[#E0E7FF] mx-auto [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                 placeholder="0"
                               />
                             </td>
