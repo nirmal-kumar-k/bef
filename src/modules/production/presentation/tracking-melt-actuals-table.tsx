@@ -160,53 +160,61 @@ export function TrackingMeltActualsTable({ rows, orders, onDirtyChange, onSaved,
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {heatGroups.map(g => (
-          <button
-            key={g.key}
-            type="button"
-            onClick={() => setOpenHeatKey(g.key)}
-            className={cn(
-              'border border-[#E0E7FF] rounded-xl p-4 bg-white shadow-sm space-y-3 text-left transition-colors hover:border-[#4F46E5]',
-              g.hasPending && 'bg-red-50 border-red-200'
-            )}
-          >
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]">Heat Code</p>
-                <p className="font-mono font-bold text-[#172554] text-base">{g.heatCode}</p>
+      {/* Denser than the previous three-across layout: each card carries very
+          little text, so wide labelled stat columns left most of the box
+          empty. Values now speak for themselves ("90 / 150 kg" reads the same
+          way the calendar states actual/planned) and the grid packs up to five
+          across, so a furnace-day of heats is visible without scrolling. */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2.5">
+        {heatGroups.map(g => {
+          const met = g.actual >= g.planned && g.actual > 0
+          const short = g.actual > 0 && g.actual < g.planned
+          return (
+            <button
+              key={g.key}
+              type="button"
+              onClick={() => setOpenHeatKey(g.key)}
+              className={cn(
+                'border rounded-xl p-3.5 bg-white shadow-sm text-left transition-colors',
+                'flex flex-col gap-2 hover:border-[#4F46E5]',
+                g.hasPending ? 'bg-red-50 border-red-200' : 'border-[#E0E7FF]'
+              )}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-mono font-bold text-[#172554] text-[15px] truncate" title={g.heatCode}>
+                  {g.heatCode}
+                </span>
+                {g.hasPending ? (
+                  <Badge variant="outline" className="shrink-0 bg-red-500/10 text-red-600 border-red-500/20 text-[9px] px-1.5">
+                    Pending
+                  </Badge>
+                ) : null}
               </div>
-              {g.hasPending ? (
-                <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/20 text-[10px]">Pending</Badge>
-              ) : null}
-            </div>
 
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8] mb-1">Pattern</p>
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-wrap gap-1 min-h-[22px]">
                 {g.patternCodes.length > 0 ? g.patternCodes.map(code => (
-                  <span key={code} className="font-mono text-xs font-semibold text-[#4F46E5] bg-[#EEF2FF] border border-[#C7D2FE] rounded-md px-2 py-0.5">
+                  <span key={code} className="font-mono text-[11px] font-semibold text-[#4F46E5] bg-[#EEF2FF] border border-[#C7D2FE] rounded-md px-1.5 py-0.5">
                     {code}
                   </span>
-                )) : <span className="text-xs text-[#94A3B8]">-</span>}
+                )) : <span className="text-[11px] text-[#94A3B8]">No pattern</span>}
               </div>
-            </div>
 
-            <div className="flex items-center justify-between pt-2 border-t border-[#E0E7FF]">
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]">Planned (kg)</p>
-                <p className="font-mono font-bold text-[#172554]">{g.planned}</p>
+              <div className="flex items-baseline justify-between gap-2 pt-2 border-t border-[#E0E7FF]">
+                <span className="font-mono text-sm font-bold">
+                  <span className={cn(
+                    met ? 'text-emerald-600' : short ? 'text-amber-600' : 'text-[#94A3B8]'
+                  )}>
+                    {g.actual}
+                  </span>
+                  <span className="text-[#94A3B8] font-normal"> / {g.planned} kg</span>
+                </span>
+                <span className="shrink-0 text-[11px] font-semibold text-[#4F46E5]">
+                  {g.rows.length} item{g.rows.length === 1 ? '' : 's'} &rsaquo;
+                </span>
               </div>
-              <div className="text-right">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]">Actual (kg)</p>
-                <p className="font-mono font-bold text-[#172554]">{g.actual}</p>
-              </div>
-              <span className="text-[11px] font-semibold text-[#4F46E5]">
-                {g.rows.length} product{g.rows.length === 1 ? '' : 's'} &rsaquo;
-              </span>
-            </div>
-          </button>
-        ))}
+            </button>
+          )
+        })}
       </div>
 
       {hasEdits && (
