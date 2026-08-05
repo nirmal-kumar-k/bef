@@ -8,6 +8,7 @@ import { cn } from '@/shared/lib/utils'
 import { NewOrderModal } from '@/modules/orders/presentation/new-order-modal'
 import { ViewOrderModal } from '@/modules/orders/presentation/view-order-modal'
 import { ConfirmDeleteDialog } from '@/shared/ui/confirm-delete-dialog'
+import { ConfirmDialog, type ConfirmDialogState } from '@/shared/ui/confirm-dialog'
 import { categories, statusColors, statusAccentColors, type Order } from '@/modules/orders/domain/order.types'
 import { useRole } from '@/shared/context/role-context'
 
@@ -18,6 +19,7 @@ export default function OrdersPage() {
   const [viewOrderId, setViewOrderId] = useState<string | null>(null)
   const [editOrderId, setEditOrderId] = useState<string | null>(null)
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null)
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState | null>(null)
   const [activeCategory, setActiveCategory] = useState('All')
   const { role } = useRole()
 
@@ -33,17 +35,28 @@ export default function OrdersPage() {
       const data = await res.json().catch(() => ({}))
       if (res.status === 409 && data.hasProductionPlans) {
         const plural = data.planCount === 1 ? 'plan' : 'plans'
-        const confirmed = confirm(
-          `This order has ${data.planCount} active production ${plural} (Core/Mould/Melt/Knockout). Deleting it will also delete those plans. Delete anyway?`
-        )
-        if (confirmed) await handleDeleteOrder(id, true)
+        setConfirmDialog({
+          title: 'Delete order and its production plans?',
+          description: `This order has ${data.planCount} active production ${plural} (Core/Mould/Melt/Knockout). Deleting it will also delete those plans.`,
+          confirmLabel: 'Delete Anyway',
+          cancelLabel: 'Cancel',
+          onConfirm: () => { handleDeleteOrder(id, true) },
+        })
         return
       }
 
-      alert(data.error || 'Failed to delete order.')
+      setConfirmDialog({
+        title: 'Could Not Delete Order',
+        description: data.error || 'Failed to delete order.',
+        onConfirm: () => {},
+      })
     } catch (err) {
       console.error('Failed to delete order:', err)
-      alert('Failed to delete order.')
+      setConfirmDialog({
+        title: 'Could Not Delete Order',
+        description: 'Failed to delete order.',
+        onConfirm: () => {},
+      })
     }
   }
 
@@ -260,6 +273,8 @@ export default function OrdersPage() {
           description="Are you sure you want to delete this sales order? All mapped scheduling backlog and production items for this order may be affected."
           itemName={orderToDelete?.customerOrderNo}
         />
+
+        <ConfirmDialog state={confirmDialog} onClose={() => setConfirmDialog(null)} />
     </div>
   )
 }

@@ -14,6 +14,7 @@ import { Switch } from '@/shared/ui/switch'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/shared/ui/command'
 import { CapacityErrorDialog } from '@/shared/ui/capacity-error-dialog'
+import { ConfirmDialog, type ConfirmDialogState } from '@/shared/ui/confirm-dialog'
 import { BacklogItem } from './daily-planning-modal'
 import { CubeTransparent, Trash, CaretDown, CaretLeft, CaretRight, MagicWand } from '@phosphor-icons/react'
 import { cn, generateId } from '@/shared/lib/utils'
@@ -96,6 +97,7 @@ export function CorePlanningModal({
   const [viewLabourers, setViewLabourers] = useState<boolean>(false)
   const [comboboxOpen, setComboboxOpen] = useState(false)
   const [capacityErrorLines, setCapacityErrorLines] = useState<string[] | null>(null)
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState | null>(null)
   // Guards Save/Save & Refresh against being fired again while a save is
   // still in flight - onSaveDayPlan is a multi-request round trip (one
   // fetch per row, then a refetch), and without this a second click before
@@ -337,7 +339,16 @@ export function CorePlanningModal({
   // Warn before discarding unsaved edits when hopping days via the header
   // arrows - otherwise just switch immediately.
   const handleNavigateDate = (direction: 1 | -1) => {
-    if (isDirty && !confirm('You have unsaved changes on this day. Discard them and switch days?')) return
+    if (isDirty) {
+      setConfirmDialog({
+        title: 'Discard unsaved changes?',
+        description: 'You have unsaved changes on this day. Switching days will discard them.',
+        confirmLabel: 'Discard & Switch',
+        cancelLabel: 'Keep Editing',
+        onConfirm: () => onNavigateDate?.(direction),
+      })
+      return
+    }
     onNavigateDate?.(direction)
   }
 
@@ -346,7 +357,16 @@ export function CorePlanningModal({
   // immediately with no warning at all, silently discarding anything typed
   // since the last save.
   const handleClose = () => {
-    if (isDirty && !confirm('You have unsaved changes on this day. Close without saving?')) return
+    if (isDirty) {
+      setConfirmDialog({
+        title: 'Close without saving?',
+        description: 'You have unsaved changes on this day. Closing now will discard them.',
+        confirmLabel: 'Discard & Close',
+        cancelLabel: 'Keep Editing',
+        onConfirm: onClose,
+      })
+      return
+    }
     onClose()
   }
 
@@ -1042,6 +1062,7 @@ export function CorePlanningModal({
       </DialogContent>
     </Dialog>
     <CapacityErrorDialog lines={capacityErrorLines} onClose={() => setCapacityErrorLines(null)} />
+    <ConfirmDialog state={confirmDialog} onClose={() => setConfirmDialog(null)} />
     </>
   )
 }
