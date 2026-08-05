@@ -43,19 +43,13 @@ export function TrackingHourlyGrid({ rows, orders, timeSlots, stage, onDirtyChan
     return (row.hourlyActuals || {})[slotTime] || 0
   }
 
-  // Hours nothing was ever planned or recorded in are dead columns - dropping
-  // them is what keeps the grid inside the dialog instead of scrolling
-  // sideways. A slot carrying any actual is always kept, so recorded work can
-  // never be hidden just because it was unplanned.
-  const visibleSlots = useMemo(() => {
-    return timeSlots.filter(slot =>
-      rows.some(row =>
-        ((row.hourlyTargets || {})[slot.time] || 0) > 0 ||
-        ((row.hourlyActuals || {})[slot.time] || 0) > 0 ||
-        (edits[row.id]?.[slot.time] || 0) > 0
-      )
-    )
-  }, [timeSlots, rows, edits])
+  // EVERY slot in the shift is rendered, including hours nothing was planned
+  // in. Reality diverges from the plan constantly - a machine goes down at
+  // 11:00 and the work is recovered at 19:00, in a slot that carried a target
+  // of zero. Hiding unplanned hours to save width would make that output
+  // literally impossible to record, which is exactly backwards for a screen
+  // whose job is capturing what actually happened.
+  const visibleSlots = timeSlots
 
   const rowActual = (row: TrackingPlanRow) =>
     timeSlots.reduce((s, slot) => s + valueFor(row, slot.time), 0)
@@ -263,9 +257,15 @@ export function TrackingHourlyGrid({ rows, orders, timeSlots, stage, onDirtyChan
                               className={cn(
                                 'w-full max-w-[56px] mx-auto h-8 text-center font-mono text-xs px-1 transition-all shadow-none',
                                 'bg-transparent border-transparent hover:border-[#E0E7FF] focus:border-[#4F46E5] focus:bg-white',
-                                touched && (actual < planned
-                                  ? 'bg-amber-50 border-amber-200 text-amber-700 font-semibold'
-                                  : 'bg-emerald-50 border-emerald-200 text-emerald-700 font-semibold')
+                                // Output in an hour with no target is neither
+                                // "short" nor "met" - it is unplanned recovery
+                                // work, so it gets its own indigo tone rather
+                                // than being misread as hitting a target.
+                                touched && (planned === 0
+                                  ? 'bg-[#EEF2FF] border-[#C7D2FE] text-[#4F46E5] font-semibold'
+                                  : actual < planned
+                                    ? 'bg-amber-50 border-amber-200 text-amber-700 font-semibold'
+                                    : 'bg-emerald-50 border-emerald-200 text-emerald-700 font-semibold')
                               )}
                             />
                           </div>
