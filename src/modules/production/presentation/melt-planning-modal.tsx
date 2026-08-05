@@ -44,7 +44,6 @@ interface Heat {
   heatNumber: number
   startTime: string
   endTime: string
-  actualMeltWeight?: number
   grade: string
   heatCode: string
   // Persistent, never-auto-resets - the furnace's running heat count at the
@@ -289,7 +288,6 @@ export function MeltPlanningModal({
             heatNumber: hNum,
             startTime: p.startTime || '08:00 AM',
             endTime: p.endTime || '09:30 AM',
-            actualMeltWeight: p.actualMeltWeight,
             grade: p.grade || '',
             heatCode: p.heatNo || '',
             sequenceNumber: p.heatSequenceNumber,
@@ -660,7 +658,6 @@ export function MeltPlanningModal({
         heatNumber: h?.heatNumber || 1,
         startTime: h?.startTime,
         endTime: h?.endTime,
-        actualMeltWeight: h?.actualMeltWeight,
         grade: h?.grade,
         heatNo: h?.heatCode,
         heatSequenceNumber: h?.sequenceNumber,
@@ -771,10 +768,6 @@ export function MeltPlanningModal({
     })
   }
 
-  const handleActualMeltChange = (heatId: string, value: string) => {
-    const val = value === '' ? undefined : Number(value)
-    setHeats(prev => prev.map(h => h.id === heatId ? { ...h, actualMeltWeight: val } : h))
-  }
 
   const addPour = (heatId: string, backlogItem: BacklogItem, mouldsToPour: number) => {
     if (mouldsToPour <= 0) return
@@ -1199,18 +1192,6 @@ export function MeltPlanningModal({
                               style={{ width: `${Math.min(100, (selectedHeatWeight / (maxCapacity || 1)) * 100)}%` }}
                             />
                           </div>
-                        </div>
-
-                        <div className="px-2 py-2.5 flex flex-col items-center gap-1">
-                          <span className="text-[9px] font-bold uppercase tracking-wider text-[#4285F4]">Actual Melt</span>
-                          <Input
-                            type="number"
-                            min="0"
-                            value={selectedHeat.actualMeltWeight ?? ''}
-                            onChange={e => handleActualMeltChange(selectedHeat.id, e.target.value)}
-                            className="w-20 h-6 text-[11px] font-mono text-center px-1 bg-white border-[#C7D2FE] focus-visible:ring-1 focus-visible:ring-[#4285F4]"
-                            placeholder="kg"
-                          />
                         </div>
                       </div>
 
