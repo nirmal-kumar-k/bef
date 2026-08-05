@@ -125,6 +125,14 @@ export default function ProductionTrackingPage() {
         shifts={shifts}
         onClose={() => setOpenDayModalDate(null)}
         onSaved={fetchData}
+        onNavigateDate={(direction) => setOpenDayModalDate(prev => {
+          if (!prev) return prev
+          // Stepped via local date parts, not Date.parse on the string: a bare
+          // YYYY-MM-DD is parsed as UTC, so adding a day east of UTC could land
+          // back on the same calendar date.
+          const [y, m, d] = prev.split('-').map(Number)
+          return toLocalDateString(new Date(y, m - 1, d + direction))
+        })}
       />
     </div>
   )

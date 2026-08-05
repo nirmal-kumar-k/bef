@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -10,7 +10,7 @@ import {
 import { Button } from '@/shared/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { ConfirmDialog, type ConfirmDialogState } from '@/shared/ui/confirm-dialog'
-import { Lock } from '@phosphor-icons/react'
+import { Lock, CaretLeft, CaretRight } from '@phosphor-icons/react'
 import { cn, generateTimeSlots } from '@/shared/lib/utils'
 import { TrackingHourlyGrid } from './tracking-hourly-grid'
 import { TrackingMeltActualsTable } from './tracking-melt-actuals-table'
@@ -25,15 +25,20 @@ interface TrackingDayModalProps {
   shifts: any[]
   onClose: () => void
   onSaved: () => Promise<void>
+  // Lets the header arrows step to the adjacent day without closing, exactly
+  // as Planning's own modals do.
+  onNavigateDate?: (direction: 1 | -1) => void
 }
 
-export function TrackingDayModal({ date, plans, orders, shifts, onClose, onSaved }: TrackingDayModalProps) {
+export function TrackingDayModal({ date, plans, orders, shifts, onClose, onSaved, onNavigateDate }: TrackingDayModalProps) {
   const [activeStage, setActiveStage] = useState<TrackingPlanRow['stage']>('Core')
   const [selectedShiftId, setSelectedShiftId] = useState<string>('')
   const [isDirty, setIsDirty] = useState(false)
   const [isClosed, setIsClosed] = useState(false)
   const [isClosing, setIsClosing] = useState(false)
   const [dialog, setDialog] = useState<ConfirmDialogState | null>(null)
+  // Distinguishes "modal just opened" from "stepped to another day".
+  const wasOpenRef = useRef(false)
 
   // This component is never unmounted - the page renders it permanently and it
   // returns null while `date` is null - so every piece of state here survives
@@ -42,9 +47,19 @@ export function TrackingDayModal({ date, plans, orders, shifts, onClose, onSaved
   // opened warned about unsaved changes that did not exist; isClosed likewise
   // carried over and briefly showed a locked banner on an open day.
   useEffect(() => {
-    if (!date) return
-    setActiveStage('Core')
-    setSelectedShiftId(shifts[0]?.id || '')
+    if (!date) {
+      wasOpenRef.current = false
+      return
+    }
+    // Stage and shift are seeded only when the modal first OPENS, never when
+    // stepping between days with the header arrows. Resetting them on every
+    // date change would snap a Night Shift user back to Day Shift on each
+    // step - the same bug Planning already had to fix in its own modals.
+    if (!wasOpenRef.current) {
+      setActiveStage('Core')
+      setSelectedShiftId(shifts[0]?.id || '')
+    }
+    wasOpenRef.current = true
     setIsDirty(false)
     setDialog(null)
     // Cleared before the lookup, not left at the previous day's value, so a
@@ -181,6 +196,22 @@ export function TrackingDayModal({ date, plans, orders, shifts, onClose, onSaved
     })
   }
 
+  // Same guard Planning applies to its own day arrows - stepping away with
+  // unsaved actuals would discard them silently.
+  const handleNavigateDate = (direction: 1 | -1) => {
+    if (isDirty) {
+      setDialog({
+        title: 'Discard unsaved actuals?',
+        description: 'You have unsaved actuals entered. Switching days will discard them.',
+        confirmLabel: 'Discard & Switch',
+        cancelLabel: 'Keep Editing',
+        onConfirm: () => onNavigateDate?.(direction),
+      })
+      return
+    }
+    onNavigateDate?.(direction)
+  }
+
   const handleCloseDay = () => {
     if (!date) return
     setDialog({
@@ -194,6 +225,14 @@ export function TrackingDayModal({ date, plans, orders, shifts, onClose, onSaved
 
   if (!date) return null
 
+  // Parsed from the parts rather than new Date(date): a bare YYYY-MM-DD string
+  // is read as UTC midnight, which renders as the previous day for anyone east
+  // of UTC. Matches Planning's own title format.
+  const [dy, dm, dd] = date.split('-').map(Number)
+  const dateString = new Date(dy, dm - 1, dd).toLocaleDateString('en-US', {
+    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
+  })
+
   return (
     <>
     <Dialog open={!!date} onOpenChange={(open) => !open && handleClose()}>
@@ -202,8 +241,60 @@ export function TrackingDayModal({ date, plans, orders, shifts, onClose, onSaved
           doesn't fit a narrower dialog without horizontal scrolling. */}
       <DialogContent className="w-full h-full max-w-full rounded-none sm:w-[98vw] sm:max-w-[98vw] sm:h-[95vh] sm:rounded-2xl bg-[#F4F6FB] text-foreground p-0 shadow-2xl flex flex-col overflow-hidden">
         <DialogHeader className="p-6 pb-4 pr-14 border-b border-[#E0E7FF] bg-white shrink-0">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <DialogTitle className="text-xl font-heading text-[#172554]">{date}</DialogTitle>
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+            <div className="space-y-3">
+              <DialogTitle className="flex items-center gap-2 text-2xl font-heading text-[#172554]">
+                {onNavigateDate && (
+                  <button
+                    type="button"
+                    onClick={() => handleNavigateDate(-1)}
+                    className="p-2 rounded-lg transition-colors hover:bg-[#EEF2FF]"
+                    aria-label="Previous day"
+                  >
+                    <CaretLeft size={28} weight="bold" />
+                  </button>
+                )}
+                <span>{dateString} &ndash; Production Tracking</span>
+                {onNavigateDate && (
+                  <button
+                    type="button"
+                    onClick={() => handleNavigateDate(1)}
+                    className="p-2 rounded-lg transition-colors hover:bg-[#EEF2FF]"
+                    aria-label="Next day"
+                  >
+                    <CaretRight size={28} weight="bold" />
+                  </button>
+                )}
+              </DialogTitle>
+
+              {/* Promoted out of the body and into the header, level with
+                  Planning's own "Select Shift" - below the stage tabs it read
+                  as a minor filter, which is how a whole Night Shift of
+                  actuals goes unrecorded. */}
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-semibold uppercase tracking-wider text-[#64748B]">Select Shift:</span>
+                {shifts.length > 0 && (
+                  <Select value={selectedShiftId} onValueChange={setSelectedShiftId}>
+                    <SelectTrigger className="h-9 px-4 text-sm font-semibold rounded-lg border border-[#E0E7FF] bg-white shadow-sm">
+                      <SelectValue placeholder="Select Shift">
+                        {(id: string) => {
+                          const s = shifts.find((sh: any) => sh.id === id)
+                          return s ? `${s.name} (${s.startTime} - ${s.endTime})` : 'Select Shift'
+                        }}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {shifts.map((s: any) => (
+                        <SelectItem key={s.id} value={s.id!} className="text-sm">
+                          {s.name} ({s.startTime} - {s.endTime})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+            </div>
+
             <div className="flex items-center gap-2">
               {/* Re-planning a disrupted day is a planning decision, so it
                   happens in Planning - which owns the quantity caps, machine
@@ -268,29 +359,6 @@ export function TrackingDayModal({ date, plans, orders, shifts, onClose, onSaved
                 {stage}
               </button>
             ))}
-          </div>
-
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-semibold uppercase tracking-wider text-[#64748B]">Shift:</span>
-            {shifts.length > 0 && (
-              <Select value={selectedShiftId} onValueChange={setSelectedShiftId}>
-                <SelectTrigger className="h-9 px-4 text-sm font-semibold rounded-lg border border-[#E0E7FF] bg-white shadow-sm">
-                  <SelectValue placeholder="Select Shift">
-                    {(id: string) => {
-                      const s = shifts.find((sh: any) => sh.id === id)
-                      return s ? `${s.name} (${s.startTime} - ${s.endTime})` : 'Select Shift'
-                    }}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {shifts.map((s: any) => (
-                    <SelectItem key={s.id} value={s.id!} className="text-sm">
-                      {s.name} ({s.startTime} - {s.endTime})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
           </div>
 
           {activeStage === 'Melt' ? (
