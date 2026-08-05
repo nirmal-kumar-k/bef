@@ -88,7 +88,11 @@ export function TrackingMeltActualsTable({ rows, orders, onDirtyChange, onSaved,
     onDirtyChange(true)
   }
 
-  const handleSave = async () => {
+  // closeAfter distinguishes the two save buttons: "Save Actuals" commits and
+  // dismisses the heat popup, while "Save & Refresh" commits and stays put
+  // with freshly-fetched values - matching Melt Planning's own pairing, so an
+  // operator can keep working through one heat without reopening it each time.
+  const handleSave = async (closeAfter: boolean) => {
     setIsSaving(true)
     try {
       const changedRowIds = Object.keys(edits)
@@ -97,8 +101,10 @@ export function TrackingMeltActualsTable({ rows, orders, onDirtyChange, onSaved,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ actualQuantity: edits[rowId] === '' ? null : Number(edits[rowId]) }),
       })))
+      // onSaved re-fetches, which replaces `rows` and so clears local edits
+      // via the reset effect - the inputs then show the persisted values.
       await onSaved()
-      setOpenHeatKey(null)
+      if (closeAfter) setOpenHeatKey(null)
     } finally {
       setIsSaving(false)
     }
@@ -164,7 +170,7 @@ export function TrackingMeltActualsTable({ rows, orders, onDirtyChange, onSaved,
 
       {hasEdits && (
         <div className="flex justify-end">
-          <Button onClick={handleSave} disabled={isSaving || disabled} className="bg-[#4F46E5] hover:bg-[#4F46E5]/90 text-white">
+          <Button onClick={() => handleSave(true)} disabled={isSaving || disabled} className="bg-[#4F46E5] hover:bg-[#4F46E5]/90 text-white">
             {isSaving ? 'Saving...' : 'Save Actuals'}
           </Button>
         </div>
@@ -227,7 +233,15 @@ export function TrackingMeltActualsTable({ rows, orders, onDirtyChange, onSaved,
 
               <div className="p-6 border-t border-[#E0E7FF] bg-white shrink-0 flex justify-end gap-3">
                 <Button variant="outline" onClick={() => setOpenHeatKey(null)}>Close</Button>
-                <Button onClick={handleSave} disabled={!hasEdits || isSaving || disabled} className="bg-[#4F46E5] hover:bg-[#4F46E5]/90 text-white">
+                <Button
+                  variant="outline"
+                  onClick={() => handleSave(false)}
+                  disabled={!hasEdits || isSaving || disabled}
+                  className="border-[#4F46E5] text-[#4F46E5] hover:bg-[#EEF2FF]"
+                >
+                  {isSaving ? 'Saving...' : 'Save & Refresh'}
+                </Button>
+                <Button onClick={() => handleSave(true)} disabled={!hasEdits || isSaving || disabled} className="bg-[#4F46E5] hover:bg-[#4F46E5]/90 text-white">
                   {isSaving ? 'Saving...' : 'Save Actuals'}
                 </Button>
               </div>
