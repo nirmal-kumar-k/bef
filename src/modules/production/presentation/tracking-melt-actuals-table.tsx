@@ -177,7 +177,7 @@ export function TrackingMeltActualsTable({ rows, orders, onDirtyChange, onSaved,
       )}
 
       <Dialog open={!!openHeat} onOpenChange={(open) => !open && setOpenHeatKey(null)}>
-        <DialogContent className="w-full sm:max-w-[900px] bg-[#F4F6FB] text-foreground p-0 shadow-2xl flex flex-col max-h-[85vh] overflow-hidden">
+        <DialogContent className="w-full sm:w-[92vw] sm:max-w-[1200px] bg-[#F4F6FB] text-foreground p-0 shadow-2xl flex flex-col max-h-[85vh] overflow-hidden">
           {openHeat && (
             <>
               <DialogHeader className="p-6 pb-4 pr-14 border-b border-[#E0E7FF] bg-white shrink-0">
@@ -190,16 +190,18 @@ export function TrackingMeltActualsTable({ rows, orders, onDirtyChange, onSaved,
               </DialogHeader>
 
               <div className="flex-1 overflow-y-auto min-h-0 p-6">
-                <div className="border border-[#E0E7FF] rounded-xl overflow-x-auto shadow-sm bg-white">
-                  <table className="w-full text-sm text-left whitespace-nowrap">
+                {/* No whitespace-nowrap: long product names wrap instead of
+                    forcing the whole table into a horizontal scroll. */}
+                <div className="border border-[#E0E7FF] rounded-xl overflow-hidden shadow-sm bg-white">
+                  <table className="w-full text-sm text-left table-fixed">
                     <thead className="bg-[#F4F6FB] border-b border-[#E0E7FF] text-[#64748B] font-semibold text-xs uppercase tracking-wider">
                       <tr>
-                        <th className="px-4 py-3">Pattern</th>
+                        <th className="px-4 py-3 w-[16%]">Pattern</th>
                         <th className="px-4 py-3">Product</th>
-                        <th className="px-4 py-3">PO No</th>
-                        <th className="px-4 py-3 text-center">Moulds</th>
-                        <th className="px-4 py-3 text-center">Planned</th>
-                        <th className="px-4 py-3 text-center">Actual</th>
+                        <th className="px-4 py-3 w-[12%]">PO No</th>
+                        <th className="px-4 py-3 text-center w-[10%]">Moulds</th>
+                        <th className="px-4 py-3 text-center w-[10%]">Planned</th>
+                        <th className="px-4 py-3 text-center w-[15%]">Actual</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#E0E7FF]">
@@ -207,9 +209,9 @@ export function TrackingMeltActualsTable({ rows, orders, onDirtyChange, onSaved,
                         const order = orders.find((o: any) => (o.id || o._id) === row.orderId)
                         return (
                           <tr key={row.id} className={cn('hover:bg-[#F8FAFC]', row.isPending && 'bg-red-50')}>
-                            <td className="px-4 py-3 font-mono font-semibold text-[#4F46E5]">{row.patternRef || '-'}</td>
-                            <td className="px-4 py-3 font-semibold text-[#172554]">{productNameFor(row, orders)}</td>
-                            <td className="px-4 py-3 font-mono text-[#4285F4]">{order?.customerOrderNo || '-'}</td>
+                            <td className="px-4 py-3 font-mono font-semibold text-[#4F46E5] break-words">{row.patternRef || '-'}</td>
+                            <td className="px-4 py-3 font-semibold text-[#172554] break-words">{productNameFor(row, orders)}</td>
+                            <td className="px-4 py-3 font-mono text-[#4285F4] break-words">{order?.customerOrderNo || '-'}</td>
                             <td className="px-4 py-3 text-center font-mono">{row.mouldsScheduled ?? '-'}</td>
                             <td className="px-4 py-3 text-center font-mono font-semibold">{row.quantityScheduled}</td>
                             <td className="px-4 py-3 text-center">

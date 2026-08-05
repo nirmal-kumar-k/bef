@@ -13,6 +13,10 @@ export interface TrackingPlanRow {
   date: string
   quantityScheduled: number
   coreBoxCode?: string | null
+  // The planned per-hour targets Planning wrote. Tracking renders them
+  // read-only beside each hour's actuals input, so the grid reads as
+  // "planned vs actual" in the same shape Planning laid the day out in.
+  hourlyTargets?: Record<string, number> | null
   hourlyActuals?: Record<string, number> | null
   actualQuantity?: string | number | null
   isPending?: boolean | null
