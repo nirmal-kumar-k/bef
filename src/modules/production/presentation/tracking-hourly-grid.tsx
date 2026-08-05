@@ -88,10 +88,11 @@ export function TrackingHourlyGrid({ rows, orders, timeSlots, stage, onDirtyChan
   // into a duplicate of Planning's rather than a measurement of reality.
   const handleChange = (rowId: string, slotTime: string, value: string) => {
     const num = Math.max(0, Number(value) || 0)
-    setEdits(prev => {
-      onDirtyChange(true)
-      return { ...prev, [rowId]: { ...prev[rowId], [slotTime]: num } }
-    })
+    setEdits(prev => ({ ...prev, [rowId]: { ...prev[rowId], [slotTime]: num } }))
+    // Must stay OUTSIDE the updater above: React may re-run an updater during
+    // render, and notifying the parent from in there is a setState-in-render
+    // on a different component.
+    onDirtyChange(true)
   }
 
   const handleSave = async () => {
