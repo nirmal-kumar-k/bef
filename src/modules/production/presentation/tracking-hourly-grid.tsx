@@ -155,20 +155,9 @@ export function TrackingHourlyGrid({ rows, orders, timeSlots, stage, onDirtyChan
               {summary.variance > 0 ? '+' : ''}{summary.variance}
             </p>
           </div>
-          <div className="flex-1 min-w-[200px]">
-            <div className="flex items-baseline justify-between mb-1.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[#A9B4CC]">Completion</span>
-              <span className="text-xs font-mono font-bold text-[#64748B]">{summary.pct}%</span>
-            </div>
-            <div className="h-2 w-full rounded-full bg-[#EEF2FB] overflow-hidden">
-              <div
-                className={cn(
-                  'h-full rounded-full transition-all duration-300',
-                  summary.pct >= 100 ? 'bg-emerald-500' : 'bg-[#4F46E5]'
-                )}
-                style={{ width: `${Math.min(100, Math.max(0, summary.pct))}%` }}
-              />
-            </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[#A9B4CC]">Attainment</p>
+            <p className={cn('text-2xl font-mono font-bold leading-tight', varianceTone)}>{summary.pct}%</p>
           </div>
         </div>
       </div>
