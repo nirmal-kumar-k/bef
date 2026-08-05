@@ -5,8 +5,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/di
 import { Button } from '@/shared/ui/button'
 import { Badge } from '@/shared/ui/badge'
 import { Input } from '@/shared/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { cn } from '@/shared/lib/utils'
 import type { TrackingPlanRow } from './tracking-stage-list'
+import { VARIANCE_REASONS } from './variance-reasons'
 
 interface TrackingMeltActualsTableProps {
   rows: TrackingPlanRow[]
@@ -39,11 +41,13 @@ function productNameFor(row: TrackingPlanRow, orders: any[]): string {
 
 export function TrackingMeltActualsTable({ rows, orders, onDirtyChange, onSaved, disabled }: TrackingMeltActualsTableProps) {
   const [edits, setEdits] = useState<Record<string, string>>({})
+  const [reasonEdits, setReasonEdits] = useState<Record<string, string>>({})
   const [isSaving, setIsSaving] = useState(false)
   const [openHeatKey, setOpenHeatKey] = useState<string | null>(null)
 
   useEffect(() => {
     setEdits({})
+    setReasonEdits({})
     onDirtyChange(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows])
@@ -95,12 +99,19 @@ export function TrackingMeltActualsTable({ rows, orders, onDirtyChange, onSaved,
   const handleSave = async (closeAfter: boolean) => {
     setIsSaving(true)
     try {
-      const changedRowIds = Object.keys(edits)
-      await Promise.all(changedRowIds.map(rowId => fetch(`/api/production-plans/${rowId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ actualQuantity: edits[rowId] === '' ? null : Number(edits[rowId]) }),
-      })))
+      // A pour is dirty if its actual changed, its shortfall reason changed,
+      // or both - de-duplicated so one row is still one PUT.
+      const changedRowIds = Array.from(new Set([...Object.keys(edits), ...Object.keys(reasonEdits)]))
+      await Promise.all(changedRowIds.map(rowId => {
+        const body: Record<string, unknown> = {}
+        if (rowId in edits) body.actualQuantity = edits[rowId] === '' ? null : Number(edits[rowId])
+        if (rowId in reasonEdits) body.varianceReason = reasonEdits[rowId] || null
+        return fetch(`/api/production-plans/${rowId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        })
+      }))
       // onSaved re-fetches, which replaces `rows` and so clears local edits
       // via the reset effect - the inputs then show the persisted values.
       await onSaved()
@@ -110,7 +121,15 @@ export function TrackingMeltActualsTable({ rows, orders, onDirtyChange, onSaved,
     }
   }
 
-  const hasEdits = Object.keys(edits).length > 0
+  const hasEdits = Object.keys(edits).length > 0 || Object.keys(reasonEdits).length > 0
+
+  const reasonFor = (row: TrackingPlanRow): string =>
+    row.id in reasonEdits ? reasonEdits[row.id] : (row.varianceReason || '')
+
+  const handleReasonChange = (rowId: string, reason: string) => {
+    setReasonEdits(prev => ({ ...prev, [rowId]: reason }))
+    onDirtyChange(true)
+  }
   const openHeat = heatGroups.find(g => g.key === openHeatKey) || null
 
   if (rows.length === 0) {
@@ -196,12 +215,13 @@ export function TrackingMeltActualsTable({ rows, orders, onDirtyChange, onSaved,
                   <table className="w-full text-sm text-left table-fixed">
                     <thead className="bg-[#F4F6FB] border-b border-[#E0E7FF] text-[#64748B] font-semibold text-xs uppercase tracking-wider">
                       <tr>
-                        <th className="px-4 py-3 w-[16%]">Pattern</th>
+                        <th className="px-4 py-3 w-[14%]">Pattern</th>
                         <th className="px-4 py-3">Product</th>
-                        <th className="px-4 py-3 w-[12%]">PO No</th>
-                        <th className="px-4 py-3 text-center w-[10%]">Moulds</th>
-                        <th className="px-4 py-3 text-center w-[10%]">Planned</th>
-                        <th className="px-4 py-3 text-center w-[15%]">Actual</th>
+                        <th className="px-4 py-3 w-[10%]">PO No</th>
+                        <th className="px-4 py-3 text-center w-[8%]">Moulds</th>
+                        <th className="px-4 py-3 text-center w-[9%]">Planned</th>
+                        <th className="px-4 py-3 text-center w-[13%]">Actual</th>
+                        <th className="px-4 py-3 w-[17%]">Shortfall Reason</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#E0E7FF]">
@@ -224,6 +244,43 @@ export function TrackingMeltActualsTable({ rows, orders, onDirtyChange, onSaved,
                                 className="w-28 h-8 text-center text-sm bg-white border-[#E0E7FF] mx-auto"
                                 placeholder="0"
                               />
+                            </td>
+                            <td className="px-4 py-3">
+                              {/* Only asked for once the pour is genuinely
+                                  short and something has been recorded - a
+                                  reason against an untouched row would be
+                                  asking why work that hasn't started is late. */}
+                              {(() => {
+                                const actualNum = Number(valueFor(row)) || 0
+                                const isShort = actualNum > 0 && actualNum < (Number(row.quantityScheduled) || 0)
+                                if (!isShort) return <span className="text-[#94A3B8] text-xs">-</span>
+                                return (
+                                  <Select
+                                    value={reasonFor(row)}
+                                    onValueChange={v => handleReasonChange(row.id, v)}
+                                    disabled={disabled}
+                                  >
+                                    <SelectTrigger
+                                      title="Why did this pour fall short of plan?"
+                                      className={cn(
+                                        'h-8 w-full px-2 text-[11px] font-semibold rounded-md border shadow-none',
+                                        reasonFor(row)
+                                          ? 'border-amber-200 bg-amber-50 text-amber-700'
+                                          : 'border-amber-300 bg-white text-amber-600'
+                                      )}
+                                    >
+                                      <SelectValue placeholder="Select reason">
+                                        {(v: string) => v || 'Select reason'}
+                                      </SelectValue>
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {VARIANCE_REASONS.map(r => (
+                                        <SelectItem key={r} value={r} className="text-xs">{r}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                )
+                              })()}
                             </td>
                           </tr>
                         )
