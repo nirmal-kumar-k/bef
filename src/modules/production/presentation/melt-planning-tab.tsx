@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { BacklogItem } from './daily-planning-modal'
 import { MeltPlanningModal } from './melt-planning-modal'
 import { cn, toLocalDateString } from '@/shared/lib/utils'
@@ -11,10 +11,17 @@ interface MeltPlanningTabProps {
   dailyPlans: any[]
   mouldCapBacklog: BacklogItem[]
   onSaveDayPlan: (date: string, plans: any[]) => Promise<void>
+  // Set when arriving from Production Tracking's "Revise plan" action, which
+  // deep-links to a specific day so the modal opens on it directly.
+  initialDate?: string | null
 }
 
-export function MeltPlanningTab({ defaultMetalQty, openOrders, products, patterns, dailyPlans, mouldCapBacklog, onSaveDayPlan }: MeltPlanningTabProps) {
+export function MeltPlanningTab({ defaultMetalQty, openOrders, products, patterns, dailyPlans, mouldCapBacklog, onSaveDayPlan, initialDate }: MeltPlanningTabProps) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (initialDate) setSelectedDate(initialDate)
+  }, [initialDate])
 
   // Calendar logic
   const getDays = () => {

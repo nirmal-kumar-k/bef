@@ -22,6 +22,7 @@ export interface TrackingPlanRow {
   isPending?: boolean | null
   carriedForwardFromDate?: string | null
   shiftId?: string | null
+  varianceReason?: string | null
   // Melt-specific. A Melt row is one *pour* (one product allocated to a
   // heat), so several rows can share a heatNo - that's what Tracking's Melt
   // view groups on to show one card per heat rather than one per pour.

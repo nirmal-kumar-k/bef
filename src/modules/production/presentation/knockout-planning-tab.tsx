@@ -9,11 +9,18 @@ interface KnockoutPlanningTabProps {
   openOrders: any[]
   dailyPlans: any[]
   onSaveDayPlan: (date: string, plans: any[]) => Promise<void>
+  // Set when arriving from Production Tracking's "Revise plan" action, which
+  // deep-links to a specific day so the modal opens on it directly.
+  initialDate?: string | null
 }
 
-export function KnockoutPlanningTab({ knockoutBacklog, openOrders, dailyPlans, onSaveDayPlan }: KnockoutPlanningTabProps) {
+export function KnockoutPlanningTab({ knockoutBacklog, openOrders, dailyPlans, onSaveDayPlan, initialDate }: KnockoutPlanningTabProps) {
   const [viewMode, setViewMode] = useState<'table' | 'calendar'>('calendar')
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (initialDate) setSelectedDate(initialDate)
+  }, [initialDate])
 
   // Equipment master is the only source for the per-hour knockout production rate
   const [knockoutEquipments, setKnockoutEquipments] = useState<any[]>([])

@@ -4,10 +4,11 @@ import { useState, useEffect, useMemo } from 'react'
 import { Button } from '@/shared/ui/button'
 import { Badge } from '@/shared/ui/badge'
 import { Input } from '@/shared/ui/input'
-
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { cn } from '@/shared/lib/utils'
 import type { TimeSlot } from '@/shared/lib/utils'
 import type { TrackingPlanRow } from './tracking-stage-list'
+import { VARIANCE_REASONS } from './variance-reasons'
 
 interface TrackingHourlyGridProps {
   rows: TrackingPlanRow[]
@@ -26,6 +27,7 @@ interface TrackingHourlyGridProps {
 // Planning decides the numbers, Tracking records them.
 export function TrackingHourlyGrid({ rows, orders, timeSlots, stage, onDirtyChange, onSaved, disabled }: TrackingHourlyGridProps) {
   const [edits, setEdits] = useState<Record<string, Record<string, number>>>({})
+  const [reasonEdits, setReasonEdits] = useState<Record<string, string>>({})
   const [isSaving, setIsSaving] = useState(false)
 
   // Reset local edits whenever the underlying rows change (new shift
@@ -33,9 +35,18 @@ export function TrackingHourlyGrid({ rows, orders, timeSlots, stage, onDirtyChan
   // relative to the latest server state, never carried across a shift switch.
   useEffect(() => {
     setEdits({})
+    setReasonEdits({})
     onDirtyChange(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows])
+
+  const reasonFor = (row: TrackingPlanRow): string =>
+    row.id in reasonEdits ? reasonEdits[row.id] : (row.varianceReason || '')
+
+  const handleReasonChange = (rowId: string, reason: string) => {
+    setReasonEdits(prev => ({ ...prev, [rowId]: reason }))
+    onDirtyChange(true)
+  }
 
   const valueFor = (row: TrackingPlanRow, slotTime: string): number => {
     const rowEdits = edits[row.id]
@@ -91,15 +102,19 @@ export function TrackingHourlyGrid({ rows, orders, timeSlots, stage, onDirtyChan
   const handleSave = async () => {
     setIsSaving(true)
     try {
-      const changedRowIds = Object.keys(edits)
+      // A row is dirty if its hourly figures changed, its reason changed, or
+      // both - keyed as a set so a row touched in both ways is still one PUT.
+      const changedRowIds = Array.from(new Set([...Object.keys(edits), ...Object.keys(reasonEdits)]))
       await Promise.all(changedRowIds.map(rowId => {
         const row = rows.find(r => r.id === rowId)
         if (!row) return Promise.resolve()
-        const merged = { ...(row.hourlyActuals || {}), ...edits[rowId] }
+        const body: Record<string, unknown> = {}
+        if (edits[rowId]) body.hourlyActuals = { ...(row.hourlyActuals || {}), ...edits[rowId] }
+        if (rowId in reasonEdits) body.varianceReason = reasonEdits[rowId] || null
         return fetch(`/api/production-plans/${rowId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ hourlyActuals: merged }),
+          body: JSON.stringify(body),
         })
       }))
       await onSaved()
@@ -109,7 +124,7 @@ export function TrackingHourlyGrid({ rows, orders, timeSlots, stage, onDirtyChan
   }
 
   const sortedRows = [...rows].sort((a, b) => (b.isPending ? 1 : 0) - (a.isPending ? 1 : 0))
-  const hasEdits = Object.keys(edits).length > 0
+  const hasEdits = Object.keys(edits).length > 0 || Object.keys(reasonEdits).length > 0
 
   if (rows.length === 0) {
     return <p className="text-[#94A3B8] text-center py-12 italic">No plans for this shift.</p>
@@ -197,6 +212,39 @@ export function TrackingHourlyGrid({ rows, orders, timeSlots, stage, onDirtyChan
                           <Badge variant="outline" className="mt-1 w-fit bg-red-500/10 text-red-600 border-red-500/20 text-[9px]">
                             Pending{row.carriedForwardFromDate ? ` (from ${row.carriedForwardFromDate})` : ''}
                           </Badge>
+                        )}
+
+                        {/* Only surfaces once the row is genuinely behind, and
+                            only after something has been recorded - prompting
+                            for a reason against an untouched row would just be
+                            asking why work that hasn't started yet is late. */}
+                        {actualSum > 0 && rowVariance < 0 && (
+                          <div className="mt-1.5">
+                            <Select
+                              value={reasonFor(row)}
+                              onValueChange={v => handleReasonChange(row.id, v)}
+                              disabled={disabled}
+                            >
+                              <SelectTrigger
+                                title="Why did this fall short of plan?"
+                                className={cn(
+                                  'h-7 w-full px-2 text-[10px] font-semibold rounded-md border shadow-none',
+                                  reasonFor(row)
+                                    ? 'border-amber-200 bg-amber-50 text-amber-700'
+                                    : 'border-amber-300 bg-white text-amber-600'
+                                )}
+                              >
+                                <SelectValue placeholder="Reason for shortfall">
+                                  {(v: string) => v || 'Reason for shortfall'}
+                                </SelectValue>
+                              </SelectTrigger>
+                              <SelectContent>
+                                {VARIANCE_REASONS.map(r => (
+                                  <SelectItem key={r} value={r} className="text-xs">{r}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
                         )}
                       </div>
                     </td>

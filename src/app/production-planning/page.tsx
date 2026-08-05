@@ -32,6 +32,21 @@ export default function ProductionPlanningPage() {
   const [splitUpStage, setSplitUpStage] = useState<'Core' | 'Mould' | 'Melt' | null>(null)
   const [summaryView, setSummaryView] = useState<'calendar' | 'list'>('calendar')
   const [saveErrorDialog, setSaveErrorDialog] = useState<ConfirmDialogState | null>(null)
+  // Set when arriving from Production Tracking's "Revise plan" action
+  // (/production-planning?tab=Core&date=YYYY-MM-DD) so the right tab opens on
+  // the right day. Read from window.location in an effect rather than via
+  // useSearchParams, which would require wrapping this page in a Suspense
+  // boundary to build.
+  const [deepLinkDate, setDeepLinkDate] = useState<string | null>(null)
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const tab = params.get('tab')
+    const date = params.get('date')
+    const allowed = ['Summary', 'Core', 'Mould', 'Melt', 'Pour', 'Knockout', 'FettlingStock', 'Inspection', 'FinishedStock']
+    if (tab && allowed.includes(tab)) setActiveTab(tab as any)
+    if (date) setDeepLinkDate(date)
+  }, [])
 
   const fetchData = useCallback(async () => {
     try {
@@ -653,19 +668,19 @@ export default function ProductionPlanningPage() {
               )}
 
               {activeTab === 'Core' && (
-                <CorePlanningTab coreBacklog={backlogData.Core} patterns={patterns} openOrders={openOrders} dailyPlans={plans} onSaveDayPlan={handleSaveDayPlan} />
+                <CorePlanningTab initialDate={deepLinkDate} coreBacklog={backlogData.Core} patterns={patterns} openOrders={openOrders} dailyPlans={plans} onSaveDayPlan={handleSaveDayPlan} />
               )}
               {activeTab === 'Mould' && (
-                <MouldPlanningTab mouldBacklog={backlogData.Mould} patterns={patterns} openOrders={openOrders} dailyPlans={plans} onSaveDayPlan={handleSaveDayPlan} />
+                <MouldPlanningTab initialDate={deepLinkDate} mouldBacklog={backlogData.Mould} patterns={patterns} openOrders={openOrders} dailyPlans={plans} onSaveDayPlan={handleSaveDayPlan} />
               )}
               {activeTab === 'Melt' && (
-                <MeltPlanningTab defaultMetalQty={totals.metal} products={products} patterns={patterns} openOrders={openOrders} dailyPlans={plans} mouldCapBacklog={backlogData.MeltMouldCap} onSaveDayPlan={handleSaveDayPlan} />
+                <MeltPlanningTab initialDate={deepLinkDate} defaultMetalQty={totals.metal} products={products} patterns={patterns} openOrders={openOrders} dailyPlans={plans} mouldCapBacklog={backlogData.MeltMouldCap} onSaveDayPlan={handleSaveDayPlan} />
               )}
               {activeTab === 'Pour' && (
                 <PourPlanningTab openOrders={openOrders} dailyPlans={plans} />
               )}
               {activeTab === 'Knockout' && (
-                <KnockoutPlanningTab knockoutBacklog={backlogData.Knockout} openOrders={openOrders} dailyPlans={plans} onSaveDayPlan={handleSaveDayPlan} />
+                <KnockoutPlanningTab initialDate={deepLinkDate} knockoutBacklog={backlogData.Knockout} openOrders={openOrders} dailyPlans={plans} onSaveDayPlan={handleSaveDayPlan} />
               )}
 
               {activeTab === 'FettlingStock' && (
