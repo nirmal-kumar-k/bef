@@ -30,15 +30,18 @@ export function TrackingHourlyGrid({ rows, orders, timeSlots, stage, onDirtyChan
   const [reasonEdits, setReasonEdits] = useState<Record<string, string>>({})
   const [isSaving, setIsSaving] = useState(false)
 
-  // Reset local edits whenever the underlying rows change (new shift
-  // selected, new date opened, or a save just landed) - edits are always
-  // relative to the latest server state, never carried across a shift switch.
+  // Keyed on WHICH rows are shown, not the array's identity. Depending on the
+  // array itself meant any parent re-render that rebuilt it - including the
+  // one caused by typing - discarded in-progress edits mid-keystroke. The
+  // signature only changes on a real context switch (different day, stage or
+  // shift), which is when discarding edits is actually correct.
+  const rowsKey = rows.map(r => r.id).join('|')
   useEffect(() => {
     setEdits({})
     setReasonEdits({})
     onDirtyChange(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows])
+  }, [rowsKey])
 
   const reasonFor = (row: TrackingPlanRow): string =>
     row.id in reasonEdits ? reasonEdits[row.id] : (row.varianceReason || '')
@@ -114,6 +117,12 @@ export function TrackingHourlyGrid({ rows, orders, timeSlots, stage, onDirtyChan
         })
       }))
       await onSaved()
+      // Cleared explicitly rather than relying on the reset effect: rowsKey is
+      // deliberately unchanged by a save (same rows, new values), so without
+      // this the local edits would keep shadowing what actually persisted.
+      setEdits({})
+      setReasonEdits({})
+      onDirtyChange(false)
     } finally {
       setIsSaving(false)
     }

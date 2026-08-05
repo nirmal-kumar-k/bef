@@ -45,12 +45,16 @@ export function TrackingMeltActualsTable({ rows, orders, onDirtyChange, onSaved,
   const [isSaving, setIsSaving] = useState(false)
   const [openHeatKey, setOpenHeatKey] = useState<string | null>(null)
 
+  // Keyed on which rows are shown rather than the array's identity - see the
+  // same guard in tracking-hourly-grid: depending on the array meant a parent
+  // re-render mid-typing discarded the value being entered.
+  const rowsKey = rows.map(r => r.id).join('|')
   useEffect(() => {
     setEdits({})
     setReasonEdits({})
     onDirtyChange(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows])
+  }, [rowsKey])
 
   const heatGroups = useMemo<HeatGroup[]>(() => {
     const map = new Map<string, HeatGroup>()
@@ -112,9 +116,13 @@ export function TrackingMeltActualsTable({ rows, orders, onDirtyChange, onSaved,
           body: JSON.stringify(body),
         })
       }))
-      // onSaved re-fetches, which replaces `rows` and so clears local edits
-      // via the reset effect - the inputs then show the persisted values.
       await onSaved()
+      // Cleared explicitly: rowsKey is deliberately unchanged by a save (same
+      // rows, new values), so without this the local edits would keep
+      // shadowing what actually persisted.
+      setEdits({})
+      setReasonEdits({})
+      onDirtyChange(false)
       if (closeAfter) setOpenHeatKey(null)
     } finally {
       setIsSaving(false)

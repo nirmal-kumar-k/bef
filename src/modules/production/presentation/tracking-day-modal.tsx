@@ -54,7 +54,14 @@ export function TrackingDayModal({ date, plans, orders, shifts, onClose, onSaved
 
   // Rows saved before shiftId existed carry no value at all - shown under
   // any shift, same convention Planning's own modals use.
-  const shiftFilteredRows = stageRows.filter(r => !r.shiftId || r.shiftId === selectedShiftId)
+  // MUST be memoized. The grid resets its in-progress edits whenever this
+  // array's identity changes, and typing a value calls onDirtyChange, which
+  // re-renders this component - so an unmemoized filter handed the grid a new
+  // array on every keystroke and wiped the value the moment it was typed.
+  const shiftFilteredRows = useMemo(
+    () => stageRows.filter(r => !r.shiftId || r.shiftId === selectedShiftId),
+    [stageRows, selectedShiftId]
+  )
 
   const handleClose = () => {
     if (!isDirty) {
