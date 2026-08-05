@@ -4,6 +4,7 @@ import { CheckCircle, MagnifyingGlass, PencilSimple, Trash, X } from '@phosphor-
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { cn } from '@/shared/lib/utils'
+import { ConfirmDialog, type ConfirmDialogState } from '@/shared/ui/confirm-dialog'
 
 interface InspectionTabProps {
   inspectionBacklog: BacklogItem[]
@@ -31,6 +32,7 @@ export function InspectionTab({ inspectionBacklog, inspectionPlans, openOrders, 
   // corrects the reason, it doesn't change how many pieces were inspected.
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editRejected, setEditRejected] = useState('')
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState | null>(null)
   const [editReason, setEditReason] = useState('')
   const [editError, setEditError] = useState('')
   const [busyId, setBusyId] = useState<string | null>(null)
@@ -102,9 +104,8 @@ export function InspectionTab({ inspectionBacklog, inspectionPlans, openOrders, 
     }
   }
 
-  const deleteInspection = async (p: any) => {
+  const performDeleteInspection = async (p: any) => {
     const id = p.id || p._id
-    if (!confirm('Undo this inspection batch entirely? Its pieces become available to inspect again, and the stock it added will be reversed.')) return
     setBusyId(id)
     try {
       const res = await fetch(`/api/production-plans/${id}`, { method: 'DELETE' })
@@ -114,6 +115,16 @@ export function InspectionTab({ inspectionBacklog, inspectionPlans, openOrders, 
     } finally {
       setBusyId(null)
     }
+  }
+
+  const deleteInspection = (p: any) => {
+    setConfirmDialog({
+      title: 'Undo this inspection batch?',
+      description: 'Its pieces become available to inspect again, and the stock it added will be reversed.',
+      confirmLabel: 'Undo Batch',
+      cancelLabel: 'Cancel',
+      onConfirm: () => performDeleteInspection(p),
+    })
   }
 
   const handleSubmit = async (b: BacklogItem) => {
@@ -345,6 +356,8 @@ export function InspectionTab({ inspectionBacklog, inspectionPlans, openOrders, 
           </div>
         )}
       </div>
+
+      <ConfirmDialog state={confirmDialog} onClose={() => setConfirmDialog(null)} />
     </div>
   )
 }

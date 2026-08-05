@@ -6,6 +6,7 @@ import { Button } from '@/shared/ui/button'
 import { EquipmentModal } from './equipment-modal'
 import { Switch } from '@/shared/ui/switch'
 import { cn } from '@/shared/lib/utils'
+import { ConfirmDialog, type ConfirmDialogState } from '@/shared/ui/confirm-dialog'
 
 export interface Equipment {
   id?: string
@@ -33,6 +34,7 @@ export function EquipmentMasterPage() {
   const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<string>('Furnace')
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState | null>(null)
 
   const fetchEquipment = async () => {
     try {
@@ -58,8 +60,7 @@ export function EquipmentMasterPage() {
     setIsModalOpen(true)
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this equipment?')) return
+  const performDeleteEquipment = async (id: string) => {
     
     try {
       const res = await fetch(`/api/equipment/${id}`, { method: 'DELETE' })
@@ -69,6 +70,16 @@ export function EquipmentMasterPage() {
     } catch (error) {
       console.error('Failed to delete equipment:', error)
     }
+  }
+
+  const handleDelete = (id: string) => {
+    setConfirmDialog({
+      title: 'Delete this equipment?',
+      description: 'Are you sure you want to delete this equipment? This cannot be undone.',
+      confirmLabel: 'Delete',
+      cancelLabel: 'Cancel',
+      onConfirm: () => performDeleteEquipment(id),
+    })
   }
 
   const toggleActive = async (equipment: Equipment) => {
@@ -237,6 +248,8 @@ export function EquipmentMasterPage() {
         }}
         initialData={selectedEquipment}
       />
+
+      <ConfirmDialog state={confirmDialog} onClose={() => setConfirmDialog(null)} />
     </div>
   )
 }

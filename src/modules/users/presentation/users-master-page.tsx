@@ -5,6 +5,7 @@ import { Plus, PencilSimple, Trash } from '@phosphor-icons/react'
 import { Button } from '@/shared/ui/button'
 import { Switch } from '@/shared/ui/switch'
 import { UserModal } from './user-modal'
+import { ConfirmDialog, type ConfirmDialogState } from '@/shared/ui/confirm-dialog'
 import { cn } from '@/shared/lib/utils'
 
 export interface AppUser {
@@ -29,6 +30,7 @@ export function UsersMasterPage() {
   const [selectedUser, setSelectedUser] = useState<AppUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState | null>(null)
 
   const fetchUsers = async () => {
     try {
@@ -55,20 +57,37 @@ export function UsersMasterPage() {
     setIsModalOpen(true)
   }
 
-  const handleDelete = async (user: AppUser) => {
-    if (!confirm(`Delete user "${user.name}"? This cannot be undone.`)) return
-
+  const performDelete = async (user: AppUser) => {
     try {
       const res = await fetch(`/api/users/${user.id}`, { method: 'DELETE' })
       if (res.ok) {
         fetchUsers()
       } else {
         const data = await res.json().catch(() => ({}))
-        alert(data.error || 'Failed to delete user')
+        setConfirmDialog({
+          title: 'Could Not Delete User',
+          description: data.error || 'Failed to delete user',
+          onConfirm: () => {},
+        })
       }
     } catch (error) {
       console.error('Failed to delete user:', error)
+      setConfirmDialog({
+        title: 'Could Not Delete User',
+        description: 'An unexpected error occurred while deleting this user.',
+        onConfirm: () => {},
+      })
     }
+  }
+
+  const handleDelete = (user: AppUser) => {
+    setConfirmDialog({
+      title: 'Delete this user?',
+      description: `Delete user "${user.name}"? This cannot be undone.`,
+      confirmLabel: 'Delete',
+      cancelLabel: 'Cancel',
+      onConfirm: () => performDelete(user),
+    })
   }
 
   const toggleActive = async (user: AppUser) => {
@@ -199,6 +218,8 @@ export function UsersMasterPage() {
         }}
         initialData={selectedUser}
       />
+
+      <ConfirmDialog state={confirmDialog} onClose={() => setConfirmDialog(null)} />
     </div>
   )
 }
