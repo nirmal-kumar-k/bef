@@ -52,6 +52,10 @@ export function TrackingMeltActualsTable({ rows, orders, onDirtyChange, onSaved,
   useEffect(() => {
     setEdits({})
     setReasonEdits({})
+    // The open heat belongs to the rows being replaced, so it cannot survive
+    // a switch to a different day/shift - otherwise the popup lingers against
+    // a heat that is no longer in view.
+    setOpenHeatKey(null)
     onDirtyChange(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rowsKey])
@@ -107,9 +111,19 @@ export function TrackingMeltActualsTable({ rows, orders, onDirtyChange, onSaved,
       // or both - de-duplicated so one row is still one PUT.
       const changedRowIds = Array.from(new Set([...Object.keys(edits), ...Object.keys(reasonEdits)]))
       await Promise.all(changedRowIds.map(rowId => {
+        const row = rows.find(r => r.id === rowId)
+        const actualTotal = rowId in edits
+          ? (edits[rowId] === '' ? 0 : Number(edits[rowId]) || 0)
+          : (Number(row?.actualQuantity) || 0)
+        const stillShort = actualTotal > 0 && actualTotal < (Number(row?.quantityScheduled) || 0)
+
         const body: Record<string, unknown> = {}
         if (rowId in edits) body.actualQuantity = edits[rowId] === '' ? null : Number(edits[rowId])
-        if (rowId in reasonEdits) body.varianceReason = reasonEdits[rowId] || null
+        // Same guard as the hourly grid: a pour raised up to plan must not
+        // keep an invisible shortfall reason from an earlier save.
+        if (!stillShort) body.varianceReason = null
+        else if (rowId in reasonEdits) body.varianceReason = reasonEdits[rowId] || null
+
         return fetch(`/api/production-plans/${rowId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },

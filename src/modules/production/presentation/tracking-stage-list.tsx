@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Badge } from '@/shared/ui/badge'
 import { Input } from '@/shared/ui/input'
 import { cn } from '@/shared/lib/utils'
@@ -49,20 +49,42 @@ function actualSumFor(plan: TrackingPlanRow): number {
 // edited through TrackingDayModal's hourly grid, so the two entry points
 // can't disagree about what "the actual" is for the same row.
 function MeltActualInput({ plan, onSaved }: { plan: TrackingPlanRow; onSaved: () => Promise<void> }) {
-  const [value, setValue] = useState(plan.actualQuantity != null ? String(plan.actualQuantity) : '')
+  const persisted = plan.actualQuantity != null ? String(plan.actualQuantity) : ''
+  const [value, setValue] = useState(persisted)
   const [isSaving, setIsSaving] = useState(false)
+  const [failed, setFailed] = useState(false)
+
+  // A useState initial value is only read on mount, and this row is never
+  // remounted (its key is the plan id), so the same pour edited in the day
+  // modal would keep showing its old figure here indefinitely. Re-sync
+  // whenever the persisted value actually changes, but never mid-edit.
+  useEffect(() => {
+    if (!isSaving) setValue(persisted)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [persisted])
 
   const handleBlur = async () => {
-    const original = plan.actualQuantity != null ? String(plan.actualQuantity) : ''
-    if (value === original) return
+    if (value === persisted) return
     setIsSaving(true)
+    setFailed(false)
     try {
-      await fetch(`/api/production-plans/${plan.id}`, {
+      const res = await fetch(`/api/production-plans/${plan.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ actualQuantity: value === '' ? null : Number(value) }),
       })
+      if (!res.ok) {
+        // Revert rather than leave a figure on screen that was never stored -
+        // silently keeping it is how a rejected save looks identical to a
+        // successful one.
+        setValue(persisted)
+        setFailed(true)
+        return
+      }
       await onSaved()
+    } catch {
+      setValue(persisted)
+      setFailed(true)
     } finally {
       setIsSaving(false)
     }
@@ -74,9 +96,13 @@ function MeltActualInput({ plan, onSaved }: { plan: TrackingPlanRow; onSaved: ()
       min="0"
       value={value}
       disabled={isSaving}
-      onChange={e => setValue(e.target.value)}
+      onChange={e => { setValue(e.target.value); setFailed(false) }}
       onBlur={handleBlur}
-      className="w-24 h-9 text-center text-sm bg-white border-[#E0E7FF] mx-auto [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+      title={failed ? 'Could not save - the value was reverted. Please try again.' : undefined}
+      className={cn(
+        'w-24 h-9 text-center text-sm bg-white mx-auto [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none',
+        failed ? 'border-red-400 bg-red-50' : 'border-[#E0E7FF]'
+      )}
       placeholder="0"
     />
   )

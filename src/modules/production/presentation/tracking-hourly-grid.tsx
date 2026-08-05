@@ -107,9 +107,19 @@ export function TrackingHourlyGrid({ rows, orders, timeSlots, stage, onDirtyChan
       await Promise.all(changedRowIds.map(rowId => {
         const row = rows.find(r => r.id === rowId)
         if (!row) return Promise.resolve()
+        const mergedActuals = { ...(row.hourlyActuals || {}), ...(edits[rowId] || {}) }
+        const actualTotal = Object.values(mergedActuals).reduce((s, v) => s + (Number(v) || 0), 0)
+        const stillShort = actualTotal > 0 && actualTotal < (Number(row.quantityScheduled) || 0)
+
         const body: Record<string, unknown> = {}
-        if (edits[rowId]) body.hourlyActuals = { ...(row.hourlyActuals || {}), ...edits[rowId] }
-        if (rowId in reasonEdits) body.varianceReason = reasonEdits[rowId] || null
+        if (edits[rowId]) body.hourlyActuals = mergedActuals
+        // Raising a row's actuals up to plan hides the reason selector, but
+        // the stored reason would otherwise survive - leaving a row that met
+        // its target carrying an invisible "Machine breakdown". Clear it
+        // whenever the row is no longer behind.
+        if (!stillShort) body.varianceReason = null
+        else if (rowId in reasonEdits) body.varianceReason = reasonEdits[rowId] || null
+
         return fetch(`/api/production-plans/${rowId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },

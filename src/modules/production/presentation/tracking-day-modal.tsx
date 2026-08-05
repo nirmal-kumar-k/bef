@@ -35,22 +35,51 @@ export function TrackingDayModal({ date, plans, orders, shifts, onClose, onSaved
   const [isClosing, setIsClosing] = useState(false)
   const [dialog, setDialog] = useState<ConfirmDialogState | null>(null)
 
+  // This component is never unmounted - the page renders it permanently and it
+  // returns null while `date` is null - so every piece of state here survives
+  // from one opening to the next and MUST be reset explicitly. Without this,
+  // typing in one day then discard-closing left isDirty true, so the next day
+  // opened warned about unsaved changes that did not exist; isClosed likewise
+  // carried over and briefly showed a locked banner on an open day.
   useEffect(() => {
     if (!date) return
     setActiveStage('Core')
     setSelectedShiftId(shifts[0]?.id || '')
+    setIsDirty(false)
+    setDialog(null)
+    // Cleared before the lookup, not left at the previous day's value, so a
+    // stale "this day is closed" state can never flash on a different date.
+    setIsClosed(false)
+    let cancelled = false
     fetch(`/api/production-day-closures?date=${date}`)
       .then(res => res.ok ? res.json() : { closed: false })
-      .then(data => setIsClosed(!!data.closed))
-      .catch(() => setIsClosed(false))
+      .then(data => { if (!cancelled) setIsClosed(!!data.closed) })
+      .catch(() => { if (!cancelled) setIsClosed(false) })
+    // Guards against a slow response for a previously-viewed date landing
+    // after the user has already switched to another one.
+    return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date])
+
+  // Shifts are fetched by the page in parallel with everything else, so a
+  // modal opened before that request lands would otherwise keep an empty
+  // shift selection for its whole lifetime - leaving the grid with no time
+  // columns at all and no way to recover short of reopening.
+  useEffect(() => {
+    if (!selectedShiftId && shifts.length > 0) setSelectedShiftId(shifts[0].id)
+  }, [shifts, selectedShiftId])
 
   const dayPlans = useMemo(() => plans.filter(p => p.date === date), [plans, date])
   const stageRows = useMemo(() => dayPlans.filter(p => p.stage === activeStage), [dayPlans, activeStage])
 
   const selectedShift = shifts.find((s: any) => s.id === selectedShiftId)
-  const timeSlots = selectedShift ? generateTimeSlots(selectedShift.startTime, selectedShift.endTime, selectedShift.breaks || []) : []
+  // Memoized for the same reason as shiftFilteredRows below: it is a prop the
+  // grid feeds into its own useMemo dependencies, so a fresh array each render
+  // makes that work churn on every keystroke.
+  const timeSlots = useMemo(
+    () => selectedShift ? generateTimeSlots(selectedShift.startTime, selectedShift.endTime, selectedShift.breaks || []) : [],
+    [selectedShift]
+  )
 
   // Rows saved before shiftId existed carry no value at all - shown under
   // any shift, same convention Planning's own modals use.
