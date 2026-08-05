@@ -194,11 +194,11 @@ export function TrackingMeltActualsTable({ rows, orders, onDirtyChange, onSaved,
 
             <div className="flex items-center justify-between pt-2 border-t border-[#E0E7FF]">
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]">Planned</p>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]">Planned (kg)</p>
                 <p className="font-mono font-bold text-[#172554]">{g.planned}</p>
               </div>
               <div className="text-right">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]">Actual</p>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]">Actual (kg)</p>
                 <p className="font-mono font-bold text-[#172554]">{g.actual}</p>
               </div>
               <span className="text-[11px] font-semibold text-[#4F46E5]">
@@ -226,7 +226,15 @@ export function TrackingMeltActualsTable({ rows, orders, onDirtyChange, onSaved,
                   Heat <span className="font-mono">{openHeat.heatCode}</span>
                 </DialogTitle>
                 <p className="text-sm text-[#64748B]">
-                  {openHeat.rows.length} product{openHeat.rows.length === 1 ? '' : 's'} poured from this heat &middot; {openHeat.planned} planned
+                  {openHeat.rows.length} product{openHeat.rows.length === 1 ? '' : 's'} poured from this heat &middot; {openHeat.planned} kg planned
+                </p>
+                {/* Moulds are a count and planned/actual are a weight, so the
+                    two columns sit side by side in different units. Stating it
+                    outright stops the actual being entered as a mould count -
+                    which would then be compared against kilograms when the day
+                    is closed. */}
+                <p className="text-xs text-[#94A3B8] mt-1">
+                  Moulds is a count; Planned and Actual are weights in kg (moulds &times; kg per mould).
                 </p>
               </DialogHeader>
 
@@ -241,8 +249,8 @@ export function TrackingMeltActualsTable({ rows, orders, onDirtyChange, onSaved,
                         <th className="px-4 py-3">Product</th>
                         <th className="px-4 py-3 w-[10%]">PO No</th>
                         <th className="px-4 py-3 text-center w-[8%]">Moulds</th>
-                        <th className="px-4 py-3 text-center w-[9%]">Planned</th>
-                        <th className="px-4 py-3 text-center w-[13%]">Actual</th>
+                        <th className="px-4 py-3 text-center w-[9%]">Planned<span className="normal-case font-normal text-[#94A3B8]"> (kg)</span></th>
+                        <th className="px-4 py-3 text-center w-[13%]">Actual<span className="normal-case font-normal text-[#94A3B8]"> (kg)</span></th>
                         <th className="px-4 py-3 w-[17%]">Shortfall Reason</th>
                       </tr>
                     </thead>
