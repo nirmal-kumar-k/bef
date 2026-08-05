@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
 import { Button } from '@/shared/ui/button'
 import { Badge } from '@/shared/ui/badge'
 import { Input } from '@/shared/ui/input'
@@ -15,14 +16,66 @@ interface TrackingMeltActualsTableProps {
   disabled?: boolean
 }
 
+// A Melt plan row is one pour - one product allocated to a heat - so a heat
+// that pours three products is three rows sharing a heatNo. Showing a card
+// per row repeated the same heat three times; grouping on heatNo gives one
+// card per actual heat, with the products behind a detail popup.
+interface HeatGroup {
+  key: string
+  heatCode: string
+  patternCodes: string[]
+  rows: TrackingPlanRow[]
+  planned: number
+  actual: number
+  hasPending: boolean
+}
+
+function productNameFor(row: TrackingPlanRow, orders: any[]): string {
+  const order = orders.find((o: any) => (o.id || o._id) === row.orderId)
+  const parts = String(row.itemId).split('-')
+  const idx = parseInt(parts[parts.length - 1], 10)
+  return order?.cart?.[idx]?.productName || '-'
+}
+
 export function TrackingMeltActualsTable({ rows, orders, onDirtyChange, onSaved, disabled }: TrackingMeltActualsTableProps) {
   const [edits, setEdits] = useState<Record<string, string>>({})
   const [isSaving, setIsSaving] = useState(false)
+  const [openHeatKey, setOpenHeatKey] = useState<string | null>(null)
 
   useEffect(() => {
     setEdits({})
     onDirtyChange(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows])
+
+  const heatGroups = useMemo<HeatGroup[]>(() => {
+    const map = new Map<string, HeatGroup>()
+    rows.forEach(row => {
+      // Rows with no heat code (legacy, saved before heatNo existed) each
+      // stand alone rather than collapsing into one nameless bucket.
+      const key = row.heatNo || `__row-${row.id}`
+      if (!map.has(key)) {
+        map.set(key, {
+          key,
+          heatCode: row.heatNo || 'No heat code',
+          patternCodes: [],
+          rows: [],
+          planned: 0,
+          actual: 0,
+          hasPending: false,
+        })
+      }
+      const g = map.get(key)!
+      g.rows.push(row)
+      g.planned += Number(row.quantityScheduled) || 0
+      g.actual += Number(row.actualQuantity) || 0
+      if (row.isPending) g.hasPending = true
+      if (row.patternRef && !g.patternCodes.includes(row.patternRef)) g.patternCodes.push(row.patternRef)
+    })
+    return Array.from(map.values()).sort((a, b) => {
+      if (a.hasPending !== b.hasPending) return a.hasPending ? -1 : 1
+      return a.heatCode.localeCompare(b.heatCode)
+    })
   }, [rows])
 
   const valueFor = (row: TrackingPlanRow): string => {
@@ -45,13 +98,14 @@ export function TrackingMeltActualsTable({ rows, orders, onDirtyChange, onSaved,
         body: JSON.stringify({ actualQuantity: edits[rowId] === '' ? null : Number(edits[rowId]) }),
       })))
       await onSaved()
+      setOpenHeatKey(null)
     } finally {
       setIsSaving(false)
     }
   }
 
-  const sortedRows = [...rows].sort((a, b) => (b.isPending ? 1 : 0) - (a.isPending ? 1 : 0))
   const hasEdits = Object.keys(edits).length > 0
+  const openHeat = heatGroups.find(g => g.key === openHeatKey) || null
 
   if (rows.length === 0) {
     return <p className="text-[#94A3B8] text-center py-12 italic">No Melt plans for this date.</p>
@@ -60,58 +114,127 @@ export function TrackingMeltActualsTable({ rows, orders, onDirtyChange, onSaved,
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {sortedRows.map(row => {
-          const order = orders.find((o: any) => (o.id || o._id) === row.orderId)
-          const parts = String(row.itemId).split('-')
-          const idx = parseInt(parts[parts.length - 1], 10)
-          const productName = order?.cart?.[idx]?.productName || '-'
-
-          return (
-            <div key={row.id} className={cn('border border-[#E0E7FF] rounded-xl p-4 bg-white shadow-sm space-y-3', row.isPending && 'bg-red-50 border-red-200')}>
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]">PO No</p>
-                  <p className="font-mono text-[#4285F4] font-semibold">{order?.customerOrderNo || '-'}</p>
-                </div>
-                {row.isPending ? (
-                  <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/20 text-[10px]">
-                    Pending{row.carriedForwardFromDate ? ` (from ${row.carriedForwardFromDate})` : ''}
-                  </Badge>
-                ) : null}
-              </div>
-
+        {heatGroups.map(g => (
+          <button
+            key={g.key}
+            type="button"
+            onClick={() => setOpenHeatKey(g.key)}
+            className={cn(
+              'border border-[#E0E7FF] rounded-xl p-4 bg-white shadow-sm space-y-3 text-left transition-colors hover:border-[#4F46E5]',
+              g.hasPending && 'bg-red-50 border-red-200'
+            )}
+          >
+            <div className="flex items-start justify-between gap-2">
               <div>
-                <p className="font-semibold text-[#172554]">{productName}</p>
-                <p className="text-xs text-[#64748B] mt-0.5">Heat No: <span className="font-mono">{(row as any).heatNo || '-'}</span></p>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]">Heat Code</p>
+                <p className="font-mono font-bold text-[#172554] text-base">{g.heatCode}</p>
               </div>
+              {g.hasPending ? (
+                <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/20 text-[10px]">Pending</Badge>
+              ) : null}
+            </div>
 
-              <div className="flex items-center gap-3 pt-2 border-t border-[#E0E7FF]">
-                <div className="text-center">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]">Planned</p>
-                  <p className="font-mono font-bold text-[#172554]">{row.quantityScheduled}</p>
-                </div>
-                <div className="flex-1 flex flex-col items-center gap-1 p-2 rounded-lg border border-[#E0E7FF] bg-[#F8FAFC]">
-                  <span className="text-[9.5px] font-semibold uppercase tracking-wider text-[#64748B]">Actual Quantity</span>
-                  <Input
-                    type="number"
-                    min="0"
-                    disabled={disabled}
-                    value={valueFor(row)}
-                    onChange={e => handleChange(row.id, e.target.value)}
-                    className="w-full h-8 text-center text-sm bg-white border-[#E0E7FF]"
-                    placeholder="0"
-                  />
-                </div>
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8] mb-1">Pattern</p>
+              <div className="flex flex-wrap gap-1">
+                {g.patternCodes.length > 0 ? g.patternCodes.map(code => (
+                  <span key={code} className="font-mono text-xs font-semibold text-[#4F46E5] bg-[#EEF2FF] border border-[#C7D2FE] rounded-md px-2 py-0.5">
+                    {code}
+                  </span>
+                )) : <span className="text-xs text-[#94A3B8]">-</span>}
               </div>
             </div>
-          )
-        })}
+
+            <div className="flex items-center justify-between pt-2 border-t border-[#E0E7FF]">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]">Planned</p>
+                <p className="font-mono font-bold text-[#172554]">{g.planned}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]">Actual</p>
+                <p className="font-mono font-bold text-[#172554]">{g.actual}</p>
+              </div>
+              <span className="text-[11px] font-semibold text-[#4F46E5]">
+                {g.rows.length} product{g.rows.length === 1 ? '' : 's'} &rsaquo;
+              </span>
+            </div>
+          </button>
+        ))}
       </div>
-      <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={!hasEdits || isSaving || disabled} className="bg-[#4F46E5] hover:bg-[#4F46E5]/90 text-white">
-          {isSaving ? 'Saving...' : 'Save Actuals'}
-        </Button>
-      </div>
+
+      {hasEdits && (
+        <div className="flex justify-end">
+          <Button onClick={handleSave} disabled={isSaving || disabled} className="bg-[#4F46E5] hover:bg-[#4F46E5]/90 text-white">
+            {isSaving ? 'Saving...' : 'Save Actuals'}
+          </Button>
+        </div>
+      )}
+
+      <Dialog open={!!openHeat} onOpenChange={(open) => !open && setOpenHeatKey(null)}>
+        <DialogContent className="w-full sm:max-w-[900px] bg-[#F4F6FB] text-foreground p-0 shadow-2xl flex flex-col max-h-[85vh] overflow-hidden">
+          {openHeat && (
+            <>
+              <DialogHeader className="p-6 pb-4 pr-14 border-b border-[#E0E7FF] bg-white shrink-0">
+                <DialogTitle className="text-xl font-heading text-[#172554]">
+                  Heat <span className="font-mono">{openHeat.heatCode}</span>
+                </DialogTitle>
+                <p className="text-sm text-[#64748B]">
+                  {openHeat.rows.length} product{openHeat.rows.length === 1 ? '' : 's'} poured from this heat &middot; {openHeat.planned} planned
+                </p>
+              </DialogHeader>
+
+              <div className="flex-1 overflow-y-auto min-h-0 p-6">
+                <div className="border border-[#E0E7FF] rounded-xl overflow-x-auto shadow-sm bg-white">
+                  <table className="w-full text-sm text-left whitespace-nowrap">
+                    <thead className="bg-[#F4F6FB] border-b border-[#E0E7FF] text-[#64748B] font-semibold text-xs uppercase tracking-wider">
+                      <tr>
+                        <th className="px-4 py-3">Pattern</th>
+                        <th className="px-4 py-3">Product</th>
+                        <th className="px-4 py-3">PO No</th>
+                        <th className="px-4 py-3 text-center">Moulds</th>
+                        <th className="px-4 py-3 text-center">Planned</th>
+                        <th className="px-4 py-3 text-center">Actual</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#E0E7FF]">
+                      {openHeat.rows.map(row => {
+                        const order = orders.find((o: any) => (o.id || o._id) === row.orderId)
+                        return (
+                          <tr key={row.id} className={cn('hover:bg-[#F8FAFC]', row.isPending && 'bg-red-50')}>
+                            <td className="px-4 py-3 font-mono font-semibold text-[#4F46E5]">{row.patternRef || '-'}</td>
+                            <td className="px-4 py-3 font-semibold text-[#172554]">{productNameFor(row, orders)}</td>
+                            <td className="px-4 py-3 font-mono text-[#4285F4]">{order?.customerOrderNo || '-'}</td>
+                            <td className="px-4 py-3 text-center font-mono">{row.mouldsScheduled ?? '-'}</td>
+                            <td className="px-4 py-3 text-center font-mono font-semibold">{row.quantityScheduled}</td>
+                            <td className="px-4 py-3 text-center">
+                              <Input
+                                type="number"
+                                min="0"
+                                disabled={disabled}
+                                value={valueFor(row)}
+                                onChange={e => handleChange(row.id, e.target.value)}
+                                className="w-28 h-8 text-center text-sm bg-white border-[#E0E7FF] mx-auto"
+                                placeholder="0"
+                              />
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="p-6 border-t border-[#E0E7FF] bg-white shrink-0 flex justify-end gap-3">
+                <Button variant="outline" onClick={() => setOpenHeatKey(null)}>Close</Button>
+                <Button onClick={handleSave} disabled={!hasEdits || isSaving || disabled} className="bg-[#4F46E5] hover:bg-[#4F46E5]/90 text-white">
+                  {isSaving ? 'Saving...' : 'Save Actuals'}
+                </Button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
