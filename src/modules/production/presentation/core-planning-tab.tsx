@@ -12,11 +12,18 @@ interface CorePlanningTabProps {
   openOrders: any[]
   dailyPlans: any[]
   onSaveDayPlan: (date: string, plans: any[]) => Promise<void>
+  // Set when arriving from Production Tracking's "Revise plan" action, which
+  // deep-links to a specific day so the modal opens on it directly.
+  initialDate?: string | null
 }
 
-export function CorePlanningTab({ coreBacklog, patterns, openOrders, dailyPlans, onSaveDayPlan }: CorePlanningTabProps) {
+export function CorePlanningTab({ coreBacklog, patterns, openOrders, dailyPlans, onSaveDayPlan, initialDate }: CorePlanningTabProps) {
   const [viewMode, setViewMode] = useState<'table' | 'calendar'>('calendar')
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (initialDate) setSelectedDate(initialDate)
+  }, [initialDate])
 
   // Workers state per core box code
   const [workersPerBox, setWorkersPerBox] = useState<Record<string, number>>({})

@@ -124,9 +124,27 @@ export function TrackingDayModal({ date, plans, orders, shifts, onClose, onSaved
         <DialogHeader className="p-6 pb-4 pr-14 border-b border-[#E0E7FF] bg-white shrink-0">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <DialogTitle className="text-xl font-heading text-[#172554]">{date}</DialogTitle>
-            <Button onClick={handleCloseDay} disabled={isClosed || isClosing} className="bg-[#4F46E5] hover:bg-[#4F46E5]/90 text-white">
-              {isClosed ? 'Day Closed' : isClosing ? 'Closing...' : 'Close Day'}
-            </Button>
+            <div className="flex items-center gap-2">
+              {/* Re-planning a disrupted day is a planning decision, so it
+                  happens in Planning - which owns the quantity caps, machine
+                  capacity ceilings and shift-end checks. Tracking deep-links
+                  straight to this day/stage so it is one click, but never
+                  rewrites the plan itself: Close Day derives the carry-forward
+                  from planned - actual, so a plan edited down to match a bad
+                  day would silently drop the unmade work instead of moving it
+                  to tomorrow. */}
+              <Button
+                variant="outline"
+                onClick={() => { window.location.href = `/production-planning?tab=${activeStage}&date=${date}` }}
+                title="Open this day in Production Planning to change the schedule"
+                className="border-[#E0E7FF] text-[#4F46E5] hover:bg-[#EEF2FF]"
+              >
+                Revise Plan
+              </Button>
+              <Button onClick={handleCloseDay} disabled={isClosed || isClosing} className="bg-[#4F46E5] hover:bg-[#4F46E5]/90 text-white">
+                {isClosed ? 'Day Closed' : isClosing ? 'Closing...' : 'Close Day'}
+              </Button>
+            </div>
           </div>
         </DialogHeader>
 

@@ -59,6 +59,13 @@ export const productionPlans = pgTable('production_plans', {
   actuals: jsonb('actuals').$type<{ pigIron?: number; scrap?: number; feMn?: number; carburizer?: number }>(),
   allocations: jsonb('allocations').$type<unknown[]>().default([]),
   isPending: boolean('is_pending').default(false),
+  // Why this row's actual output fell short of what was planned (machine
+  // breakdown, power cut, ...). Written only by Production Tracking, and only
+  // meaningful when actual < planned. This is what turns a bare shortfall
+  // into something reportable - the plan itself is never rewritten to match
+  // reality, so the variance stays visible and Close Day can still carry the
+  // unmade quantity forward.
+  varianceReason: text('variance_reason'),
   // Set only on rows created by the Close Day carry-forward process (Production
   // Tracking) - the origin date this row's shortfall came from, purely for
   // display ("Carried forward from Jul 31"). Never set by Production Planning.
