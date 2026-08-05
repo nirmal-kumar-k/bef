@@ -78,12 +78,7 @@ export function TrackingHourlyGrid({ rows, orders, timeSlots, stage, onDirtyChan
         return s + v
       }, 0)
     })
-    return {
-      planned,
-      actual,
-      variance: actual - planned,
-      pct: planned > 0 ? Math.round((actual / planned) * 100) : 0,
-    }
+    return { planned, actual, variance: actual - planned }
   }, [rows, edits, timeSlots])
 
   // Every slot is typed by hand, deliberately. No copy-the-plan shortcut and
@@ -154,10 +149,6 @@ export function TrackingHourlyGrid({ rows, orders, timeSlots, stage, onDirtyChan
             <p className={cn('text-2xl font-mono font-bold leading-tight', varianceTone)}>
               {summary.variance > 0 ? '+' : ''}{summary.variance}
             </p>
-          </div>
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-[#A9B4CC]">Attainment</p>
-            <p className={cn('text-2xl font-mono font-bold leading-tight', varianceTone)}>{summary.pct}%</p>
           </div>
         </div>
       </div>
@@ -272,13 +263,17 @@ export function TrackingHourlyGrid({ rows, orders, timeSlots, stage, onDirtyChan
                         <td key={slot.time} className="px-1 py-2 text-center border-r border-[#E8EDFB]">
                           <div className="flex flex-col gap-1 items-center justify-center">
                             {/* Planned target: strictly read-only reference.
-                                Planning owns this number, and it is shown only
-                                so the operator can see what to measure against. */}
+                                Planning owns this number; it sits in its own
+                                bordered chip so it reads as a fixed target
+                                rather than another field you could type into,
+                                while staying large enough to actually read. */}
                             <span
                               title={planned > 0 ? `Planned ${planned} this hour` : 'Nothing planned this hour'}
                               className={cn(
-                                'text-[10px] font-mono leading-none',
-                                planned > 0 ? 'text-[#94A3B8]' : 'text-[#D7DEEC]'
+                                'w-full max-w-[56px] mx-auto h-[20px] flex items-center justify-center rounded-md border font-mono text-[11px] font-semibold',
+                                planned > 0
+                                  ? 'border-[#E2E8F5] bg-[#F4F7FD] text-[#5A6B8C]'
+                                  : 'border-transparent bg-transparent text-[#D7DEEC]'
                               )}
                             >
                               {planned > 0 ? planned : '-'}
