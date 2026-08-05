@@ -117,7 +117,10 @@ export function TrackingDayModal({ date, plans, orders, shifts, onClose, onSaved
   return (
     <>
     <Dialog open={!!date} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="w-full h-full max-w-full rounded-none sm:w-[95vw] sm:max-w-[1200px] sm:h-[90vh] sm:rounded-2xl bg-[#F4F6FB] text-foreground p-0 shadow-2xl flex flex-col overflow-hidden">
+      {/* Sized like Planning's own modal (98vw) rather than a fixed 1200px:
+          the hourly grid carries one column per shift hour, which simply
+          doesn't fit a narrower dialog without horizontal scrolling. */}
+      <DialogContent className="w-full h-full max-w-full rounded-none sm:w-[98vw] sm:max-w-[98vw] sm:h-[95vh] sm:rounded-2xl bg-[#F4F6FB] text-foreground p-0 shadow-2xl flex flex-col overflow-hidden">
         <DialogHeader className="p-6 pb-4 pr-14 border-b border-[#E0E7FF] bg-white shrink-0">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <DialogTitle className="text-xl font-heading text-[#172554]">{date}</DialogTitle>
@@ -179,6 +182,7 @@ export function TrackingDayModal({ date, plans, orders, shifts, onClose, onSaved
               rows={shiftFilteredRows}
               orders={orders}
               timeSlots={timeSlots}
+              stage={activeStage}
               onDirtyChange={setIsDirty}
               onSaved={onSaved}
               disabled={isClosed}
