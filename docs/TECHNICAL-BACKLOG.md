@@ -12,6 +12,43 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done
 
 Nothing here is theoretical; each was verified against the running code or database.
 
+### [ ] 0a. Next.js 16.2.6 has a middleware/proxy bypass advisory — and BOTH preconditions are met
+**Evidence:** `pnpm audit` reports GHSA-6gpp-xcg3-4w24, "Middleware / Proxy bypass in
+App Router applications using Turbopack and single locale", affecting `>=16.0.0
+<16.2.11`. Build output confirms `Next.js 16.2.6 (Turbopack)`; there is no i18n
+config, so the app is single-locale.
+**Impact:** `src/proxy.ts` is the *entire* authentication gate — for pages and, since
+the `/api` guard was added, for the API surface too. A middleware bypass is an
+authentication bypass.
+**Fix:** upgrade to `next@>=16.2.11`. Patch-level bump; also clears 8 further
+advisories (Server Action DoS, two SSRF, cache confusion, unauthenticated disclosure
+of internal Server Function endpoints).
+**Do this first — it is the single highest-value security item in this document.**
+
+### [ ] 0b. `shadcn` sits in `dependencies` and drags in a vulnerable server stack
+**Evidence:** never imported anywhere in `src`, but listed under `dependencies`. It is
+a CLI scaffolding tool. Through it the app installs `@modelcontextprotocol/sdk`,
+`express`, `hono`, `body-parser`, `js-yaml`, `brace-expansion`, `fast-uri`,
+`ip-address`.
+**Impact:** roughly half of the 30 reported vulnerabilities enter solely through this
+one unused package.
+**Fix:** move to `devDependencies` or remove entirely. Zero code change.
+
+### [ ] 0c. No rate limiting or lockout on login
+**Evidence:** no throttle, attempt counter, or lockout anywhere in the codebase.
+**Impact:** unlimited password guessing against `loginUser`, over plain HTTP, with a
+known default account name (see item 3).
+**Fix:** attempt counter keyed on username+IP with backoff; log repeated failures.
+
+### [ ] 0d. Sessions cannot be revoked
+**Evidence:** JWT with `setExpirationTime('7d')` and a 7-day cookie. No refresh, no
+denylist, no server-side session record.
+**Impact:** deactivating a user does not log them out — `isActive` is only checked at
+login. A leaked or stolen token stays valid for up to seven days with no way to kill
+it.
+**Fix:** shorten expiry with refresh, or check `isActive`/a token version on each
+request in the proxy.
+
 ### [ ] 1. API routes do not enforce roles
 **Evidence:** only 2 of 22 route files reference `role`; `proxy.ts` guards exactly one
 path (`ADMIN_ONLY_PATHS = ['/users']`). Meanwhile 10 UI files gate features on
@@ -199,3 +236,15 @@ Worth recording so it is not re-investigated:
 - bcrypt cost factor 10
 - Cookies are `httpOnly` + `sameSite=lax`
 - 0 orphaned `production_plans` rows at time of audit
+- **No SQL injection surface** — every query goes through Drizzle's builder; no raw
+  `sql\`\`` or string interpolation in any route
+- **No user enumeration** — login returns the same "Invalid credentials" for unknown
+  user, wrong password, and deactivated account
+- **No password hash leakage** — `GET /api/users` selects an explicit column list that
+  excludes `passwordHash`
+- **No state-changing GET handlers** — every mutation is POST/PUT/DELETE, so
+  `sameSite=lax` is a meaningful CSRF defence
+- **No open redirect** — every `redirect()` targets a hard-coded path, none reads a
+  `next`/`returnTo` parameter
+- **No XSS sink** — the single `dangerouslySetInnerHTML` is a static `<style>` string
+  in the login page with no interpolated input
