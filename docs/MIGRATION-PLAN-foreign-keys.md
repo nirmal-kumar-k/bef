@@ -205,25 +205,52 @@ an UPDATE or a VACUUM. If it ever does, every production plan for that order
 silently starts attributing quantities to a **different product** — with no
 error and nothing in the UI to reveal it.
 
-`order_items` already has real `uuid` primary keys (9 rows across 5 orders
-locally), so the correct fix exists:
+### ⚠️ Correction: adding `ORDER BY id` is NOT a safe fix
 
-1. **Immediate, low-risk mitigation:** add a deterministic ordering to the cart
-   relation so positions stop being arbitrary. This is a one-line change and
-   should arguably be done *before* the FK migration, since it is a live
-   correctness risk.
-2. **Proper fix (separate plan):** repoint `item_id` at `order_items.id`,
-   backfill existing rows by resolving each `<orderId>-<index>` against the
-   current ordering, then add the FK. This needs its own migration and touches
-   every component that parses `itemId`.
+An earlier draft of this document called this a one-line change. **That was
+wrong and would have caused the exact corruption described above.**
+
+`order_items` has no column recording cart position — its columns are
+`id, order_id, product, product_name, quantity, delivery_quantity, weight,
+rate_per_kg, unit_cost`. There is no `position`, no `created_at`, nothing
+sequential, and `id` is a random UUID.
+
+So `ORDER BY id` imposes a *stable but arbitrary* order, not the order the
+items were entered in. Tested against real local data:
+
+```
+orders with MULTIPLE cart items: 3
+  order fc3bca01 (3 items) -> ORDER BY id gives same order? NO
+  order 871f260d (2 items) -> yes
+  order 66d4ec8d (2 items) -> yes
+
+1 of 3 multi-item orders would be REORDERED
+```
+
+Because `item_id` is `${orderId}-${index}`, reordering that order silently
+repoints every one of its production plans at a different product.
+
+### The actual fix (its own migration)
+
+1. Add a `position` integer column to `order_items`.
+2. **Backfill from the current physical order**, freezing today's de-facto
+   ordering so every existing `item_id` stays valid.
+3. Apply `orderBy: position` to the cart relation.
+4. Set `position` on insert from then on.
+5. *Later, optionally:* repoint `item_id` at `order_items.id` and add a real FK.
+   This touches every component that parses `itemId`.
+
+Today's ordering is stable in practice (physical order, no updates to cart rows
+yet) — the risk is that nothing guarantees it stays that way.
 
 ---
 
 ## Execution order
 
 1. **Backup** (Step 0) — and verify it
-2. **Fix the cart ordering** — one line, removes a live correctness risk
-3. **Pre-flight checks on Azure** (Step 1) — report results before continuing
-4. **Migration** (Step 2) — only if pre-flight is all zeros
-5. **Drizzle schema update** (Step 3) + typecheck + build
-6. `item_id` → `order_items.id` — later, separate plan
+2. **Pre-flight checks on Azure** (Step 1) — report results before continuing
+3. **Migration** (Step 2) — only if pre-flight is all zeros
+4. **Drizzle schema update** (Step 3) + typecheck + build
+5. **Cart `position` column** — separate migration, see above. Deliberately NOT
+   bundled here: it needs its own backfill and carries its own risk.
+6. `item_id` → `order_items.id` — later still, separate plan again.
