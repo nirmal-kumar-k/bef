@@ -1,4 +1,7 @@
-import { pgTable, uuid, text, integer, numeric, boolean, jsonb, timestamp, pgEnum } from 'drizzle-orm/pg-core'
+import { pgTable, uuid, text, integer, numeric, boolean, jsonb, timestamp, pgEnum, index } from 'drizzle-orm/pg-core'
+import { orders } from './orders.schema'
+import { equipment } from './equipment.schema'
+import { shifts } from './shifts.schema'
 
 export const productionPlanStageEnum = pgEnum('production_plan_stage', [
   'Core',
@@ -14,7 +17,15 @@ export const productionPlanStageEnum = pgEnum('production_plan_stage', [
 export const productionPlans = pgTable('production_plans', {
   id: uuid('id').primaryKey().defaultRandom(),
   date: text('date').notNull(), // YYYY-MM-DD
-  orderId: text('order_id').notNull(),
+  // Real referential integrity as of the 2026-08-06 migration. Deleting an
+  // order cascades to its plans at the database level - the order-delete route
+  // already did this by hand, this makes it guaranteed rather than dependent
+  // on every future code path remembering to.
+  orderId: uuid('order_id').references(() => orders.id, { onDelete: 'cascade' }),
+  // NOT a foreign key: this is `${orderId}-${cartIndex}`, a positional pointer
+  // into the cart array rather than a reference to a row. See
+  // docs/MIGRATION-PLAN-cart-ordering.md - order_items already has real uuid
+  // keys, so this can eventually point at them properly.
   itemId: text('item_id').notNull(),
   stage: productionPlanStageEnum('stage').notNull(),
   coreBoxCode: text('core_box_code').default(''),
@@ -22,12 +33,14 @@ export const productionPlans = pgTable('production_plans', {
   quantityScheduled: integer('quantity_scheduled').notNull(),
   laborersAssigned: integer('laborers_assigned').default(1),
   workersAssigned: integer('workers_assigned'),
-  equipmentId: text('equipment_id'),
+  // SET NULL rather than cascade: retiring a machine must never erase the
+  // record of what it produced.
+  equipmentId: uuid('equipment_id').references(() => equipment.id, { onDelete: 'set null' }),
   // Which shift (Day/Night) this plan belongs to - was previously read/written
   // by Core/Mould/Melt planning code but never actually had a column to
   // persist to, so it silently dropped on every save and every plan looked
   // shift-less on reload.
-  shiftId: text('shift_id'),
+  shiftId: uuid('shift_id').references(() => shifts.id, { onDelete: 'set null' }),
   // Melt-specific heat identity - same story as shiftId: read/written by
   // melt-planning-modal.tsx but never persisted, so heats collapsed into one
   // on reload and mould counts were lost.
@@ -78,4 +91,13 @@ export const productionPlans = pgTable('production_plans', {
 
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
-})
+}, (table) => [
+  // Declared here, not just created in SQL: drizzle-kit push treats anything
+  // absent from the schema as drift and drops it - which is exactly what
+  // happened to these two the first time round.
+  //
+  // Every screen filters plans by date and stage, and the order_id index backs
+  // the new foreign key (Postgres does not index FK columns automatically).
+  index('production_plans_date_stage_idx').on(table.date, table.stage),
+  index('production_plans_order_id_idx').on(table.orderId),
+])

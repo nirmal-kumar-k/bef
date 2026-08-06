@@ -23,6 +23,11 @@ export async function POST(request: NextRequest) {
     await db.transaction(async (tx) => {
       for (const plan of plans) {
         if (!plan.actualQuantity || Number(plan.actualQuantity) <= 0) continue
+        // orderId became nullable when the foreign key was added (a deleted
+        // machine or shift nulls its own column, and the type now admits it).
+        // A plan with no order can't resolve a cart item, so skip it the same
+        // way the checks below skip a missing order or cart line.
+        if (!plan.orderId) continue
 
         const order = await tx.query.orders.findFirst({
           where: eq(orders.id, plan.orderId),
