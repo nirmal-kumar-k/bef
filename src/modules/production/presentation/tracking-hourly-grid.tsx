@@ -7,7 +7,7 @@ import { Input } from '@/shared/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { cn } from '@/shared/lib/utils'
 import type { TimeSlot } from '@/shared/lib/utils'
-import type { TrackingPlanRow } from './tracking-stage-list'
+import type { TrackingPlanRow } from './tracking-types'
 import { VARIANCE_REASONS } from './variance-reasons'
 
 interface TrackingHourlyGridProps {
@@ -30,15 +30,18 @@ export function TrackingHourlyGrid({ rows, orders, timeSlots, stage, onDirtyChan
   const [reasonEdits, setReasonEdits] = useState<Record<string, string>>({})
   const [isSaving, setIsSaving] = useState(false)
 
-  // Reset local edits whenever the underlying rows change (new shift
-  // selected, new date opened, or a save just landed) - edits are always
-  // relative to the latest server state, never carried across a shift switch.
+  // Keyed on WHICH rows are shown, not the array's identity. Depending on the
+  // array itself meant any parent re-render that rebuilt it - including the
+  // one caused by typing - discarded in-progress edits mid-keystroke. The
+  // signature only changes on a real context switch (different day, stage or
+  // shift), which is when discarding edits is actually correct.
+  const rowsKey = rows.map(r => r.id).join('|')
   useEffect(() => {
     setEdits({})
     setReasonEdits({})
     onDirtyChange(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows])
+  }, [rowsKey])
 
   const reasonFor = (row: TrackingPlanRow): string =>
     row.id in reasonEdits ? reasonEdits[row.id] : (row.varianceReason || '')
@@ -78,12 +81,7 @@ export function TrackingHourlyGrid({ rows, orders, timeSlots, stage, onDirtyChan
         return s + v
       }, 0)
     })
-    return {
-      planned,
-      actual,
-      variance: actual - planned,
-      pct: planned > 0 ? Math.round((actual / planned) * 100) : 0,
-    }
+    return { planned, actual, variance: actual - planned }
   }, [rows, edits, timeSlots])
 
   // Every slot is typed by hand, deliberately. No copy-the-plan shortcut and
@@ -93,10 +91,11 @@ export function TrackingHourlyGrid({ rows, orders, timeSlots, stage, onDirtyChan
   // into a duplicate of Planning's rather than a measurement of reality.
   const handleChange = (rowId: string, slotTime: string, value: string) => {
     const num = Math.max(0, Number(value) || 0)
-    setEdits(prev => {
-      onDirtyChange(true)
-      return { ...prev, [rowId]: { ...prev[rowId], [slotTime]: num } }
-    })
+    setEdits(prev => ({ ...prev, [rowId]: { ...prev[rowId], [slotTime]: num } }))
+    // Must stay OUTSIDE the updater above: React may re-run an updater during
+    // render, and notifying the parent from in there is a setState-in-render
+    // on a different component.
+    onDirtyChange(true)
   }
 
   const handleSave = async () => {
@@ -108,9 +107,19 @@ export function TrackingHourlyGrid({ rows, orders, timeSlots, stage, onDirtyChan
       await Promise.all(changedRowIds.map(rowId => {
         const row = rows.find(r => r.id === rowId)
         if (!row) return Promise.resolve()
+        const mergedActuals = { ...(row.hourlyActuals || {}), ...(edits[rowId] || {}) }
+        const actualTotal = Object.values(mergedActuals).reduce((s, v) => s + (Number(v) || 0), 0)
+        const stillShort = actualTotal > 0 && actualTotal < (Number(row.quantityScheduled) || 0)
+
         const body: Record<string, unknown> = {}
-        if (edits[rowId]) body.hourlyActuals = { ...(row.hourlyActuals || {}), ...edits[rowId] }
-        if (rowId in reasonEdits) body.varianceReason = reasonEdits[rowId] || null
+        if (edits[rowId]) body.hourlyActuals = mergedActuals
+        // Raising a row's actuals up to plan hides the reason selector, but
+        // the stored reason would otherwise survive - leaving a row that met
+        // its target carrying an invisible "Machine breakdown". Clear it
+        // whenever the row is no longer behind.
+        if (!stillShort) body.varianceReason = null
+        else if (rowId in reasonEdits) body.varianceReason = reasonEdits[rowId] || null
+
         return fetch(`/api/production-plans/${rowId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -118,6 +127,12 @@ export function TrackingHourlyGrid({ rows, orders, timeSlots, stage, onDirtyChan
         })
       }))
       await onSaved()
+      // Cleared explicitly rather than relying on the reset effect: rowsKey is
+      // deliberately unchanged by a save (same rows, new values), so without
+      // this the local edits would keep shadowing what actually persisted.
+      setEdits({})
+      setReasonEdits({})
+      onDirtyChange(false)
     } finally {
       setIsSaving(false)
     }
@@ -155,35 +170,20 @@ export function TrackingHourlyGrid({ rows, orders, timeSlots, stage, onDirtyChan
               {summary.variance > 0 ? '+' : ''}{summary.variance}
             </p>
           </div>
-          <div className="flex-1 min-w-[200px]">
-            <div className="flex items-baseline justify-between mb-1.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[#A9B4CC]">Completion</span>
-              <span className="text-xs font-mono font-bold text-[#64748B]">{summary.pct}%</span>
-            </div>
-            <div className="h-2 w-full rounded-full bg-[#EEF2FB] overflow-hidden">
-              <div
-                className={cn(
-                  'h-full rounded-full transition-all duration-300',
-                  summary.pct >= 100 ? 'bg-emerald-500' : 'bg-[#4F46E5]'
-                )}
-                style={{ width: `${Math.min(100, Math.max(0, summary.pct))}%` }}
-              />
-            </div>
-          </div>
         </div>
       </div>
 
       <div className="rounded-xl border border-[#E8EDFB] bg-white shadow-sm overflow-hidden">
         <div className="w-full overflow-x-auto">
           <table className="w-full min-w-[720px] table-fixed text-sm text-left">
-            <thead className="bg-[#F8FAFF] border-b border-[#E8EDFB] text-[#8494B4] uppercase tracking-wider font-bold text-[11px]">
+            <thead className="bg-[#E8EEF9] border-b border-[#D3DDEF] text-[#3F4E6B] uppercase tracking-wider font-bold text-[12px]">
               <tr>
-                <th className="px-3 py-3 w-[190px]">{stage === 'Core' ? 'Core Box Details' : 'Item Details'}</th>
-                <th className="px-1.5 py-3 text-center border-x border-[#E8EDFB] w-[124px]">Quantity Info</th>
+                <th className="px-3 py-3.5 w-[190px]">{stage === 'Core' ? 'Core Box Details' : 'Item Details'}</th>
+                <th className="px-1.5 py-3.5 text-center border-x border-[#D3DDEF] w-[124px]">Quantity Info</th>
                 {visibleSlots.map(slot => (
-                  <th key={slot.time} className="px-1 py-3 text-center border-r border-[#E8EDFB] leading-tight">
+                  <th key={slot.time} className="px-1 py-3.5 text-center border-r border-[#D3DDEF] leading-tight">
                     <div>{slot.time}</div>
-                    <div className="text-[9px] font-normal normal-case text-[#A9B4CC]">to {slot.endTime}</div>
+                    <div className="text-[10px] font-semibold normal-case text-[#6B7A99] mt-0.5">to {slot.endTime}</div>
                   </th>
                 ))}
               </tr>
@@ -283,13 +283,17 @@ export function TrackingHourlyGrid({ rows, orders, timeSlots, stage, onDirtyChan
                         <td key={slot.time} className="px-1 py-2 text-center border-r border-[#E8EDFB]">
                           <div className="flex flex-col gap-1 items-center justify-center">
                             {/* Planned target: strictly read-only reference.
-                                Planning owns this number, and it is shown only
-                                so the operator can see what to measure against. */}
+                                Planning owns this number; it sits in its own
+                                bordered chip so it reads as a fixed target
+                                rather than another field you could type into,
+                                while staying large enough to actually read. */}
                             <span
                               title={planned > 0 ? `Planned ${planned} this hour` : 'Nothing planned this hour'}
                               className={cn(
-                                'text-[10px] font-mono leading-none',
-                                planned > 0 ? 'text-[#94A3B8]' : 'text-[#D7DEEC]'
+                                'w-[62px] mx-auto h-[22px] flex items-center justify-center rounded-md border font-mono text-[12px] font-semibold',
+                                planned > 0
+                                  ? 'border-[#E2E8F5] bg-[#F4F7FD] text-[#5A6B8C]'
+                                  : 'border-transparent bg-transparent text-[#D7DEEC]'
                               )}
                             >
                               {planned > 0 ? planned : '-'}
@@ -303,7 +307,12 @@ export function TrackingHourlyGrid({ rows, orders, timeSlots, stage, onDirtyChan
                               placeholder="-"
                               title="Actual produced this hour"
                               className={cn(
-                                'w-full max-w-[56px] mx-auto h-8 text-center font-mono text-xs px-1 transition-all shadow-none',
+                                'w-[62px] mx-auto h-9 text-center font-mono text-sm px-0 transition-all shadow-none',
+                                // Number inputs render browser spin buttons that
+                                // occupy space on the right, so text-center
+                                // lands visibly left of true centre. Suppressing
+                                // them is what actually centres the figure.
+                                '[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none',
                                 'bg-transparent border-transparent hover:border-[#E0E7FF] focus:border-[#4F46E5] focus:bg-white',
                                 // Output in an hour with no target is neither
                                 // "short" nor "met" - it is unplanned recovery

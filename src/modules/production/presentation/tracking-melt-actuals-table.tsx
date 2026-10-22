@@ -7,7 +7,7 @@ import { Badge } from '@/shared/ui/badge'
 import { Input } from '@/shared/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { cn } from '@/shared/lib/utils'
-import type { TrackingPlanRow } from './tracking-stage-list'
+import type { TrackingPlanRow } from './tracking-types'
 import { VARIANCE_REASONS } from './variance-reasons'
 
 interface TrackingMeltActualsTableProps {
@@ -45,12 +45,20 @@ export function TrackingMeltActualsTable({ rows, orders, onDirtyChange, onSaved,
   const [isSaving, setIsSaving] = useState(false)
   const [openHeatKey, setOpenHeatKey] = useState<string | null>(null)
 
+  // Keyed on which rows are shown rather than the array's identity - see the
+  // same guard in tracking-hourly-grid: depending on the array meant a parent
+  // re-render mid-typing discarded the value being entered.
+  const rowsKey = rows.map(r => r.id).join('|')
   useEffect(() => {
     setEdits({})
     setReasonEdits({})
+    // The open heat belongs to the rows being replaced, so it cannot survive
+    // a switch to a different day/shift - otherwise the popup lingers against
+    // a heat that is no longer in view.
+    setOpenHeatKey(null)
     onDirtyChange(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows])
+  }, [rowsKey])
 
   const heatGroups = useMemo<HeatGroup[]>(() => {
     const map = new Map<string, HeatGroup>()
@@ -103,18 +111,32 @@ export function TrackingMeltActualsTable({ rows, orders, onDirtyChange, onSaved,
       // or both - de-duplicated so one row is still one PUT.
       const changedRowIds = Array.from(new Set([...Object.keys(edits), ...Object.keys(reasonEdits)]))
       await Promise.all(changedRowIds.map(rowId => {
+        const row = rows.find(r => r.id === rowId)
+        const actualTotal = rowId in edits
+          ? (edits[rowId] === '' ? 0 : Number(edits[rowId]) || 0)
+          : (Number(row?.actualQuantity) || 0)
+        const stillShort = actualTotal > 0 && actualTotal < (Number(row?.quantityScheduled) || 0)
+
         const body: Record<string, unknown> = {}
         if (rowId in edits) body.actualQuantity = edits[rowId] === '' ? null : Number(edits[rowId])
-        if (rowId in reasonEdits) body.varianceReason = reasonEdits[rowId] || null
+        // Same guard as the hourly grid: a pour raised up to plan must not
+        // keep an invisible shortfall reason from an earlier save.
+        if (!stillShort) body.varianceReason = null
+        else if (rowId in reasonEdits) body.varianceReason = reasonEdits[rowId] || null
+
         return fetch(`/api/production-plans/${rowId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
         })
       }))
-      // onSaved re-fetches, which replaces `rows` and so clears local edits
-      // via the reset effect - the inputs then show the persisted values.
       await onSaved()
+      // Cleared explicitly: rowsKey is deliberately unchanged by a save (same
+      // rows, new values), so without this the local edits would keep
+      // shadowing what actually persisted.
+      setEdits({})
+      setReasonEdits({})
+      onDirtyChange(false)
       if (closeAfter) setOpenHeatKey(null)
     } finally {
       setIsSaving(false)
@@ -138,53 +160,61 @@ export function TrackingMeltActualsTable({ rows, orders, onDirtyChange, onSaved,
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {heatGroups.map(g => (
-          <button
-            key={g.key}
-            type="button"
-            onClick={() => setOpenHeatKey(g.key)}
-            className={cn(
-              'border border-[#E0E7FF] rounded-xl p-4 bg-white shadow-sm space-y-3 text-left transition-colors hover:border-[#4F46E5]',
-              g.hasPending && 'bg-red-50 border-red-200'
-            )}
-          >
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]">Heat Code</p>
-                <p className="font-mono font-bold text-[#172554] text-base">{g.heatCode}</p>
+      {/* Denser than the previous three-across layout: each card carries very
+          little text, so wide labelled stat columns left most of the box
+          empty. Values now speak for themselves ("90 / 150 kg" reads the same
+          way the calendar states actual/planned) and the grid packs up to five
+          across, so a furnace-day of heats is visible without scrolling. */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2.5">
+        {heatGroups.map(g => {
+          const met = g.actual >= g.planned && g.actual > 0
+          const short = g.actual > 0 && g.actual < g.planned
+          return (
+            <button
+              key={g.key}
+              type="button"
+              onClick={() => setOpenHeatKey(g.key)}
+              className={cn(
+                'border rounded-xl p-3.5 bg-white shadow-sm text-left transition-colors',
+                'flex flex-col gap-2 hover:border-[#4F46E5]',
+                g.hasPending ? 'bg-red-50 border-red-200' : 'border-[#E0E7FF]'
+              )}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-mono font-bold text-[#172554] text-[15px] truncate" title={g.heatCode}>
+                  {g.heatCode}
+                </span>
+                {g.hasPending ? (
+                  <Badge variant="outline" className="shrink-0 bg-red-500/10 text-red-600 border-red-500/20 text-[9px] px-1.5">
+                    Pending
+                  </Badge>
+                ) : null}
               </div>
-              {g.hasPending ? (
-                <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/20 text-[10px]">Pending</Badge>
-              ) : null}
-            </div>
 
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8] mb-1">Pattern</p>
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-wrap gap-1 min-h-[22px]">
                 {g.patternCodes.length > 0 ? g.patternCodes.map(code => (
-                  <span key={code} className="font-mono text-xs font-semibold text-[#4F46E5] bg-[#EEF2FF] border border-[#C7D2FE] rounded-md px-2 py-0.5">
+                  <span key={code} className="font-mono text-[11px] font-semibold text-[#4F46E5] bg-[#EEF2FF] border border-[#C7D2FE] rounded-md px-1.5 py-0.5">
                     {code}
                   </span>
-                )) : <span className="text-xs text-[#94A3B8]">-</span>}
+                )) : <span className="text-[11px] text-[#94A3B8]">No pattern</span>}
               </div>
-            </div>
 
-            <div className="flex items-center justify-between pt-2 border-t border-[#E0E7FF]">
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]">Planned</p>
-                <p className="font-mono font-bold text-[#172554]">{g.planned}</p>
+              <div className="flex items-baseline justify-between gap-2 pt-2 border-t border-[#E0E7FF]">
+                <span className="font-mono text-sm font-bold">
+                  <span className={cn(
+                    met ? 'text-emerald-600' : short ? 'text-amber-600' : 'text-[#94A3B8]'
+                  )}>
+                    {g.actual}
+                  </span>
+                  <span className="text-[#94A3B8] font-normal"> / {g.planned} kg</span>
+                </span>
+                <span className="shrink-0 text-[11px] font-semibold text-[#4F46E5]">
+                  {g.rows.length} item{g.rows.length === 1 ? '' : 's'} &rsaquo;
+                </span>
               </div>
-              <div className="text-right">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#94A3B8]">Actual</p>
-                <p className="font-mono font-bold text-[#172554]">{g.actual}</p>
-              </div>
-              <span className="text-[11px] font-semibold text-[#4F46E5]">
-                {g.rows.length} product{g.rows.length === 1 ? '' : 's'} &rsaquo;
-              </span>
-            </div>
-          </button>
-        ))}
+            </button>
+          )
+        })}
       </div>
 
       {hasEdits && (
@@ -204,7 +234,15 @@ export function TrackingMeltActualsTable({ rows, orders, onDirtyChange, onSaved,
                   Heat <span className="font-mono">{openHeat.heatCode}</span>
                 </DialogTitle>
                 <p className="text-sm text-[#64748B]">
-                  {openHeat.rows.length} product{openHeat.rows.length === 1 ? '' : 's'} poured from this heat &middot; {openHeat.planned} planned
+                  {openHeat.rows.length} product{openHeat.rows.length === 1 ? '' : 's'} poured from this heat &middot; {openHeat.planned} kg planned
+                </p>
+                {/* Moulds are a count and planned/actual are a weight, so the
+                    two columns sit side by side in different units. Stating it
+                    outright stops the actual being entered as a mould count -
+                    which would then be compared against kilograms when the day
+                    is closed. */}
+                <p className="text-xs text-[#94A3B8] mt-1">
+                  Moulds is a count; Planned and Actual are weights in kg (moulds &times; kg per mould).
                 </p>
               </DialogHeader>
 
@@ -219,8 +257,8 @@ export function TrackingMeltActualsTable({ rows, orders, onDirtyChange, onSaved,
                         <th className="px-4 py-3">Product</th>
                         <th className="px-4 py-3 w-[10%]">PO No</th>
                         <th className="px-4 py-3 text-center w-[8%]">Moulds</th>
-                        <th className="px-4 py-3 text-center w-[9%]">Planned</th>
-                        <th className="px-4 py-3 text-center w-[13%]">Actual</th>
+                        <th className="px-4 py-3 text-center w-[9%]">Planned<span className="normal-case font-normal text-[#94A3B8]"> (kg)</span></th>
+                        <th className="px-4 py-3 text-center w-[13%]">Actual<span className="normal-case font-normal text-[#94A3B8]"> (kg)</span></th>
                         <th className="px-4 py-3 w-[17%]">Shortfall Reason</th>
                       </tr>
                     </thead>
@@ -241,7 +279,7 @@ export function TrackingMeltActualsTable({ rows, orders, onDirtyChange, onSaved,
                                 disabled={disabled}
                                 value={valueFor(row)}
                                 onChange={e => handleChange(row.id, e.target.value)}
-                                className="w-28 h-8 text-center text-sm bg-white border-[#E0E7FF] mx-auto"
+                                className="w-28 h-9 text-center text-sm bg-white border-[#E0E7FF] mx-auto [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                 placeholder="0"
                               />
                             </td>

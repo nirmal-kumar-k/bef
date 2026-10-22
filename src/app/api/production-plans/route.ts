@@ -1,13 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { asc } from 'drizzle-orm'
+import { and, asc, eq, gte, lte, type SQL } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
-import { productionPlans } from '@/infrastructure/database/schema'
+import { productionPlans, productionPlanStageEnum } from '@/infrastructure/database/schema'
+import { parseCreate } from './_plan-payload'
 
 export const dynamic = 'force-dynamic'
 
+const DATE = /^\d{4}-\d{2}-\d{2}$/
+
+// Optional ?from=YYYY-MM-DD&to=YYYY-MM-DD&stage=Core filters (all inclusive,
+// backed by the (date, stage) index). With none supplied it still returns
+// every plan - Planning's backlog sums every plan ever scheduled per item, so
+// it must keep reading the full history and is deliberately left unfiltered.
 export async function GET(request: NextRequest) {
   try {
-    const rows = await db.select().from(productionPlans).orderBy(asc(productionPlans.date))
+    const params = request.nextUrl.searchParams
+    const from = params.get('from')
+    const to = params.get('to')
+    const stage = params.get('stage')
+    if ((from && !DATE.test(from)) || (to && !DATE.test(to))) {
+      return NextResponse.json({ error: 'from/to must be YYYY-MM-DD' }, { status: 400 })
+    }
+    const stages = productionPlanStageEnum.enumValues as readonly string[]
+    if (stage && !stages.includes(stage)) {
+      return NextResponse.json({ error: `stage must be one of: ${stages.join(', ')}` }, { status: 400 })
+    }
+    const filters: SQL[] = []
+    // date is text, but YYYY-MM-DD compares correctly as a string
+    if (from) filters.push(gte(productionPlans.date, from))
+    if (to) filters.push(lte(productionPlans.date, to))
+    if (stage) filters.push(eq(productionPlans.stage, stage as (typeof productionPlanStageEnum.enumValues)[number]))
+    const rows = await db.select().from(productionPlans)
+      .where(filters.length ? and(...filters) : undefined)
+      .orderBy(asc(productionPlans.date))
     return NextResponse.json(rows)
   } catch (error) {
     console.error('GET /api/production-plans error:', error)
@@ -18,7 +43,10 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { id, createdAt: _createdAt, updatedAt: _updatedAt, ...insertData } = body
+    const parsed = parseCreate(body)
+    if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 })
+    const insertData = parsed.data
+    const id: string | undefined = typeof body?.id === 'string' && body.id ? body.id : undefined
     // A client-generated id (assigned the moment a row is added in the UI,
     // before it's ever round-tripped to the server) makes this insert
     // idempotent: if the same not-yet-confirmed row gets submitted twice -
