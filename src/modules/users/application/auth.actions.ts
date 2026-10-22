@@ -4,10 +4,18 @@ import { cookies, headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import bcrypt from 'bcryptjs'
 import { SignJWT } from 'jose'
-import { eq, count } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
 import { users } from '@/infrastructure/database/schema'
 import { JWT_SECRET } from '@/shared/lib/auth'
+import { lockedForMinutes, recordFailure, recordSuccess } from './login-throttle'
+
+// nginx sets X-Real-IP to the connecting address, overwriting anything the
+// client sent, and port 3000 is firewalled so requests can only arrive through
+// nginx. Without it (local dev) every request counts as one address.
+async function clientIp() {
+  return (await headers()).get('x-real-ip') || 'local'
+}
 
 // `NODE_ENV === 'production'` isn't the same thing as "served over HTTPS" - a
 // production build with no reverse proxy in front (direct `next start`, e.g.
@@ -49,37 +57,30 @@ export async function loginUser(formData: FormData) {
     return { error: 'Username and password are required' }
   }
 
+  // There is deliberately no default account: an empty users table used to
+  // create admin/admin123 and sign it straight in, which on a public IP is a
+  // takeover. The first admin is created with scripts/create-admin.mjs.
+  const ip = await clientIp()
+  const minutes = lockedForMinutes(username, ip)
+  if (minutes > 0) {
+    return { error: `Too many failed attempts. Try again in ${minutes} minute${minutes === 1 ? '' : 's'}.` }
+  }
+
   try {
-    // For development: if no user exists at all in the DB, create a default
-    // admin so the very first login works without a manual seed step.
-    const [{ value: userCount }] = await db.select({ value: count() }).from(users)
-    if (userCount === 0) {
-      console.log('No users found in database. Creating default admin user.')
-      const hashedPassword = await bcrypt.hash('admin123', 10)
-      const [newUser] = await db.insert(users).values({
-        name: 'Admin User',
-        username: 'admin',
-        passwordHash: hashedPassword,
-        role: 'admin'
-      }).returning()
-
-      if (username === 'admin' && password === 'admin123') {
-        await issueSession(newUser)
-        return { success: true }
-      }
-    }
-
     const [user] = await db.select().from(users).where(eq(users.username, username))
 
     if (!user || !user.isActive) {
+      recordFailure(username, ip)
       return { error: 'Invalid credentials' }
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash)
     if (!isPasswordValid) {
+      recordFailure(username, ip)
       return { error: 'Invalid credentials' }
     }
 
+    recordSuccess(username, ip)
     await issueSession(user)
     return { success: true }
   } catch (error) {
