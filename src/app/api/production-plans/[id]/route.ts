@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
 import { productionPlans } from '@/infrastructure/database/schema'
 import { syncInspectionStock } from '../_inspection-stock-sync'
+import { parseUpdate } from '../_plan-payload'
 
 export async function PUT(
   request: NextRequest,
@@ -10,14 +11,12 @@ export async function PUT(
 ) {
   try {
     const { id } = await params
-    const body = await request.json()
-    // Callers commonly spread a previously-fetched plan back as the save payload
-    // (production-planning/page.tsx handleSaveDayPlan) - strip system-managed
-    // fields so stale/wrong-typed values (id, createdAt/updatedAt as JSON
-    // strings) can't crash the timestamp columns or overwrite the id.
-    const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...rest } = body
+    // Only whitelisted fields are written; id/createdAt/updatedAt and the
+    // modals' row bookkeeping (_id, _isNew) are discarded - see _plan-payload.
+    const parsed = parseUpdate(await request.json())
+    if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 })
     const updateData: Record<string, any> = { updatedAt: new Date() }
-    for (const [key, value] of Object.entries(rest)) {
+    for (const [key, value] of Object.entries(parsed.data)) {
       if (value !== undefined) updateData[key] = value
     }
     const [existing] = await db.select().from(productionPlans).where(eq(productionPlans.id, id))
