@@ -12,7 +12,7 @@ Status key: `[ ]` open · `[~]` in progress · `[x]` done
 
 Nothing here is theoretical; each was verified against the running code or database.
 
-### [ ] 0a. Next.js 16.2.6 has a middleware/proxy bypass advisory — and BOTH preconditions are met
+### [x] 0a. Next.js 16.2.6 has a middleware/proxy bypass advisory — and BOTH preconditions are met
 **Evidence:** `pnpm audit` reports GHSA-6gpp-xcg3-4w24, "Middleware / Proxy bypass in
 App Router applications using Turbopack and single locale", affecting `>=16.0.0
 <16.2.11`. Build output confirms `Next.js 16.2.6 (Turbopack)`; there is no i18n
@@ -61,7 +61,7 @@ closures) regardless of what the UI shows them.
 **Risk:** low — additive guard. Must audit which roles legitimately need which
 mutation before enforcing, or it will lock out real users.
 
-### [ ] 2. Mass assignment on `PUT /api/production-plans/[id]`
+### [x] 2. Mass assignment on `PUT /api/production-plans/[id]`
 **Evidence:** the route strips only `id`/`createdAt`/`updatedAt`, then copies every
 remaining key into the update.
 **Impact:** a client can set any column — `isConfirmed`, `quantityScheduled`,
@@ -92,7 +92,7 @@ arrives, `isRequestSecure()` switches to Secure cookies on its own, no code chan
 
 ## P1 — Data integrity
 
-### [ ] 5. `production_plans` has no foreign keys, and cannot have one as-is
+### [x] 5. `production_plans` has no foreign keys, and cannot have one as-is
 **Evidence:** 4 FKs exist in the whole schema (shift_breaks, pattern_core_boxes,
 pattern_products, order_items). `production_plans.order_id` is `text` while
 `orders.id` is `uuid` — the two cannot even be joined without a cast.
@@ -121,7 +121,7 @@ plan's `itemId` at a different product. Nothing prevents or detects this.
 
 ## P1 — Scaling
 
-### [ ] 8. `GET /api/production-plans` returns the entire table
+### [~] 8. `GET /api/production-plans` returns the entire table
 **Evidence:** no filter, no pagination. Both `/production` and `/production-planning`
 fetch every plan ever created and filter client-side — and refetch all of it after
 every single save.
@@ -130,7 +130,7 @@ This is the item most likely to become a hard outage as real data accumulates.
 **Fix:** accept `?from=&to=&stage=` and scope the query. Client already knows the
 date range it needs.
 
-### [ ] 9. No indexes beyond primary keys
+### [x] 9. No indexes beyond primary keys
 **Evidence:** `pg_indexes` shows only `*_pkey` on production_plans, orders,
 production_day_closures.
 **Impact:** every filter on `date`, `stage`, `order_id` is a full table scan.
@@ -155,7 +155,7 @@ caused two production bugs this month — Melt rows lost to a 500 with no error 
 and a List input displaying a value that never persisted.
 **Fix:** a small `apiFetch()` wrapper that throws on non-ok and is used everywhere.
 
-### [ ] 12. No `error.tsx` or `loading.tsx` anywhere
+### [x] 12. No `error.tsx` or `loading.tsx` anywhere
 **Evidence:** zero of either in `src/app`.
 **Impact:** no error boundary at all — an unhandled render error drops the user on
 Next's default screen, which is exactly the "this page couldn't load" experience.
@@ -185,7 +185,7 @@ unsaved-changes guards). The duplication actively manufactures bugs.
 Highest value of anything here, and the highest risk — this is the most bug-prone
 code in the app. Deserves a dedicated pass, not a drive-by.
 
-### [ ] 15. Dead dependencies
+### [x] 15. Dead dependencies
 **Evidence:** 0 usages each of `@reduxjs/toolkit`, `react-redux`, `i18next`,
 `react-i18next`, `docx`, `lucide-react`.
 **Fix:** remove after a confirming grep.

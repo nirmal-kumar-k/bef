@@ -3,7 +3,7 @@
 Working list, ordered by what to do next. Full evidence for each item lives in
 [TECHNICAL-BACKLOG.md](./TECHNICAL-BACKLOG.md); this file is the running queue.
 
-Last updated: 2026-08-06
+Last updated: 2026-10-22
 
 ---
 
@@ -26,37 +26,33 @@ Last updated: 2026-08-06
 - [x] **Backlog calculation verified correct** — Knockout remaining matches
   hand-computed values, sums across both shifts, and no Melt pours are dropped
   (`siblingMoulds = 0` in every pattern group).
+- [x] **Whitelist the production-plans payload** (2026-10-22) — `PUT /[id]`
+  and `POST` both validate against one zod schema (`_plan-payload.ts`);
+  unknown fields and wrong types get a 400 naming them. Payload shapes of all
+  four planning modals, Tracking and Inspection were read from the code and
+  replayed against the API: 22/22 checks pass. Note this stops *unknown and
+  malformed* writes only — who may write `isConfirmed` etc. is the roles item.
+- [x] **`GET /api/production-plans` accepts `?from=&to=&stage=`**
+  (2026-10-22) — server side only. Planning must keep the full history (its
+  backlog sums every plan per item); Tracking could scope to the visible month
+  but that is a UI change, not yet made.
+- [x] **`error.tsx`, `loading.tsx`, `global-error.tsx`** (2026-10-22).
+- [x] **Dead dependencies removed** (2026-10-22). `components.json` still
+  names `lucide` as the shadcn icon library — re-add `lucide-react` if a shadcn
+  component is ever added.
 
 ---
 
-## Next up — low risk, no UI impact
+## Next up
 
-Chosen deliberately over Phase 3: these are contained, and none touches the
-screens just tested.
-
-- [ ] **Whitelist the `PUT /api/production-plans/[id]` payload**
-  Currently copies every key from the request body into the update, so any
-  client can set `isConfirmed`, `quantityScheduled`, `isPending`. Same
-  permissiveness silently swallowed `actualMeltWeight` for months. Zod schema
-  per route, reject unknown fields loudly.
-
-- [ ] **Date-scope `GET /api/production-plans`**
-  Returns the entire table with no filter; Planning and Tracking both fetch
-  every plan ever created and refetch all of it after every save. 54 rows
-  today, an outage at 50k. Accept `?from=&to=&stage=`.
-
-- [ ] **Remove the default-admin fallback**
+- [ ] **Remove the default-admin fallback** — *parked by the owner until the
+  end of the current round, decision pending.*
   `auth.actions.ts` creates `admin` / `admin123` and signs it in whenever the
-  users table is empty. ~10 lines to delete; seed the first admin with a script.
-
-- [ ] **Add `error.tsx` and `loading.tsx`**
-  Neither exists anywhere in `src/app`. No error boundary at all — an unhandled
-  render error drops the user on Next's default page. Purely additive.
-
-- [ ] **Remove dead dependencies**
-  `@reduxjs/toolkit`, `react-redux`, `i18next`, `react-i18next`, `docx`,
-  `lucide-react` — 0 usages each. (`shadcn` is NOT dead: `globals.css` imports
-  `shadcn/tailwind.css`.)
+  users table is empty, and line 66 accepts `admin`/`admin123` outright. The
+  existing local `admin` account also still uses `admin123` (verified against
+  the hash 2026-10-22).
+- [ ] **`pnpm lint` does not run** — the script calls `eslint`, which is not
+  installed. Pre-existing.
 
 ---
 
