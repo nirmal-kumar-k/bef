@@ -34,7 +34,7 @@ a CLI scaffolding tool. Through it the app installs `@modelcontextprotocol/sdk`,
 one unused package.
 **Fix:** move to `devDependencies` or remove entirely. Zero code change.
 
-### [ ] 0c. No rate limiting or lockout on login
+### [x] 0c. No rate limiting or lockout on login
 **Evidence:** no throttle, attempt counter, or lockout anywhere in the codebase.
 **Impact:** unlimited password guessing against `loginUser`, over plain HTTP, with a
 known default account name (see item 3).
@@ -72,7 +72,7 @@ Tracking calls this route. This also silently swallowed `actualMeltWeight` for m
 loudly rather than ignoring them.
 **Also check:** the same pattern in other PUT/POST routes.
 
-### [ ] 3. Default admin auto-creation runs in production
+### [x] 3. Default admin auto-creation runs in production
 **Evidence:** `auth.actions.ts` — if `userCount === 0`, it creates `admin` /
 `admin123` and signs that session straight in.
 **Impact:** if the users table is ever emptied, or a fresh database is pointed at the

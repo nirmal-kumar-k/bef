@@ -4,6 +4,7 @@ import { eq, count } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
 import { users } from '@/infrastructure/database/schema'
 import { getSessionUser } from '@/shared/lib/auth'
+import { passwordProblem } from '@/modules/users/domain/password'
 
 export async function PUT(
   request: NextRequest,
@@ -29,6 +30,8 @@ export async function PUT(
       }
     }
     if (body.password) {
+      const problem = passwordProblem(String(body.password))
+      if (problem) return NextResponse.json({ error: problem }, { status: 400 })
       safeData.passwordHash = await bcrypt.hash(body.password, 10)
     }
 

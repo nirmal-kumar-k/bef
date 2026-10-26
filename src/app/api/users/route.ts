@@ -4,6 +4,7 @@ import { asc } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
 import { users } from '@/infrastructure/database/schema'
 import { getSessionUser } from '@/shared/lib/auth'
+import { passwordProblem } from '@/modules/users/domain/password'
 
 export const dynamic = 'force-dynamic'
 
@@ -41,6 +42,8 @@ export async function POST(request: NextRequest) {
     if (!body.name || !body.username || !body.password) {
       return NextResponse.json({ error: 'Name, username, and password are required' }, { status: 400 })
     }
+    const problem = passwordProblem(String(body.password))
+    if (problem) return NextResponse.json({ error: problem }, { status: 400 })
 
     const passwordHash = await bcrypt.hash(body.password, 10)
     const [row] = await db.insert(users).values({

@@ -13,6 +13,7 @@ import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import type { AppUser } from './users-master-page'
+import { passwordProblem } from '../domain/password'
 
 interface UserModalProps {
   isOpen: boolean
@@ -47,6 +48,11 @@ export function UserModal({ isOpen, onClose, initialData }: UserModalProps) {
     }
     if (!initialData && !password.trim()) {
       setError('Password is required for a new user')
+      return
+    }
+    const problem = password.trim() ? passwordProblem(password.trim()) : null
+    if (problem) {
+      setError(problem)
       return
     }
 

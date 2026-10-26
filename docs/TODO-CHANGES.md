@@ -45,12 +45,23 @@ Last updated: 2026-10-22
 
 ## Next up
 
-- [ ] **Remove the default-admin fallback** — *parked by the owner until the
-  end of the current round, decision pending.*
-  `auth.actions.ts` creates `admin` / `admin123` and signs it in whenever the
-  users table is empty, and line 66 accepts `admin`/`admin123` outright. The
-  existing local `admin` account also still uses `admin123` (verified against
-  the hash 2026-10-22).
+- [x] **Default-admin fallback removed** (2026-10-22) — an empty users table
+  no longer creates `admin`/`admin123`. The first admin of a fresh database is
+  created with `node scripts/create-admin.mjs` (hidden password prompt,
+  refuses if an admin exists). Its refusal path is tested; its create path has
+  not been run, as that needs an empty database.
+- [x] **Login lockout** (2026-10-22) — 5 failures per username+IP locks that
+  pair for 15 min; 20 failures from one IP blocks the IP for 15 min. In
+  memory, so `pm2 restart bef` clears every lock. IP comes from nginx's
+  `X-Real-IP`.
+- [x] **Minimum password length 8** (2026-10-22) — enforced in the Users API
+  (create and reset) and the user modal.
+- [ ] **Change the `admin` password on Azure and locally** — still
+  `admin123` on both (verified against the hashes 2026-10-22). Users page →
+  edit admin → Reset Password.
+- [ ] **Sessions survive a password change** — a login cookie stays valid for
+  7 days even after the password is reset or the user is deactivated
+  (backlog 0d).
 - [ ] **`pnpm lint` does not run** — the script calls `eslint`, which is not
   installed. Pre-existing.
 
