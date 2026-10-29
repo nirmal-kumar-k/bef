@@ -48,6 +48,19 @@ export function toLocalDateString(date: Date): string {
   return `${year}-${month}-${day}`
 }
 
+// The plant's calendar day (IST) as YYYY-MM-DD, for code running on the
+// SERVER. toLocalDateString would use the server's own time zone, and the
+// Azure VM runs on UTC - so between midnight and 05:30 IST it would still
+// report yesterday. Browser code should keep using toLocalDateString.
+export const BUSINESS_TIME_ZONE = 'Asia/Kolkata'
+
+export function businessDateString(date: Date = new Date()): string {
+  // en-CA formats as YYYY-MM-DD
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: BUSINESS_TIME_ZONE, year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(date)
+}
+
 export function handleEnterToTab(e: React.KeyboardEvent) {
   if (e.key === 'Enter') {
     const target = e.target as HTMLElement;

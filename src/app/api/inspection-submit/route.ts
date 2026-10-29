@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { eq, or } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
 import { productionPlans, orders, products } from '@/infrastructure/database/schema'
-import { toLocalDateString } from '@/shared/lib/utils'
+import { businessDateString } from '@/shared/lib/utils'
 
 // Inspects the entire currently-available fettled quantity for one item in a
 // single batch: logs one new Inspection-stage plan row (accepted quantity in
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
 
     const [row] = await db.transaction(async (tx) => {
       const inserted = await tx.insert(productionPlans).values({
-        date: toLocalDateString(new Date()),
+        date: businessDateString(),
         orderId,
         itemId,
         stage: 'Inspection',
