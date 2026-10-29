@@ -214,7 +214,7 @@ status → colour, both used across Orders/Planning/Tracking.
 
 ## P2 — Operations
 
-### [ ] 20. No backup automation
+### [x] 20. No backup automation
 **Evidence:** no `pg_dump` or backup script anywhere in the repo.
 **Impact:** a production database holding real order and production history with no
 verified recovery path.

@@ -59,6 +59,21 @@ Last updated: 2026-10-22
 - [ ] **Change the `admin` password on Azure and locally** — still
   `admin123` on both (verified against the hashes 2026-10-22). Users page →
   edit admin → Reset Password.
+- [x] **Inspection batches dated in IST** (2026-10-29) — `inspection-submit`
+  stamped "today" with the server clock, and the Azure VM runs on UTC, so a
+  batch submitted 00:00–05:30 IST was dated the previous day. Now uses
+  `businessDateString()` (Asia/Kolkata). Checked: none of the 4 existing
+  inspection rows on Azure were affected. Every other date is chosen in the
+  browser (IST) or sent by it (Close Day), so was already correct.
+- [x] **Backups** (2026-10-29)
+  - On the VM, daily at 02:00 IST (server clock is UTC):
+    `30 20 * * * /usr/bin/bash /home/azureuser/babufoundry/scripts/backup-db.sh >> /home/azureuser/bef-backup.log 2>&1`
+    (`bash` explicitly: the script has no execute bit after `git pull`.)
+  - Off the VM: `scripts/pull-backups.ps1` copies new dumps to
+    `D:\BEF-backups` on the office PC; a Windows scheduled task runs it daily
+    and catches up if the PC was off. Registered with:
+    `Register-ScheduledTask -TaskName 'BEF pull backups' -Action (New-ScheduledTaskAction -Execute 'powershell.exe' -Argument '-NoProfile -ExecutionPolicy Bypass -File D:\BEF\scripts\pull-backups.ps1') -Trigger (New-ScheduledTaskTrigger -Daily -At 9:30am) -Settings (New-ScheduledTaskSettingsSet -StartWhenAvailable)`
+  - Local copies are never pruned (~1.4 MB/day).
 - [ ] **Sessions survive a password change** — a login cookie stays valid for
   7 days even after the password is reset or the user is deactivated
   (backlog 0d).
