@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { eq, or } from 'drizzle-orm'
+import { and, eq, or, sql } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
 import { productionPlans, orders, products } from '@/infrastructure/database/schema'
 import { businessDateString } from '@/shared/lib/utils'
@@ -46,7 +46,23 @@ export async function POST(request: NextRequest) {
       or(eq(products.name, cartItem.productName), eq(products.code, cartItem.product))
     ).limit(1)
 
-    const [row] = await db.transaction(async (tx) => {
+    const result = await db.transaction(async (tx) => {
+      // One inspection per item at a time: a second submission for the same
+      // item waits here until the first commits, then sees its batch below.
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${'inspection:' + itemId}))`)
+
+      // The pieces waiting are computed here, not taken from the browser:
+      // knocked out for this item, minus every batch already inspected
+      // (accepted + rejected) - the same rule the Planning page displays.
+      // If it no longer matches what the inspector was shown, someone else
+      // inspected in between, and accepting would count those pieces twice.
+      const [{ knockedOut }] = await tx.select({ knockedOut: sql<number>`coalesce(sum(${productionPlans.quantityScheduled}), 0)::int` })
+        .from(productionPlans).where(and(eq(productionPlans.itemId, itemId), eq(productionPlans.stage, 'Knockout')))
+      const [{ inspected }] = await tx.select({ inspected: sql<number>`coalesce(sum(coalesce(${productionPlans.quantityScheduled}, 0) + coalesce(${productionPlans.rejectedQuantity}, 0)), 0)::int` })
+        .from(productionPlans).where(and(eq(productionPlans.itemId, itemId), eq(productionPlans.stage, 'Inspection')))
+      const available = knockedOut - inspected
+      if (available !== totalAvailable) return { stale: true as const, available }
+
       const inserted = await tx.insert(productionPlans).values({
         date: businessDateString(),
         orderId,
@@ -60,13 +76,20 @@ export async function POST(request: NextRequest) {
       }).returning()
 
       if (product && accepted > 0) {
-        await tx.update(products).set({ stock: (product.stock || 0) + accepted }).where(eq(products.id, product.id))
+        // Added in the database, not read-then-written here, so two
+        // simultaneous additions to the same product cannot overwrite each other.
+        await tx.update(products).set({ stock: sql`coalesce(${products.stock}, 0) + ${accepted}` }).where(eq(products.id, product.id))
       }
 
-      return inserted
+      return { stale: false as const, row: inserted[0] }
     })
 
-    return NextResponse.json({ success: true, row, accepted, rejected })
+    if (result.stale) {
+      return NextResponse.json({
+        error: `Someone else has inspected pieces of this item since you opened it - ${result.available} piece(s) are now waiting. Reload and try again.`,
+      }, { status: 409 })
+    }
+    return NextResponse.json({ success: true, row: result.row, accepted, rejected })
   } catch (error) {
     console.error('POST /api/inspection-submit error:', error)
     return NextResponse.json({ error: 'Failed to submit inspection' }, { status: 500 })

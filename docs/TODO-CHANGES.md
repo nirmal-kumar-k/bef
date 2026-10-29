@@ -74,6 +74,25 @@ Last updated: 2026-10-22
     and catches up if the PC was off. Registered with:
     `Register-ScheduledTask -TaskName 'BEF pull backups' -Action (New-ScheduledTaskAction -Execute 'powershell.exe' -Argument '-NoProfile -ExecutionPolicy Bypass -File D:\BEF\scripts\pull-backups.ps1') -Trigger (New-ScheduledTaskTrigger -Daily -At 9:30am) -Settings (New-ScheduledTaskSettingsSet -StartWhenAvailable)`
   - Local copies are never pruned (~1.4 MB/day).
+- [x] **Concurrency step A** (2026-10-29)
+  - Stock is added in the database (`stock = stock + n`) in Inspection,
+    Knockout-confirm and the inspection-correction sync, so simultaneous
+    additions cannot overwrite each other.
+  - Inspection computes the pieces waiting on the server under a per-item
+    lock and refuses (409, "reload") if the inspector's figure is out of date,
+    so one batch cannot be inspected twice. The screen reloads on that 409.
+  - Knockout-confirm claims each plan before adding stock, so a double
+    confirm counts once. Note: nothing in the app calls this route.
+  - Login IP-wide cap raised 20 → 100 (the office shares one public IP).
+  - Tested on a scratch copy of the database against the production build:
+    10 simultaneous inspections of one batch → 1 accepted, 9 refused, stock
+    up once; 10 simultaneous corrections → none lost; 30 simultaneous
+    confirms of 15 plans → each counted once. Not yet run against the old
+    code to show the test fails there.
+- [ ] **Decide: remove `/api/knockout-confirm`?** Unused, and adds stock at
+  Knockout while Inspection is where stock is meant to be created.
+- [ ] **Concurrency steps B–E** — who-changed-it + history table, version
+  numbers + conflict dialog, stock ledger, History/Activity screens.
 - [ ] **Sessions survive a password change** — a login cookie stays valid for
   7 days even after the password is reset or the user is deactivated
   (backlog 0d).

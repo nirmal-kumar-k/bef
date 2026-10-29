@@ -1,4 +1,4 @@
-import { eq, or } from 'drizzle-orm'
+import { eq, or, sql } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
 import { orders, products } from '@/infrastructure/database/schema'
 
@@ -26,5 +26,6 @@ export async function syncInspectionStock(itemId: string | undefined | null, ord
   ).limit(1)
   if (!product) return
 
-  await db.update(products).set({ stock: (product.stock || 0) + delta }).where(eq(products.id, product.id))
+  // Applied in the database so a concurrent stock change is not overwritten.
+  await db.update(products).set({ stock: sql`coalesce(${products.stock}, 0) + ${delta}` }).where(eq(products.id, product.id))
 }

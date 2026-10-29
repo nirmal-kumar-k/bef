@@ -161,6 +161,9 @@ export function InspectionTab({ inspectionBacklog, inspectionPlans, openOrders, 
       } else {
         const data = await res.json().catch(() => ({}))
         setErrorByKey(prev => ({ ...prev, [key]: data.error || 'Failed to submit inspection' }))
+        // 409: someone else inspected this item meanwhile - pull the current
+        // figures so the waiting count on screen is right for the retry.
+        if (res.status === 409) await onRefetch()
       }
     } catch (err) {
       console.error('Error submitting inspection:', err)
