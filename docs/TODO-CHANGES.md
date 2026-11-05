@@ -167,7 +167,11 @@ Last updated: 2026-10-22
   set state inside useMemo; three planning modals' backlog memo missed
   removedRows. React-Compiler-only rules downgraded to warnings (app does not
   use the compiler) after review.
-- [ ] **Step E** — History/Activity screens for plans and orders.
+- [x] **History/Activity screens (step E)** (2026-11-05) — GET /api/activity
+  (whole feed: admin only; `?orderId=`: any logged-in user, includes the
+  order's deleted plans; IST day filters; paging). Admin > Activity page with
+  filters; a History section in the View Order window. Tests:
+  tests/qa/activity.test.mjs (14). Full suite 163/163.
 - [ ] **Sessions survive a password change** — a login cookie stays valid for
   7 days even after the password is reset or the user is deactivated
   (backlog 0d).

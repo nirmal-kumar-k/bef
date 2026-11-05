@@ -21,6 +21,7 @@ import { Input } from '@/shared/ui/input'
 import { useState, useEffect } from 'react'
 import { pdf } from '@react-pdf/renderer'
 import { SalesOrderPdf } from './sales-order-pdf'
+import { OrderHistory } from '@/modules/activity/presentation/order-history'
 
 export function ViewOrderModal({
   order: initialOrder,
@@ -389,6 +390,9 @@ export function ViewOrderModal({
               </div>
             </div>
           )}
+
+          {/* History: who changed this order and its plans, and what */}
+          {order?.id && <OrderHistory orderId={order.id} />}
 
           {/* Documents */}
           <div className="space-y-4">

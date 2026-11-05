@@ -75,7 +75,7 @@ SERVER_STARTED=1
 for _ in $(seq 1 60); do curl -s -o /dev/null "http://localhost:$PORT/login" && break; sleep 1; done
 
 FAILED=()
-for t in throttle api history concurrency cart stock errors login realtime sessions; do
+for t in throttle api history concurrency cart stock errors activity login realtime sessions; do
   echo; echo "========== $t =========="
   QA_BASE_URL="http://localhost:$PORT" QA_DB_NAME="$QA_DB" node --env-file=.env.local "tests/qa/$t.test.mjs" || FAILED+=("$t")
 done
