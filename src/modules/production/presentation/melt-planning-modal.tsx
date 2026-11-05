@@ -18,6 +18,7 @@ import { Fire, Trash, Plus, Clock, WarningCircle, CaretLeft, CaretRight, Magnify
 import { cn, generateId } from '@/shared/lib/utils'
 import { formatWhen } from '@/shared/ui/conflict-dialog'
 import type { Shift } from './shift-master-page'
+import { useEditing } from '@/shared/realtime/live-updates'
 
 interface MeltPlanningModalProps {
   isOpen: boolean
@@ -215,6 +216,9 @@ export function MeltPlanningModal({
   // it resolves would re-submit every not-yet-persisted pour as if it were
   // new (no planId assigned yet), creating duplicate rows.
   const [isSaving, setIsSaving] = useState(false)
+  // Rows are rebuilt whenever the plans list changes, so a live refresh
+  // while open would wipe unsaved edits - hold refreshes until closed.
+  useEditing(isOpen)
 
   // Snapshot of the fields that matter for saving, captured once when the
   // modal's heats/pours are (re)initialized - compared against current state

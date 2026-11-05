@@ -12,6 +12,7 @@ import { ConfirmDialog, type ConfirmDialogState } from '@/shared/ui/confirm-dial
 import { ConflictDialog, formatWhen, type ConflictItem } from '@/shared/ui/conflict-dialog'
 import { categories, statusColors, statusAccentColors, type Order } from '@/modules/orders/domain/order.types'
 import { useRole } from '@/shared/context/role-context'
+import { useEditing, useLiveRefresh } from '@/shared/realtime/live-updates'
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([])
@@ -87,6 +88,9 @@ export default function OrdersPage() {
   useEffect(() => {
     fetchOrders()
   }, [fetchOrders])
+  // Orders created/changed by others appear without a reload; held back
+  // while the order form is open (see useEditing in NewOrderModal).
+  useLiveRefresh(['order'], fetchOrders)
 
   const handleSaveOrder = async (order: Order | Omit<Order, 'id'>, overwriteVersion?: number): Promise<boolean> => {
     try {

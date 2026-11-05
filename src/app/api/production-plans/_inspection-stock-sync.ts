@@ -1,6 +1,8 @@
 import { eq, or, sql } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
 import { orders, products } from '@/infrastructure/database/schema'
+import { currentActor } from '@/infrastructure/audit'
+import { publishChange } from '@/infrastructure/realtime'
 
 // Correcting or deleting a past Inspection batch (accepted quantity lives in
 // quantityScheduled) must adjust product.stock by the same delta, since that
@@ -28,4 +30,5 @@ export async function syncInspectionStock(itemId: string | undefined | null, ord
 
   // Applied in the database so a concurrent stock change is not overwritten.
   await db.update(products).set({ stock: sql`coalesce(${products.stock}, 0) + ${delta}` }).where(eq(products.id, product.id))
+  await publishChange(db, await currentActor(), { type: 'product', action: 'update', id: product.id, label: product.name })
 }

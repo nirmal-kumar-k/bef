@@ -21,6 +21,7 @@ import { cn, generateId } from '@/shared/lib/utils'
 import { formatWhen } from '@/shared/ui/conflict-dialog'
 import { generateTimeSlots, TimeSlot, resolveAvgProductionRate } from '@/shared/lib/utils'
 import type { Shift } from './shift-master-page'
+import { useEditing } from '@/shared/realtime/live-updates'
 
 interface MouldPlanningModalProps {
   isOpen: boolean
@@ -109,6 +110,9 @@ export function MouldPlanningModal({
   // it resolves would re-submit every not-yet-persisted row as if it were
   // new (no planId assigned yet), creating duplicate rows.
   const [isSaving, setIsSaving] = useState(false)
+  // Rows are rebuilt whenever the plans list changes, so a live refresh
+  // while open would wipe unsaved edits - hold refreshes until closed.
+  useEditing(isOpen)
 
   // Rows removed from the schedule via the trash icon this session - kept in
   // full (not just their id) because their originalQty must still be

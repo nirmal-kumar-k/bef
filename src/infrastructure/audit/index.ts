@@ -1,7 +1,9 @@
 import { and, asc, eq, gt } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
 import { auditEvents } from '@/infrastructure/database/schema'
+import { headers } from 'next/headers'
 import { getSessionUser } from '@/shared/lib/auth'
+import { publishChange } from '@/infrastructure/realtime'
 
 // Change history and optimistic locking for production plans and orders.
 //
@@ -11,14 +13,19 @@ import { getSessionUser } from '@/shared/lib/auth'
 // in a request body is never read.
 
 export type EntityType = 'production_plan' | 'order'
-export type Actor = { id: string | null; name: string | null }
+export type Actor = { id: string | null; name: string | null; clientId?: string | null }
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0]
 type Executor = typeof db | Tx
 
 export async function currentActor(): Promise<Actor> {
   const user = await getSessionUser()
-  return { id: user?.id ?? null, name: user?.name || user?.username || null }
+  // The browser tab that sent the request (set by the live-updates client),
+  // so the change is not echoed back to the tab that made it. Not trusted for
+  // anything else - who made the change always comes from the session.
+  const raw = (await headers()).get('x-client-id')
+  const clientId = raw && /^[A-Za-z0-9-]{1,64}$/.test(raw) ? raw : null
+  return { id: user?.id ?? null, name: user?.name || user?.username || null, clientId }
 }
 
 // Bookkeeping columns that change on every write - not interesting as "what
@@ -62,6 +69,16 @@ export async function recordAudit(ex: Executor, actor: Actor, e: {
     // JSON round-trip: jsonb columns need plain values, not Date objects.
     before: before ? JSON.parse(JSON.stringify(before)) : null,
     after: after ? JSON.parse(JSON.stringify(after)) : null,
+  })
+  // Same transaction: delivered to other screens only if this change commits.
+  const row = (after || before || {}) as Record<string, unknown>
+  await publishChange(ex, actor, {
+    type: e.entityType,
+    action: e.action,
+    id: e.entityId,
+    date: e.entityType === 'production_plan' ? (row.date as string) ?? null : null,
+    stage: e.entityType === 'production_plan' ? (row.stage as string) ?? null : null,
+    label: e.entityType === 'order' ? (row.customerOrderNo as string) ?? null : null,
   })
 }
 

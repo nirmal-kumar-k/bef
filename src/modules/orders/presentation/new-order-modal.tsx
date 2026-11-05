@@ -37,6 +37,7 @@ import { Check, CaretUpDown } from '@phosphor-icons/react'
 import { cn, handleEnterToTab, generateId } from '@/shared/lib/utils'
 import { type Order } from '@/modules/orders/domain/order.types'
 import { useRole } from '@/shared/context/role-context'
+import { useEditing } from '@/shared/realtime/live-updates'
 
 interface CartItem {
   id: string
@@ -112,6 +113,10 @@ export function NewOrderModal({
 
   // Auto-fill the next Internal Order No. when opening for a brand new order
   // (not editing an existing one) - still a plain editable field afterward.
+  // A live refresh of the orders list would hand this form a new initialData
+  // and re-fill it, wiping what is being typed - hold refreshes while open.
+  useEditing(isOpen)
+
   useEffect(() => {
     if (isOpen && !initialData) {
       setInternalOrderNo(generateNextInternalOrderNo(existingOrders))

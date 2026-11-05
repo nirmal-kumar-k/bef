@@ -4,6 +4,7 @@ import { db } from '@/infrastructure/database/client'
 import { productionPlans, orders, products } from '@/infrastructure/database/schema'
 import { businessDateString } from '@/shared/lib/utils'
 import { currentActor, recordAudit } from '@/infrastructure/audit'
+import { publishChange } from '@/infrastructure/realtime'
 
 // Inspects the entire currently-available fettled quantity for one item in a
 // single batch: logs one new Inspection-stage plan row (accepted quantity in
@@ -84,6 +85,7 @@ export async function POST(request: NextRequest) {
         // Added in the database, not read-then-written here, so two
         // simultaneous additions to the same product cannot overwrite each other.
         await tx.update(products).set({ stock: sql`coalesce(${products.stock}, 0) + ${accepted}` }).where(eq(products.id, product.id))
+        await publishChange(tx, actor, { type: 'product', action: 'update', id: product.id, label: product.name })
       }
 
       return { stale: false as const, row: inserted[0] }

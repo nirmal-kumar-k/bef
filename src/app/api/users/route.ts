@@ -5,6 +5,7 @@ import { db } from '@/infrastructure/database/client'
 import { users } from '@/infrastructure/database/schema'
 import { getSessionUser } from '@/shared/lib/auth'
 import { passwordProblem } from '@/modules/users/domain/password'
+import { publishOnSuccess } from '@/infrastructure/realtime/route-wrapper'
 
 export const dynamic = 'force-dynamic'
 
@@ -31,7 +32,7 @@ export async function GET() {
   }
 }
 
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   const session = await getSessionUser()
   if (!session || session.role !== 'admin') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
@@ -70,3 +71,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: message }, { status: error?.code === '23505' ? 409 : 500 })
   }
 }
+
+// Tell other open screens about successful writes (see src/infrastructure/realtime).
+export const POST = publishOnSuccess('master', 'users', 'create', postHandler)

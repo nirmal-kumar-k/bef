@@ -109,6 +109,29 @@ Last updated: 2026-10-22
   - Tested on a scratch copy: 25/25 B+C checks, 53/53 regression checks.
     Not yet seen in a browser.
   - **Azure needs `drizzle-kit push` for this** (10 additive statements).
+- [x] **Live updates** (2026-11-05) — publish/subscribe over Postgres
+  LISTEN/NOTIFY, delivered to browsers as Server-Sent Events (`/api/events`).
+  - Publish: `publishChange()` (src/infrastructure/realtime) runs `pg_notify`
+    inside the save's transaction, so only committed changes are announced.
+    Plans and orders publish via `recordAudit`; Close Day and the three
+    stock-changing paths publish explicitly; master-data routes and day
+    re-open are wrapped with `publishOnSuccess`.
+  - Subscribe: one LISTEN connection per server process fans out to every
+    open stream; on a database reconnect it sends `resync` and browsers
+    reload. 25s heartbeat; `X-Accel-Buffering: no` so nginx needs no change.
+  - Browser: `LiveUpdatesProvider` (root layout). Screens use
+    `useLiveRefresh`; editors with unsaved input use `useEditing`, which holds
+    refreshes back (amber banner) until they close. A tab ignores its own
+    changes via an `X-Client-Id` header. Toasts group bursts.
+  - Wired: Orders, Planning (incl. Inspection), Tracking (+ live day-closed
+    lock), Products. Tracking's reloads no longer flash "Loading...".
+  - QA on a scratch copy: 19/19 realtime checks (64 ms delivery; no event for
+    409/400/no-op/failed saves; recovery after a killed LISTEN connection)
+    and 78/78 regression checks. Browser behaviour not yet seen.
+  - MQTT can be added later inside `publishChange()` if machines start
+    sending data.
+  - Noted, not changed: creating a customer with missing fields returns 500
+    instead of a validation message.
 - [ ] **Concurrency steps D–E** — stock ledger, History/Activity screens.
 - [ ] **Sessions survive a password change** — a login cookie stays valid for
   7 days even after the password is reset or the user is deactivated

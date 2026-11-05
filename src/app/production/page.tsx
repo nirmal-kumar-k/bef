@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { cn, toLocalDateString } from '@/shared/lib/utils'
 import { TrackingDayModal } from '@/modules/production/presentation/tracking-day-modal'
 import type { TrackingPlanRow } from '@/modules/production/presentation/tracking-types'
+import { useLiveRefresh } from '@/shared/realtime/live-updates'
 
 const STAGES: TrackingPlanRow['stage'][] = ['Core', 'Mould', 'Melt', 'Knockout']
 const STAGE_DOTS: { stage: TrackingPlanRow['stage']; color: string }[] = [
@@ -22,7 +23,9 @@ export default function ProductionTrackingPage() {
 
   const fetchData = useCallback(async () => {
     try {
-      setLoading(true)
+      // No setLoading(true) here: `loading` starts true for the first load, and
+      // later reloads (after a save, or a live update) refresh quietly instead
+      // of flashing "Loading..." over the calendar.
       const [planRes, orderRes, shiftRes] = await Promise.all([fetch('/api/production-plans'), fetch('/api/orders'), fetch('/api/shifts')])
       if (planRes.ok) setPlans(await planRes.json())
       if (orderRes.ok) setOrders(await orderRes.json())
@@ -35,6 +38,8 @@ export default function ProductionTrackingPage() {
   }, [])
 
   useEffect(() => { fetchData() }, [fetchData])
+  // Held back while the day window has unsaved actuals (useEditing there).
+  useLiveRefresh(['production_plan', 'order', 'day_closure', 'master'], fetchData)
 
   const calendarDays = useMemo(() => {
     const today = new Date()

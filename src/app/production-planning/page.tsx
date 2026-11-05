@@ -18,6 +18,7 @@ import { MeltPlanningTab } from '@/modules/production/presentation/melt-planning
 import { PourPlanningTab } from '@/modules/production/presentation/pour-planning-tab'
 import { KnockoutPlanningTab } from '@/modules/production/presentation/knockout-planning-tab'
 import { InspectionTab } from '@/modules/production/presentation/inspection-tab'
+import { useLiveRefresh } from '@/shared/realtime/live-updates'
 
 export default function ProductionPlanningPage() {
   const { role } = useRole()
@@ -78,6 +79,9 @@ export default function ProductionPlanningPage() {
   useEffect(() => {
     fetchData()
   }, [fetchData])
+  // Backlog, calendar and Inspection follow other people's changes live; held
+  // back while a planning modal is open (see useEditing in each modal).
+  useLiveRefresh(['production_plan', 'order', 'product', 'master', 'day_closure'], fetchData)
 
   const openOrders = useMemo(() => orders.filter(o => o.status === 'Received'), [orders])
 

@@ -4,6 +4,7 @@ import { db } from '@/infrastructure/database/client'
 import { productionPlans, productionDayClosures } from '@/infrastructure/database/schema'
 import { computeCarryForwards, type PlanRow } from '../_close-day'
 import { currentActor, recordAudit } from '@/infrastructure/audit'
+import { publishChange } from '@/infrastructure/realtime'
 
 export async function POST(request: NextRequest) {
   try {
@@ -44,6 +45,7 @@ export async function POST(request: NextRequest) {
         }
 
         await tx.insert(productionDayClosures).values({ date })
+        await publishChange(tx, actor, { type: 'day_closure', action: 'create', date })
       })
     } catch (error) {
       // Handle TOCTOU race: two concurrent requests both passed the existingClosure check
