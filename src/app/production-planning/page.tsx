@@ -796,7 +796,7 @@ export default function ProductionPlanningPage() {
                 <div className="space-y-6 bg-white p-6 rounded-2xl border border-[#E0E7FF] shadow-lg">
                   <div>
                     <h3 className="text-[#172554] font-bold text-lg font-heading">Finished Stock</h3>
-                    <p className="text-[#64748B] text-xs mt-1">Total accepted-and-stocked quantity per product, across every order - not broken down by PO No, since stock itself isn't order-scoped.</p>
+                    <p className="text-[#64748B] text-xs mt-1">Total accepted-and-stocked quantity per product, across every order - not broken down by PO No, since stock itself isn&apos;t order-scoped.</p>
                   </div>
                   <div className="border border-[#E0E7FF] rounded-xl overflow-x-auto shadow-sm">
                     <table className="w-full text-sm text-left whitespace-nowrap">

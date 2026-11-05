@@ -735,7 +735,7 @@ export function MouldPlanningModal({
     return Array.from(options.values())
       .map(b => ({ ...b, totalScheduled: b.totalScheduled + getSessionCommittedQty(b.orderNo, b.patternRef) }))
       .filter(b => b.totalRequired > b.totalScheduled)
-  }, [backlogData, activeRows, plannedRows])
+  }, [backlogData, activeRows, plannedRows, removedRows])
 
   return (
     <>
@@ -899,7 +899,7 @@ export function MouldPlanningModal({
                   <div className={cn("p-16 flex flex-col items-center justify-center transition-colors duration-500 ease-in-out", theme.rowMuted)}>
                     <CubeTransparent className="w-12 h-12 mb-4 opacity-20" />
                     <p className={cn("text-lg font-medium transition-colors duration-500 ease-in-out", theme.label)}>No patterns scheduled</p>
-                    <p className="text-sm">Click the button above to add a pattern to this machine's schedule.</p>
+                    <p className="text-sm">Click the button above to add a pattern to this machine&apos;s schedule.</p>
                   </div>
                 ) : (
                   <div className="w-full overflow-x-auto">

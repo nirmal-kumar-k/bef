@@ -155,6 +155,18 @@ Last updated: 2026-10-22
   on Planning > Finished Stock. Opening balances:
   scripts/migrations/post/2026-11-05-stock-opening-balances.sql — **run on
   Azure AFTER drizzle-kit push**. Tests: tests/qa/stock.test.mjs (14).
+- [x] **Clear write errors** (2026-11-05) — dbErrorResponse(): missing field
+  -> 400 naming it, duplicate -> 409 (the old `error.code === '23505'`
+  checks never fired because Drizzle wraps the error in `cause`).
+- [x] **Sessions end on password/role/active change** (2026-11-05) —
+  users.session_version carried in the token; checked per request (15s cache).
+- [x] **ESLint** (2026-11-05) — eslint 10.13 + eslint-config-next 16.4.3,
+  `pnpm lint` passes with 0 errors (326 warnings, mostly `any` and unused
+  vars) and runs in `pnpm qa`. Bugs found and fixed through it: the product
+  form erased the product's customer when saved on first open; the order form
+  set state inside useMemo; three planning modals' backlog memo missed
+  removedRows. React-Compiler-only rules downgraded to warnings (app does not
+  use the compiler) after review.
 - [ ] **Step E** — History/Activity screens for plans and orders.
 - [ ] **Sessions survive a password change** — a login cookie stays valid for
   7 days even after the password is reset or the user is deactivated

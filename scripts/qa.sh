@@ -61,6 +61,9 @@ DATABASE_URL="$TEST_URL" npx drizzle-kit push 2>&1 | grep -E "Changes applied|No
 echo "[qa] applying post-schema migrations (scripts/migrations/post) to the copy"
 for m in scripts/migrations/post/*.sql; do psql "$TEST_URL" -q -v ON_ERROR_STOP=1 -f "$m" >/dev/null || { echo "[qa] migration $m FAILED"; exit 1; }; done
 
+echo "[qa] lint (errors fail the run; warnings are listed by pnpm lint)"
+pnpm lint >/dev/null 2>&1 || { echo "[qa] lint FAILED - run pnpm lint to see why"; exit 1; }
+
 if [[ "${QA_SKIP_BUILD:-}" != "1" ]]; then
   echo "[qa] building"
   pnpm build >/dev/null 2>&1 || { echo "[qa] build FAILED - run pnpm build to see why"; exit 1; }

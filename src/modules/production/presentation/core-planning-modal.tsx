@@ -734,7 +734,7 @@ export function CorePlanningModal({
     return Array.from(options.values())
       .map(b => ({ ...b, totalScheduled: b.totalScheduled + getSessionCommittedQty(b.orderNo, b.coreBoxCode || '') }))
       .filter(b => b.totalRequired > b.totalScheduled)
-  }, [backlogData, mappedCoreBoxes, activeRows, plannedRows])
+  }, [backlogData, mappedCoreBoxes, activeRows, plannedRows, removedRows])
 
   // Per-row wrapper, shared between the column header and the blocking check below
   const rowMeta = useMemo(() => {
@@ -924,7 +924,7 @@ export function CorePlanningModal({
                   <div className={cn("p-16 flex flex-col items-center justify-center transition-colors duration-500 ease-in-out", theme.rowMuted)}>
                     <CubeTransparent className="w-12 h-12 mb-4 opacity-20" />
                     <p className={cn("text-lg font-medium transition-colors duration-500 ease-in-out", theme.emptyCardTitle)}>No core boxes scheduled</p>
-                    <p className="text-sm">Click the button above to add a core box to this machine's schedule.</p>
+                    <p className="text-sm">Click the button above to add a core box to this machine&apos;s schedule.</p>
                   </div>
                 ) : (
                   <div className="w-full overflow-x-auto">

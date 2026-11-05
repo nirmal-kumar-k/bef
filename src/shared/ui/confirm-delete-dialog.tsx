@@ -31,7 +31,7 @@ export function ConfirmDeleteDialog({
             {itemName && (
               <>
                 <br />
-                <span className="text-[#172554] font-medium mt-1 inline-block">"{itemName}"</span>
+                <span className="text-[#172554] font-medium mt-1 inline-block">&quot;{itemName}&quot;</span>
               </>
             )}
           </p>

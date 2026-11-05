@@ -138,8 +138,10 @@ export function NewOrderModal({
     }).catch(() => {})
   }, [isOpen])
 
-  // Initialize from existing data if editing
-  useMemo(() => {
+  // Initialize from existing data if editing. An effect, not a useMemo:
+  // setting state while rendering (which useMemo does) is fragile and can
+  // loop; same inputs, same result, run after render instead.
+  useEffect(() => {
     if (isOpen && initialData) {
       const custValue = customers.find(c => c.label === initialData.customer)?.value || initialData.customer || ''
       setSelectedCustomer(custValue)

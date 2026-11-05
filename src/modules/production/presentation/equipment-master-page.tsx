@@ -144,7 +144,7 @@ export function EquipmentMasterPage() {
               <div className="p-12 text-center text-[#94A3B8] animate-pulse">Loading...</div>
             ) : equipmentList.filter(e => e.type === activeTab).length === 0 ? (
               <div className="p-12 text-center text-[#94A3B8] italic">
-                No {activeTab}s configured yet. Click "Add Equipment" to create one.
+                No {activeTab}s configured yet. Click &quot;Add Equipment&quot; to create one.
               </div>
             ) : (
               <div className="overflow-x-auto">

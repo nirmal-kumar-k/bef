@@ -99,7 +99,8 @@ export function handleEnterToTab(e: React.KeyboardEvent) {
 
 export function parseTimeToMinutes(timeStr: string): number {
   const [time, modifier] = timeStr.trim().split(' ')
-  let [hours, minutes] = time.split(':').map(Number)
+  const [h, minutes] = time.split(':').map(Number)
+  let hours = h
   if (hours === 12) {
     hours = modifier === 'AM' ? 0 : 12
   } else if (modifier === 'PM') {
@@ -124,7 +125,7 @@ function formatMinutesToTime(mins: number): string {
 }
 
 export function generateTimeSlots(startTime: string, endTime: string, breaks: {startTime: string, endTime: string}[] = []): TimeSlot[] {
-  let startMins = parseTimeToMinutes(startTime)
+  const startMins = parseTimeToMinutes(startTime)
   let endMins = parseTimeToMinutes(endTime)
   if (endMins <= startMins) {
     endMins += 24 * 60 // spans across midnight
