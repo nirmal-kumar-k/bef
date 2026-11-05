@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server'
 import { eq } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
 import { equipment } from '@/infrastructure/database/schema'
+import { publishOnSuccess } from '@/infrastructure/realtime/route-wrapper'
 
-export async function PUT(
+async function putHandler(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -44,7 +45,7 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
+async function deleteHandler(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -68,3 +69,7 @@ export async function DELETE(
     )
   }
 }
+
+// Tell other open screens about successful writes (see src/infrastructure/realtime).
+export const PUT = publishOnSuccess('master', 'equipment', 'update', putHandler)
+export const DELETE = publishOnSuccess('master', 'equipment', 'delete', deleteHandler)

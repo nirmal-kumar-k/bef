@@ -37,6 +37,7 @@ import { Check, CaretUpDown } from '@phosphor-icons/react'
 import { cn, handleEnterToTab, generateId } from '@/shared/lib/utils'
 import { type Order } from '@/modules/orders/domain/order.types'
 import { useRole } from '@/shared/context/role-context'
+import { useEditing } from '@/shared/realtime/live-updates'
 
 interface CartItem {
   id: string
@@ -76,7 +77,9 @@ export function NewOrderModal({
 }: {
   isOpen: boolean
   onClose: () => void
-  onSave: (order: Order | Omit<Order, 'id'>) => Promise<void>
+  // Resolves false when the save did not go through (error or someone else's
+  // newer change), so the form keeps what was typed instead of clearing.
+  onSave: (order: Order | Omit<Order, 'id'>) => Promise<boolean | void>
   initialData?: Order | null
   existingOrders?: Order[]
 }) {
@@ -110,6 +113,10 @@ export function NewOrderModal({
 
   // Auto-fill the next Internal Order No. when opening for a brand new order
   // (not editing an existing one) - still a plain editable field afterward.
+  // A live refresh of the orders list would hand this form a new initialData
+  // and re-fill it, wiping what is being typed - hold refreshes while open.
+  useEditing(isOpen)
+
   useEffect(() => {
     if (isOpen && !initialData) {
       setInternalOrderNo(generateNextInternalOrderNo(existingOrders))
@@ -193,15 +200,16 @@ export function NewOrderModal({
 
     setIsSaving(true)
     try {
+      let saved: boolean | void
       if (initialData) {
-        await onSave({ ...orderPayload, id: initialData.id })
+        saved = await onSave({ ...orderPayload, id: initialData.id })
       } else {
         // Generated now, not left blank until the server assigns one - the
         // create route upserts on this id, so even a double-submit of this
         // exact request collapses into one order instead of creating two.
-        await onSave({ ...orderPayload, id: generateId() })
+        saved = await onSave({ ...orderPayload, id: generateId() })
       }
-      resetForm()
+      if (saved !== false) resetForm()
     } finally {
       setIsSaving(false)
     }

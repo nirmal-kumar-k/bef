@@ -15,6 +15,14 @@ export const orders = pgTable('orders', {
   subtotal: numeric('subtotal').default('0'),
   gstAmount: numeric('gst_amount').default('0'),
   grandTotal: numeric('grand_total').default('0'),
+  // Optimistic locking: bumped on every write. A save carrying an older
+  // version is refused (409) instead of silently overwriting someone
+  // else's change. See src/infrastructure/audit.
+  version: integer('version').default(1).notNull(),
+  // Who last changed this row, from the server-side session. Name is a
+  // snapshot so it survives the user being renamed or deleted.
+  updatedById: uuid('updated_by_id'),
+  updatedByName: text('updated_by_name'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })

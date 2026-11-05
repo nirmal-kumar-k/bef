@@ -88,13 +88,18 @@ export function InspectionTab({ inspectionBacklog, inspectionPlans, openOrders, 
           quantityScheduled: newAccepted,
           rejectedQuantity: newRejected,
           rejectionReason: newRejected > 0 ? editReason.trim() : null,
+          ...(p.version ? { version: p.version } : {}),
         }),
       })
       if (res.ok) {
         cancelEdit()
         await onRefetch()
       } else {
-        setEditError('Failed to save correction')
+        const data = await res.json().catch(() => ({}))
+        // 409: someone else changed this batch since the list was loaded -
+        // say who, and refresh so the retry starts from the current figures.
+        setEditError(res.status === 409 && data.error ? data.error : 'Failed to save correction')
+        if (res.status === 409) await onRefetch()
       }
     } catch (err) {
       console.error('Error editing inspection:', err)
@@ -108,8 +113,13 @@ export function InspectionTab({ inspectionBacklog, inspectionPlans, openOrders, 
     const id = p.id || p._id
     setBusyId(id)
     try {
-      const res = await fetch(`/api/production-plans/${id}`, { method: 'DELETE' })
+      const res = await fetch(`/api/production-plans/${id}${p.version ? `?version=${p.version}` : ''}`, { method: 'DELETE' })
       if (res.ok) await onRefetch()
+      else if (res.status === 409) {
+        const data = await res.json().catch(() => ({}))
+        await onRefetch()
+        setConfirmDialog({ title: 'Batch was changed', description: data.error || 'Someone else changed this batch. The list has been refreshed.', onConfirm: () => {} })
+      }
     } catch (err) {
       console.error('Error deleting inspection:', err)
     } finally {
@@ -161,6 +171,9 @@ export function InspectionTab({ inspectionBacklog, inspectionPlans, openOrders, 
       } else {
         const data = await res.json().catch(() => ({}))
         setErrorByKey(prev => ({ ...prev, [key]: data.error || 'Failed to submit inspection' }))
+        // 409: someone else inspected this item meanwhile - pull the current
+        // figures so the waiting count on screen is right for the retry.
+        if (res.status === 409) await onRefetch()
       }
     } catch (err) {
       console.error('Error submitting inspection:', err)

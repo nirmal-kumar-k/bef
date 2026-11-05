@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/infrastructure/database/client'
 import { patterns, patternCoreBoxes, patternProducts } from '@/infrastructure/database/schema'
+import { publishOnSuccess } from '@/infrastructure/realtime/route-wrapper'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,7 +18,7 @@ export async function GET() {
   }
 }
 
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   try {
     const body = await request.json()
     const { sharedCoreBoxes, mappedProducts, ...patternData } = body
@@ -77,3 +78,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to create pattern' }, { status: 500 })
   }
 }
+
+// Tell other open screens about successful writes (see src/infrastructure/realtime).
+export const POST = publishOnSuccess('master', 'patterns', 'create', postHandler)

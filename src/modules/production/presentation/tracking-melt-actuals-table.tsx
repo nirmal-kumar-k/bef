@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { cn } from '@/shared/lib/utils'
 import type { TrackingPlanRow } from './tracking-types'
 import { VARIANCE_REASONS } from './variance-reasons'
+import { saveTrackingRows, pick } from './tracking-save'
 
 interface TrackingMeltActualsTableProps {
   rows: TrackingPlanRow[]
@@ -44,6 +45,7 @@ export function TrackingMeltActualsTable({ rows, orders, onDirtyChange, onSaved,
   const [reasonEdits, setReasonEdits] = useState<Record<string, string>>({})
   const [isSaving, setIsSaving] = useState(false)
   const [openHeatKey, setOpenHeatKey] = useState<string | null>(null)
+  const [saveMessage, setSaveMessage] = useState<string | null>(null)
 
   // Keyed on which rows are shown rather than the array's identity - see the
   // same guard in tracking-hourly-grid: depending on the array meant a parent
@@ -52,6 +54,7 @@ export function TrackingMeltActualsTable({ rows, orders, onDirtyChange, onSaved,
   useEffect(() => {
     setEdits({})
     setReasonEdits({})
+    setSaveMessage(null)
     // The open heat belongs to the rows being replaced, so it cannot survive
     // a switch to a different day/shift - otherwise the popup lingers against
     // a heat that is no longer in view.
@@ -110,7 +113,7 @@ export function TrackingMeltActualsTable({ rows, orders, onDirtyChange, onSaved,
       // A pour is dirty if its actual changed, its shortfall reason changed,
       // or both - de-duplicated so one row is still one PUT.
       const changedRowIds = Array.from(new Set([...Object.keys(edits), ...Object.keys(reasonEdits)]))
-      await Promise.all(changedRowIds.map(rowId => {
+      const { failedIds, message } = await saveTrackingRows(changedRowIds, rowId => {
         const row = rows.find(r => r.id === rowId)
         const actualTotal = rowId in edits
           ? (edits[rowId] === '' ? 0 : Number(edits[rowId]) || 0)
@@ -123,21 +126,23 @@ export function TrackingMeltActualsTable({ rows, orders, onDirtyChange, onSaved,
         // keep an invisible shortfall reason from an earlier save.
         if (!stillShort) body.varianceReason = null
         else if (rowId in reasonEdits) body.varianceReason = reasonEdits[rowId] || null
-
-        return fetch(`/api/production-plans/${rowId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        })
-      }))
+        if (row?.version) body.version = row.version
+        return body
+      }, rowId => {
+        const row = rows.find(r => r.id === rowId)
+        const orderNo = orders.find((o: any) => (o.id || o._id) === row?.orderId)?.customerOrderNo
+        return `Melt${row?.heatNo ? ` heat ${row.heatNo}` : ''}${orderNo ? `, order ${orderNo}` : ''}`
+      })
       await onSaved()
       // Cleared explicitly: rowsKey is deliberately unchanged by a save (same
       // rows, new values), so without this the local edits would keep
-      // shadowing what actually persisted.
-      setEdits({})
-      setReasonEdits({})
-      onDirtyChange(false)
-      if (closeAfter) setOpenHeatKey(null)
+      // shadowing what actually persisted. Rows that did NOT save keep their
+      // edits, and the popup stays open so the message is seen.
+      setEdits(prev => pick(prev, failedIds))
+      setReasonEdits(prev => pick(prev, failedIds))
+      setSaveMessage(message)
+      onDirtyChange(failedIds.length > 0)
+      if (closeAfter && failedIds.length === 0) setOpenHeatKey(null)
     } finally {
       setIsSaving(false)
     }
@@ -217,6 +222,11 @@ export function TrackingMeltActualsTable({ rows, orders, onDirtyChange, onSaved,
         })}
       </div>
 
+      {saveMessage && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 whitespace-pre-line">
+          {saveMessage}
+        </div>
+      )}
       {hasEdits && (
         <div className="flex justify-end">
           <Button onClick={() => handleSave(true)} disabled={isSaving || disabled} className="bg-[#4F46E5] hover:bg-[#4F46E5]/90 text-white">
@@ -328,6 +338,11 @@ export function TrackingMeltActualsTable({ rows, orders, onDirtyChange, onSaved,
                 </div>
               </div>
 
+              {saveMessage && (
+                <div className="mx-6 mb-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 whitespace-pre-line">
+                  {saveMessage}
+                </div>
+              )}
               <div className="p-6 border-t border-[#E0E7FF] bg-white shrink-0 flex justify-end gap-3">
                 <Button variant="outline" onClick={() => setOpenHeatKey(null)}>Close</Button>
                 <Button

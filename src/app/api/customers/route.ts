@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { asc } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
 import { customers } from '@/infrastructure/database/schema'
+import { publishOnSuccess } from '@/infrastructure/realtime/route-wrapper'
 
 export const dynamic = 'force-dynamic'
 
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+async function postHandler(request: NextRequest) {
   try {
     const body = await request.json()
     const insertData = {
@@ -54,3 +55,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: message }, { status: error?.code === '23505' ? 409 : 500 })
   }
 }
+
+// Tell other open screens about successful writes (see src/infrastructure/realtime).
+export const POST = publishOnSuccess('master', 'customers', 'create', postHandler)

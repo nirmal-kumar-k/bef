@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { eq } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
 import { grades } from '@/infrastructure/database/schema'
+import { publishOnSuccess } from '@/infrastructure/realtime/route-wrapper'
 
-export async function PUT(
+async function putHandler(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -29,7 +30,7 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
+async function deleteHandler(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -42,3 +43,7 @@ export async function DELETE(
     return NextResponse.json({ error: 'Failed to delete grade' }, { status: 500 })
   }
 }
+
+// Tell other open screens about successful writes (see src/infrastructure/realtime).
+export const PUT = publishOnSuccess('master', 'grades', 'update', putHandler)
+export const DELETE = publishOnSuccess('master', 'grades', 'delete', deleteHandler)

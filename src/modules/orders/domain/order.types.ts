@@ -20,6 +20,10 @@ export interface Order {
     ratePerKg: number
     unitCost: number
   }[]
+  // Server-managed: optimistic-lock version and who last changed the order.
+  version?: number
+  updatedByName?: string | null
+  updatedAt?: string | null
 }
 
 export const categories = ['All', 'Received', 'Completed']

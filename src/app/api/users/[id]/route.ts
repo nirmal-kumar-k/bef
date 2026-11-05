@@ -5,8 +5,9 @@ import { db } from '@/infrastructure/database/client'
 import { users } from '@/infrastructure/database/schema'
 import { getSessionUser } from '@/shared/lib/auth'
 import { passwordProblem } from '@/modules/users/domain/password'
+import { publishOnSuccess } from '@/infrastructure/realtime/route-wrapper'
 
-export async function PUT(
+async function putHandler(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -56,7 +57,7 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
+async function deleteHandler(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -90,3 +91,7 @@ export async function DELETE(
     return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 })
   }
 }
+
+// Tell other open screens about successful writes (see src/infrastructure/realtime).
+export const PUT = publishOnSuccess('master', 'users', 'update', putHandler)
+export const DELETE = publishOnSuccess('master', 'users', 'delete', deleteHandler)

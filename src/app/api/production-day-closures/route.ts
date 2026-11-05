@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { and, eq } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
 import { productionDayClosures, productionPlans } from '@/infrastructure/database/schema'
+import { publishOnSuccess } from '@/infrastructure/realtime/route-wrapper'
 
 export const dynamic = 'force-dynamic'
 
@@ -27,7 +28,7 @@ export async function GET(request: NextRequest) {
 // nothing has been recorded against them yet - once someone has entered
 // actuals on a carried-forward row it represents real work, so it is left
 // alone and reported back rather than silently deleted.
-export async function DELETE(request: NextRequest) {
+async function deleteHandler(request: NextRequest) {
   try {
     const date = request.nextUrl.searchParams.get('date')
     if (!date) return NextResponse.json({ error: 'date query param is required' }, { status: 400 })
@@ -61,3 +62,6 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to reopen day' }, { status: 500 })
   }
 }
+
+// Tell other open screens about successful writes (see src/infrastructure/realtime).
+export const DELETE = publishOnSuccess('day_closure', 'production_day_closures', 'delete', deleteHandler)

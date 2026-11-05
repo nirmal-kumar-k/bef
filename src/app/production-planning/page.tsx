@@ -9,6 +9,7 @@ import { useRole } from '@/shared/context/role-context'
 import { cn, toLocalDateString } from '@/shared/lib/utils'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
 import { ConfirmDialog, type ConfirmDialogState } from '@/shared/ui/confirm-dialog'
+import { ConflictDialog, type ConflictItem } from '@/shared/ui/conflict-dialog'
 
 import { BacklogItem } from '@/modules/production/presentation/daily-planning-modal'
 import { CorePlanningTab } from '@/modules/production/presentation/core-planning-tab'
@@ -17,6 +18,7 @@ import { MeltPlanningTab } from '@/modules/production/presentation/melt-planning
 import { PourPlanningTab } from '@/modules/production/presentation/pour-planning-tab'
 import { KnockoutPlanningTab } from '@/modules/production/presentation/knockout-planning-tab'
 import { InspectionTab } from '@/modules/production/presentation/inspection-tab'
+import { useLiveRefresh } from '@/shared/realtime/live-updates'
 
 export default function ProductionPlanningPage() {
   const { role } = useRole()
@@ -32,6 +34,10 @@ export default function ProductionPlanningPage() {
   const [splitUpStage, setSplitUpStage] = useState<'Core' | 'Mould' | 'Melt' | null>(null)
   const [summaryView, setSummaryView] = useState<'calendar' | 'list'>('calendar')
   const [saveErrorDialog, setSaveErrorDialog] = useState<ConfirmDialogState | null>(null)
+  // Rows refused because someone else saved them first. Each carries a
+  // retry that resends this user's version against the current one.
+  const [conflicts, setConflicts] = useState<(ConflictItem & { retry: (version: number) => Promise<Response> })[] | null>(null)
+  const [resolvingConflicts, setResolvingConflicts] = useState(false)
   // Set when arriving from Production Tracking's "Revise plan" action
   // (/production-planning?tab=Core&date=YYYY-MM-DD) so the right tab opens on
   // the right day. Read from window.location in an effect rather than via
@@ -73,6 +79,9 @@ export default function ProductionPlanningPage() {
   useEffect(() => {
     fetchData()
   }, [fetchData])
+  // Backlog, calendar and Inspection follow other people's changes live; held
+  // back while a planning modal is open (see useEditing in each modal).
+  useLiveRefresh(['production_plan', 'order', 'product', 'master', 'day_closure'], fetchData)
 
   const openOrders = useMemo(() => orders.filter(o => o.status === 'Received'), [orders])
 
@@ -334,12 +343,20 @@ export default function ProductionPlanningPage() {
     // success, and the row simply wasn't there on the next refresh. Track
     // failures and surface them instead of losing work without a word.
     const failures: string[] = []
-    const check = async (res: Response, what: string) => {
+    const found: (ConflictItem & { retry: (version: number) => Promise<Response> })[] = []
+    // `retry` is how to resend this request against a newer version; given,
+    // a 409 conflict goes to the conflict dialog instead of the error list.
+    const check = async (res: Response, what: string, plan?: any, retry?: (version: number) => Promise<Response>) => {
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
+        if (res.status === 409 && body.conflict && retry) {
+          found.push({ label: `${what} - ${plan?.date || date}`, conflict: body.conflict, mine: plan, retry })
+          return
+        }
         failures.push(`${what}: ${body.error || `HTTP ${res.status}`}`)
       }
     }
+    const deleteUrl = (id: string, version?: number) => `/api/production-plans/${id}${version ? `?version=${version}` : ''}`
 
     try {
       for (const plan of newPlans) {
@@ -348,7 +365,8 @@ export default function ProductionPlanningPage() {
         if (plan._delete) {
           // Row was removed via the trash icon in the modal - it carries no
           // scheduled quantity to check, just delete its existing record.
-          if (id) await check(await fetch(`/api/production-plans/${id}`, { method: 'DELETE' }), `Delete ${label}`)
+          if (id) await check(await fetch(deleteUrl(id, plan.version), { method: 'DELETE' }), `Delete ${label}`, plan,
+            v => fetch(deleteUrl(id, v), { method: 'DELETE' }))
           continue
         }
         // Rows added this session carry a client-generated id from the
@@ -375,14 +393,16 @@ export default function ProductionPlanningPage() {
           const usesActualSafetyValve = plan.stage !== 'Core' && plan.stage !== 'Mould' && plan.stage !== 'Knockout'
           if (usesActualSafetyValve && plan.quantityScheduled === 0 && !plan.actualQuantity) {
             // Delete
-            await check(await fetch(`/api/production-plans/${id}`, { method: 'DELETE' }), `Delete ${label}`)
+            await check(await fetch(deleteUrl(id, plan.version), { method: 'DELETE' }), `Delete ${label}`, plan,
+              v => fetch(deleteUrl(id, v), { method: 'DELETE' }))
           } else {
             // Update
-            await check(await fetch(`/api/production-plans/${id}`, {
+            const put = (version?: number) => fetch(`/api/production-plans/${id}`, {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ ...plan, date: plan.date || date })
-            }), `Update ${label}`)
+              body: JSON.stringify({ ...plan, date: plan.date || date, ...(version ? { version } : {}) })
+            })
+            await check(await put(), `Update ${label}`, plan, v => put(v))
           }
         } else {
           // Create (no client-generated id supplied - caller predates this
@@ -405,10 +425,50 @@ export default function ProductionPlanningPage() {
       failures.push(err instanceof Error ? err.message : 'Unexpected error while saving')
     }
 
+    if (found.length > 0) setConflicts(found)
+
     if (failures.length > 0) {
       setSaveErrorDialog({
         title: 'Some rows could not be saved',
         description: `${failures.length} row(s) failed to save and are NOT stored:\n\n${failures.slice(0, 8).join('\n')}${failures.length > 8 ? `\n...and ${failures.length - 8} more` : ''}`,
+        onConfirm: () => {},
+      })
+    }
+  }
+
+  const refetchPlans = async () => {
+    const res = await fetch('/api/production-plans')
+    if (res.ok) setPlans(await res.json())
+  }
+
+  // "Reload with their changes": their version is already stored and this
+  // user's refused rows were never written - just show the current data.
+  const handleConflictReload = async () => {
+    setConflicts(null)
+    await refetchPlans()
+  }
+
+  // "Keep mine and overwrite": resend each refused row against the version
+  // now stored, so it replaces theirs - a deliberate choice, recorded in the
+  // history under this user like any other save.
+  const handleConflictOverwrite = async () => {
+    if (!conflicts) return
+    setResolvingConflicts(true)
+    const failed: string[] = []
+    for (const c of conflicts) {
+      const res = await c.retry(c.conflict.currentVersion)
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        failed.push(`${c.label}: ${body.error || `HTTP ${res.status}`}`)
+      }
+    }
+    setResolvingConflicts(false)
+    setConflicts(null)
+    await refetchPlans()
+    if (failed.length > 0) {
+      setSaveErrorDialog({
+        title: 'Some rows could not be overwritten',
+        description: `They changed again in the meantime, or failed to save:\n\n${failed.slice(0, 8).join('\n')}`,
         onConfirm: () => {},
       })
     }
@@ -844,6 +904,7 @@ export default function ProductionPlanningPage() {
       )}
 
       <ConfirmDialog state={saveErrorDialog} onClose={() => setSaveErrorDialog(null)} />
+      <ConflictDialog items={conflicts} onReload={handleConflictReload} onOverwrite={handleConflictOverwrite} busy={resolvingConflicts} />
     </div>
   )
 }

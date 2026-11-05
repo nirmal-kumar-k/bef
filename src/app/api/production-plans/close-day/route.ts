@@ -3,6 +3,8 @@ import { and, eq, inArray } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
 import { productionPlans, productionDayClosures } from '@/infrastructure/database/schema'
 import { computeCarryForwards, type PlanRow } from '../_close-day'
+import { currentActor, recordAudit } from '@/infrastructure/audit'
+import { publishChange } from '@/infrastructure/realtime'
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,10 +22,11 @@ export async function POST(request: NextRequest) {
 
     const carryForwards = computeCarryForwards(rows as unknown as PlanRow[])
 
+    const actor = await currentActor()
     try {
       await db.transaction(async (tx) => {
         if (carryForwards.length > 0) {
-          await tx.insert(productionPlans).values(carryForwards.map(cf => ({
+          const created = await tx.insert(productionPlans).values(carryForwards.map(cf => ({
             orderId: cf.orderId,
             itemId: cf.itemId,
             stage: cf.stage,
@@ -33,10 +36,16 @@ export async function POST(request: NextRequest) {
             shiftId: cf.shiftId,
             isPending: true,
             carriedForwardFromDate: cf.carriedForwardFromDate,
-          })))
+            updatedById: actor.id,
+            updatedByName: actor.name,
+          }))).returning()
+          for (const row of created) {
+            await recordAudit(tx, actor, { entityType: 'production_plan', entityId: row.id, action: 'create', after: row, version: row.version })
+          }
         }
 
         await tx.insert(productionDayClosures).values({ date })
+        await publishChange(tx, actor, { type: 'day_closure', action: 'create', date })
       })
     } catch (error) {
       // Handle TOCTOU race: two concurrent requests both passed the existingClosure check

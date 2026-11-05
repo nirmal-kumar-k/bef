@@ -62,7 +62,9 @@ export const planFields = z.object({
 
 // Sent by the planning modals alongside the real fields (row bookkeeping) or
 // managed by the server itself - accepted and discarded, never written.
-const IGNORED_KEYS = ['id', '_id', '_isNew', '_delete', 'createdAt', 'updatedAt']
+// `version` is read separately by the routes as the optimistic-lock check;
+// updatedById/updatedByName always come from the session, never the body.
+const IGNORED_KEYS = ['id', '_id', '_isNew', '_delete', 'createdAt', 'updatedAt', 'version', 'updatedById', 'updatedByName']
 
 type ParseResult<T> = { ok: true; data: T } | { ok: false; error: string }
 
