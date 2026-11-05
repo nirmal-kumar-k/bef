@@ -5,3 +5,7 @@ allowBuilds:
 
 overrides:
   hono: 4.12.25
+  # Patched versions of build-time tooling pulled in by next (pnpm audit, 2026-11-05)
+  browserslist: ^4.28.7
+  source-map-js: ^1.2.2
+  baseline-browser-mapping: ^2.11.0
