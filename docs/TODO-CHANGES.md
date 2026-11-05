@@ -91,8 +91,25 @@ Last updated: 2026-10-22
     code to show the test fails there.
 - [ ] **Decide: remove `/api/knockout-confirm`?** Unused, and adds stock at
   Knockout while Inspection is where stock is meant to be created.
-- [ ] **Concurrency steps B–E** — who-changed-it + history table, version
-  numbers + conflict dialog, stock ledger, History/Activity screens.
+- [x] **Concurrency steps B+C** (2026-11-05) — change history and
+  optimistic locking for production plans and orders.
+  - `audit_events`: one row per create/update/delete (who, when, changed
+    fields, full before/after), written in the same transaction as the change.
+    Who always comes from the session. Order deletes record each removed plan.
+  - `version` + `updated_by_*` on plans and orders. A save carrying an older
+    version gets 409 with who changed what; screens show a conflict dialog
+    (Planning, Orders) or keep the unsaved figures with a message (Tracking,
+    Inspection). Requests without a version behave as before.
+  - "Edited by NAME · time" on plan rows (4 modals, Tracking) and orders.
+  - Fixed on the way: Tracking ignored save results; failed order saves were
+    silent; the order form cleared itself on a failed save.
+  - History times are set by the app in UTC: local Postgres runs Asia/Calcutta,
+    Azure's runs UTC, so now() would differ. (Pre-existing: `created_at` and
+    insert-time `updated_at` still use now(), so read IST locally.)
+  - Tested on a scratch copy: 25/25 B+C checks, 53/53 regression checks.
+    Not yet seen in a browser.
+  - **Azure needs `drizzle-kit push` for this** (10 additive statements).
+- [ ] **Concurrency steps D–E** — stock ledger, History/Activity screens.
 - [ ] **Sessions survive a password change** — a login cookie stays valid for
   7 days even after the password is reset or the user is deactivated
   (backlog 0d).

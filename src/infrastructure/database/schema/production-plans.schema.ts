@@ -89,6 +89,14 @@ export const productionPlans = pgTable('production_plans', {
   startTime: text('start_time'),
   endTime: text('end_time'),
 
+  // Optimistic locking: bumped on every write. A save carrying an older
+  // version is refused (409) instead of silently overwriting someone
+  // else's change. See src/infrastructure/audit.
+  version: integer('version').default(1).notNull(),
+  // Who last changed this row, from the server-side session. Name is a
+  // snapshot so it survives the user being renamed or deleted.
+  updatedById: uuid('updated_by_id'),
+  updatedByName: text('updated_by_name'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (table) => [

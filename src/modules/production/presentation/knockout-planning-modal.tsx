@@ -18,6 +18,7 @@ import { ConfirmDialog, type ConfirmDialogState } from '@/shared/ui/confirm-dial
 import { BacklogItem } from './daily-planning-modal'
 import { CubeTransparent, Trash, CaretDown, CaretLeft, CaretRight, MagicWand } from '@phosphor-icons/react'
 import { cn, generateId } from '@/shared/lib/utils'
+import { formatWhen } from '@/shared/ui/conflict-dialog'
 import { generateTimeSlots, TimeSlot, resolveAvgProductionRate } from '@/shared/lib/utils'
 import type { Shift } from './shift-master-page'
 
@@ -38,6 +39,11 @@ interface KnockoutPlanningModalProps {
 interface PlannedRow {
   id: string
   planId?: string
+  // Version of the saved plan this row was loaded from - sent back on save
+  // so the server can refuse it if someone else saved in between.
+  version?: number
+  updatedByName?: string | null
+  updatedAt?: string | null
   orderId: string
   orderNo: string
   itemId: string
@@ -255,6 +261,9 @@ export function KnockoutPlanningModal({
         return {
           id: Math.random().toString(),
           planId: p.id || p._id,
+          version: p.version,
+          updatedByName: p.updatedByName,
+          updatedAt: p.updatedAt,
           orderId: p.orderId || '',
           orderNo: order?.customerOrderNo || '',
           itemId: p.itemId || '',
@@ -446,6 +455,7 @@ export function KnockoutPlanningModal({
       return {
         id: r.planId,
         _id: r.planId,
+        version: r.version,
         orderId: r.orderId,
         itemId: r.itemId,
         stage: 'Knockout',
@@ -469,7 +479,7 @@ export function KnockoutPlanningModal({
     // existing DB record would just sit there untouched forever. Rows that
     // were added and removed again in the same session without ever being
     // saved (still isNew) have nothing to delete server-side, so skip them.
-    const deletions = removedRows.filter(r => r.planId && !r.isNew).map(r => ({ id: r.planId, _id: r.planId, _delete: true }))
+    const deletions = removedRows.filter(r => r.planId && !r.isNew).map(r => ({ id: r.planId, _id: r.planId, version: r.version, _delete: true }))
     return [...plansToSave, ...deletions]
   }
 
@@ -879,6 +889,11 @@ export function KnockoutPlanningModal({
                                   </button>
                                 </div>
                                 <span className={cn("text-[10px] truncate transition-colors duration-500 ease-in-out", theme.rowMuted)}>{row.orderNo} | {row.patternRef}</span>
+                                {row.updatedByName && (
+                                  <span className={cn("text-[9px] truncate", theme.rowMuted)} title={`Last edited by ${row.updatedByName}`}>
+                                    Edited by {row.updatedByName}{row.updatedAt ? ` · ${formatWhen(row.updatedAt)}` : ''}
+                                  </span>
+                                )}
                               </div>
                             </td>
                             <td className={cn("px-2 py-3 text-center border-x transition-colors duration-500 ease-in-out", theme.pendingQtyCell)}>

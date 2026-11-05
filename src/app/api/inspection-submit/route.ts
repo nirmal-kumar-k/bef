@@ -3,6 +3,7 @@ import { and, eq, or, sql } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
 import { productionPlans, orders, products } from '@/infrastructure/database/schema'
 import { businessDateString } from '@/shared/lib/utils'
+import { currentActor, recordAudit } from '@/infrastructure/audit'
 
 // Inspects the entire currently-available fettled quantity for one item in a
 // single batch: logs one new Inspection-stage plan row (accepted quantity in
@@ -46,6 +47,7 @@ export async function POST(request: NextRequest) {
       or(eq(products.name, cartItem.productName), eq(products.code, cartItem.product))
     ).limit(1)
 
+    const actor = await currentActor()
     const result = await db.transaction(async (tx) => {
       // One inspection per item at a time: a second submission for the same
       // item waits here until the first commits, then sees its batch below.
@@ -73,7 +75,10 @@ export async function POST(request: NextRequest) {
         rejectedQuantity: rejected,
         rejectionReason: rejected > 0 ? reason.trim() : null,
         laborersAssigned: 1,
+        updatedById: actor.id,
+        updatedByName: actor.name,
       }).returning()
+      await recordAudit(tx, actor, { entityType: 'production_plan', entityId: inserted[0].id, action: 'create', after: inserted[0], version: inserted[0].version })
 
       if (product && accepted > 0) {
         // Added in the database, not read-then-written here, so two

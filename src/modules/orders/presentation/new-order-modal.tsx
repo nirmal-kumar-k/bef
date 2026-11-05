@@ -76,7 +76,9 @@ export function NewOrderModal({
 }: {
   isOpen: boolean
   onClose: () => void
-  onSave: (order: Order | Omit<Order, 'id'>) => Promise<void>
+  // Resolves false when the save did not go through (error or someone else's
+  // newer change), so the form keeps what was typed instead of clearing.
+  onSave: (order: Order | Omit<Order, 'id'>) => Promise<boolean | void>
   initialData?: Order | null
   existingOrders?: Order[]
 }) {
@@ -193,15 +195,16 @@ export function NewOrderModal({
 
     setIsSaving(true)
     try {
+      let saved: boolean | void
       if (initialData) {
-        await onSave({ ...orderPayload, id: initialData.id })
+        saved = await onSave({ ...orderPayload, id: initialData.id })
       } else {
         // Generated now, not left blank until the server assigns one - the
         // create route upserts on this id, so even a double-submit of this
         // exact request collapses into one order instead of creating two.
-        await onSave({ ...orderPayload, id: generateId() })
+        saved = await onSave({ ...orderPayload, id: generateId() })
       }
-      resetForm()
+      if (saved !== false) resetForm()
     } finally {
       setIsSaving(false)
     }
