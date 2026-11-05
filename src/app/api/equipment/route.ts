@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { asc } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
 import { equipment } from '@/infrastructure/database/schema'
+import { publishOnSuccess } from '@/infrastructure/realtime/route-wrapper'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,7 +19,7 @@ export async function GET() {
   }
 }
 
-export async function POST(req: Request) {
+async function postHandler(req: Request) {
   try {
     const data = await req.json()
     const safeData = {
@@ -41,3 +42,6 @@ export async function POST(req: Request) {
     )
   }
 }
+
+// Tell other open screens about successful writes (see src/infrastructure/realtime).
+export const POST = publishOnSuccess('master', 'equipment', 'create', postHandler)

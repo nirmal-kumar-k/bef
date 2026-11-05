@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { and, asc, eq, gte, lte, type SQL } from 'drizzle-orm'
+import { and, asc, eq, gte, lte, sql, type SQL } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
 import { productionPlans, productionPlanStageEnum } from '@/infrastructure/database/schema'
+import { currentActor, recordAudit } from '@/infrastructure/audit'
 import { parseCreate } from './_plan-payload'
 
 export const dynamic = 'force-dynamic'
@@ -55,11 +56,20 @@ export async function POST(request: NextRequest) {
     // updates the same row instead of creating a duplicate. Callers that
     // don't supply an id fall back to the column's defaultRandom(), exactly
     // as before.
-    const [row] = id
-      ? await db.insert(productionPlans).values({ id, ...insertData })
-          .onConflictDoUpdate({ target: productionPlans.id, set: insertData })
-          .returning()
-      : await db.insert(productionPlans).values(insertData).returning()
+    const actor = await currentActor()
+    const who = { updatedById: actor.id, updatedByName: actor.name }
+    const row = await db.transaction(async (tx) => {
+      const [before] = id ? await tx.select().from(productionPlans).where(eq(productionPlans.id, id)) : []
+      const [saved] = id
+        ? await tx.insert(productionPlans).values({ id, ...insertData, ...who })
+            .onConflictDoUpdate({ target: productionPlans.id, set: { ...insertData, ...who, updatedAt: new Date(), version: sql`${productionPlans.version} + 1` } })
+            .returning()
+        : await tx.insert(productionPlans).values({ ...insertData, ...who }).returning()
+      await recordAudit(tx, actor, before
+        ? { entityType: 'production_plan', entityId: saved.id, action: 'update', before, after: saved, version: saved.version }
+        : { entityType: 'production_plan', entityId: saved.id, action: 'create', after: saved, version: saved.version })
+      return saved
+    })
     return NextResponse.json(row, { status: 201 })
   } catch (error) {
     console.error('POST /api/production-plans error:', error)

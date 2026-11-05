@@ -26,4 +26,8 @@ export interface TrackingPlanRow {
   heatNo?: string | null
   patternRef?: string | null
   mouldsScheduled?: number | null
+  // Optimistic-lock version and who last changed the row (server-managed).
+  version?: number
+  updatedByName?: string | null
+  updatedAt?: string | null
 }

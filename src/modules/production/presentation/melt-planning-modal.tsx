@@ -16,7 +16,9 @@ import { ConfirmDialog, type ConfirmDialogState } from '@/shared/ui/confirm-dial
 import { BacklogItem } from './daily-planning-modal'
 import { Fire, Trash, Plus, Clock, WarningCircle, CaretLeft, CaretRight, MagnifyingGlass } from '@phosphor-icons/react'
 import { cn, generateId } from '@/shared/lib/utils'
+import { formatWhen } from '@/shared/ui/conflict-dialog'
 import type { Shift } from './shift-master-page'
+import { useEditing } from '@/shared/realtime/live-updates'
 
 interface MeltPlanningModalProps {
   isOpen: boolean
@@ -61,6 +63,11 @@ interface Heat {
 interface Pour {
   id: string
   planId?: string
+  // Version of the saved plan this row was loaded from - sent back on save
+  // so the server can refuse it if someone else saved in between.
+  version?: number
+  updatedByName?: string | null
+  updatedAt?: string | null
   furnaceId: string
   heatId: string
   orderId: string
@@ -209,6 +216,9 @@ export function MeltPlanningModal({
   // it resolves would re-submit every not-yet-persisted pour as if it were
   // new (no planId assigned yet), creating duplicate rows.
   const [isSaving, setIsSaving] = useState(false)
+  // Rows are rebuilt whenever the plans list changes, so a live refresh
+  // while open would wipe unsaved edits - hold refreshes until closed.
+  useEditing(isOpen)
 
   // Snapshot of the fields that matter for saving, captured once when the
   // modal's heats/pours are (re)initialized - compared against current state
@@ -317,6 +327,9 @@ export function MeltPlanningModal({
         loadedPours.push({
           id: Math.random().toString(),
           planId: p.id || p._id,
+          version: p.version,
+          updatedByName: p.updatedByName,
+          updatedAt: p.updatedAt,
           furnaceId: eqId,
           heatId: hId,
           orderId: p.orderId || '',
@@ -637,6 +650,7 @@ export function MeltPlanningModal({
       return {
         id: p.planId,
         _id: p.planId,
+        version: p.version,
         orderId: p.orderId,
         itemId: p.itemId,
         stage: 'Melt',
@@ -673,7 +687,7 @@ export function MeltPlanningModal({
     // continuing to count against the mould cap on every future save. Pours
     // that were added and removed again in the same session without ever
     // being saved (still isNew) have nothing to delete server-side.
-    const deletions = removedPours.filter(p => p.planId && !p.isNew).map(p => ({ id: p.planId, _id: p.planId, _delete: true }))
+    const deletions = removedPours.filter(p => p.planId && !p.isNew).map(p => ({ id: p.planId, _id: p.planId, version: p.version, _delete: true }))
     return [...plansToSave, ...deletions]
   }
 
@@ -1298,6 +1312,11 @@ export function MeltPlanningModal({
                                           <span className="text-[9px] font-bold uppercase tracking-wide text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded shrink-0">{pour.grade}</span>
                                         </div>
                                         <span className="text-[11px] text-[#94A3B8] truncate">{pour.orderNo} · {pour.mouldWeight} kg/mould</span>
+                                        {pour.updatedByName && (
+                                          <span className={cn("text-[9px] truncate", "text-[#94A3B8]")} title={`Last edited by ${pour.updatedByName}`}>
+                                            Edited by {pour.updatedByName}{pour.updatedAt ? ` · ${formatWhen(pour.updatedAt)}` : ''}
+                                          </span>
+                                        )}
                                       </div>
                                     </div>
                                     <div className="flex items-center gap-2 shrink-0">

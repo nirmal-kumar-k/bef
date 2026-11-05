@@ -74,6 +74,65 @@ Last updated: 2026-10-22
     and catches up if the PC was off. Registered with:
     `Register-ScheduledTask -TaskName 'BEF pull backups' -Action (New-ScheduledTaskAction -Execute 'powershell.exe' -Argument '-NoProfile -ExecutionPolicy Bypass -File D:\BEF\scripts\pull-backups.ps1') -Trigger (New-ScheduledTaskTrigger -Daily -At 9:30am) -Settings (New-ScheduledTaskSettingsSet -StartWhenAvailable)`
   - Local copies are never pruned (~1.4 MB/day).
+- [x] **Concurrency step A** (2026-10-29)
+  - Stock is added in the database (`stock = stock + n`) in Inspection,
+    Knockout-confirm and the inspection-correction sync, so simultaneous
+    additions cannot overwrite each other.
+  - Inspection computes the pieces waiting on the server under a per-item
+    lock and refuses (409, "reload") if the inspector's figure is out of date,
+    so one batch cannot be inspected twice. The screen reloads on that 409.
+  - Knockout-confirm claims each plan before adding stock, so a double
+    confirm counts once. Note: nothing in the app calls this route.
+  - Login IP-wide cap raised 20 → 100 (the office shares one public IP).
+  - Tested on a scratch copy of the database against the production build:
+    10 simultaneous inspections of one batch → 1 accepted, 9 refused, stock
+    up once; 10 simultaneous corrections → none lost; 30 simultaneous
+    confirms of 15 plans → each counted once. Not yet run against the old
+    code to show the test fails there.
+- [ ] **Decide: remove `/api/knockout-confirm`?** Unused, and adds stock at
+  Knockout while Inspection is where stock is meant to be created.
+- [x] **Concurrency steps B+C** (2026-11-05) — change history and
+  optimistic locking for production plans and orders.
+  - `audit_events`: one row per create/update/delete (who, when, changed
+    fields, full before/after), written in the same transaction as the change.
+    Who always comes from the session. Order deletes record each removed plan.
+  - `version` + `updated_by_*` on plans and orders. A save carrying an older
+    version gets 409 with who changed what; screens show a conflict dialog
+    (Planning, Orders) or keep the unsaved figures with a message (Tracking,
+    Inspection). Requests without a version behave as before.
+  - "Edited by NAME · time" on plan rows (4 modals, Tracking) and orders.
+  - Fixed on the way: Tracking ignored save results; failed order saves were
+    silent; the order form cleared itself on a failed save.
+  - History times are set by the app in UTC: local Postgres runs Asia/Calcutta,
+    Azure's runs UTC, so now() would differ. (Pre-existing: `created_at` and
+    insert-time `updated_at` still use now(), so read IST locally.)
+  - Tested on a scratch copy: 25/25 B+C checks, 53/53 regression checks.
+    Not yet seen in a browser.
+  - **Azure needs `drizzle-kit push` for this** (10 additive statements).
+- [x] **Live updates** (2026-11-05) — publish/subscribe over Postgres
+  LISTEN/NOTIFY, delivered to browsers as Server-Sent Events (`/api/events`).
+  - Publish: `publishChange()` (src/infrastructure/realtime) runs `pg_notify`
+    inside the save's transaction, so only committed changes are announced.
+    Plans and orders publish via `recordAudit`; Close Day and the three
+    stock-changing paths publish explicitly; master-data routes and day
+    re-open are wrapped with `publishOnSuccess`.
+  - Subscribe: one LISTEN connection per server process fans out to every
+    open stream; on a database reconnect it sends `resync` and browsers
+    reload. 25s heartbeat; `X-Accel-Buffering: no` so nginx needs no change.
+  - Browser: `LiveUpdatesProvider` (root layout). Screens use
+    `useLiveRefresh`; editors with unsaved input use `useEditing`, which holds
+    refreshes back (amber banner) until they close. A tab ignores its own
+    changes via an `X-Client-Id` header. Toasts group bursts.
+  - Wired: Orders, Planning (incl. Inspection), Tracking (+ live day-closed
+    lock), Products. Tracking's reloads no longer flash "Loading...".
+  - QA on a scratch copy: 19/19 realtime checks (64 ms delivery; no event for
+    409/400/no-op/failed saves; recovery after a killed LISTEN connection)
+    and 78/78 regression checks. Browser behaviour not yet seen.
+  - MQTT can be added later inside `publishChange()` if machines start
+    sending data.
+  - Noted, not changed: creating a customer with missing fields returns 500
+    instead of a validation message.
+- [ ] **Concurrency steps D–E** — stock ledger, History/Activity screens.
 - [ ] **Sessions survive a password change** — a login cookie stays valid for
   7 days even after the password is reset or the user is deactivated
   (backlog 0d).

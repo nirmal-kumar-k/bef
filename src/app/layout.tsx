@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from 'next'
 import { Inter, Plus_Jakarta_Sans } from 'next/font/google'
 import { AppLayout } from "@/shared/layouts/app-layout"
 import { RoleProvider } from "@/shared/context/role-context"
+import { LiveUpdatesProvider } from '@/shared/realtime/live-updates'
 import { getSessionUser } from '@/shared/lib/auth'
 import './globals.css'
 
@@ -52,9 +53,11 @@ export default async function RootLayout({
     <html lang="en" suppressHydrationWarning className={`${inter.variable} ${plusJakartaSans.variable} bg-background`}>
       <body className="font-sans antialiased" suppressHydrationWarning>
         <RoleProvider initialRole={initialRole}>
-          <AppLayout user={user}>
-            {children}
-          </AppLayout>
+          <LiveUpdatesProvider enabled={!!user}>
+            <AppLayout user={user}>
+              {children}
+            </AppLayout>
+          </LiveUpdatesProvider>
         </RoleProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>

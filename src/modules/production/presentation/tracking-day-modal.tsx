@@ -15,6 +15,7 @@ import { cn, generateTimeSlots } from '@/shared/lib/utils'
 import { TrackingHourlyGrid } from './tracking-hourly-grid'
 import { TrackingMeltActualsTable } from './tracking-melt-actuals-table'
 import type { TrackingPlanRow } from './tracking-types'
+import { useEditing, useLiveRefresh } from '@/shared/realtime/live-updates'
 
 const STAGES: TrackingPlanRow['stage'][] = ['Core', 'Mould', 'Melt', 'Knockout']
 
@@ -35,6 +36,17 @@ export function TrackingDayModal({ date, plans, orders, shifts, onClose, onSaved
   const [selectedShiftId, setSelectedShiftId] = useState<string>('')
   const [isDirty, setIsDirty] = useState(false)
   const [isClosed, setIsClosed] = useState(false)
+  // Unsaved actuals: hold live refreshes so they are not reset under the user.
+  useEditing(isDirty)
+  // Someone else closing or reopening this day locks/unlocks it here at once.
+  // Only flips the lock, never touches typed values, so it is not held back.
+  useLiveRefresh(['day_closure'], () => {
+    if (!date) return
+    fetch(`/api/production-day-closures?date=${date}`)
+      .then(res => res.ok ? res.json() : null)
+      .then(data => { if (data) setIsClosed(!!data.closed) })
+      .catch(() => {})
+  }, { immediate: true })
   const [isClosing, setIsClosing] = useState(false)
   const [dialog, setDialog] = useState<ConfirmDialogState | null>(null)
   // Distinguishes "modal just opened" from "stepped to another day".

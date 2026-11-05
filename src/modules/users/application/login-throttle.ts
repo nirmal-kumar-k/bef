@@ -3,8 +3,9 @@
 // - username + IP: 5 failures locks that pair. Keyed on the pair, not the
 //   username alone, so someone hammering "admin" from the internet cannot lock
 //   the real admin out from the office.
-// - IP alone: 20 failures blocks the address for every username, which stops
-//   one host cycling through usernames.
+// - IP alone: 100 failures blocks the address for every username, which stops
+//   one host cycling through usernames. High on purpose: the whole office
+//   shares one public IP, so every employee's typos count against it.
 //
 // Held in memory: the app runs as a single pm2 process, so one Map sees every
 // request. A restart clears all locks - acceptable, and also the way to free a
@@ -12,7 +13,7 @@
 
 const WINDOW_MS = 15 * 60 * 1000
 const MAX_PER_USER_IP = 5
-const MAX_PER_IP = 20
+const MAX_PER_IP = 100
 
 type Bucket = { failures: number; windowStart: number; lockedUntil: number }
 

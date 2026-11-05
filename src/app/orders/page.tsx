@@ -9,8 +9,10 @@ import { NewOrderModal } from '@/modules/orders/presentation/new-order-modal'
 import { ViewOrderModal } from '@/modules/orders/presentation/view-order-modal'
 import { ConfirmDeleteDialog } from '@/shared/ui/confirm-delete-dialog'
 import { ConfirmDialog, type ConfirmDialogState } from '@/shared/ui/confirm-dialog'
+import { ConflictDialog, formatWhen, type ConflictItem } from '@/shared/ui/conflict-dialog'
 import { categories, statusColors, statusAccentColors, type Order } from '@/modules/orders/domain/order.types'
 import { useRole } from '@/shared/context/role-context'
+import { useEditing, useLiveRefresh } from '@/shared/realtime/live-updates'
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([])
@@ -20,12 +22,18 @@ export default function OrdersPage() {
   const [editOrderId, setEditOrderId] = useState<string | null>(null)
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null)
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState | null>(null)
+  // An edit refused because someone else saved the order first, with what
+  // this user tried to save so they can choose to overwrite.
+  const [orderConflict, setOrderConflict] = useState<{ item: ConflictItem; order: Order } | null>(null)
+  const [resolvingConflict, setResolvingConflict] = useState(false)
   const [activeCategory, setActiveCategory] = useState('All')
   const { role } = useRole()
 
   const handleDeleteOrder = async (id: string, force = false) => {
     try {
-      const res = await fetch(`/api/orders/${id}${force ? '?force=true' : ''}`, { method: 'DELETE' })
+      const version = orders.find(o => o.id === id)?.version
+      const query = [force ? 'force=true' : '', version ? `version=${version}` : ''].filter(Boolean).join('&')
+      const res = await fetch(`/api/orders/${id}${query ? `?${query}` : ''}`, { method: 'DELETE' })
       if (res.ok) {
         await fetchOrders()
         setViewOrderId(null)
@@ -45,6 +53,9 @@ export default function OrdersPage() {
         return
       }
 
+      // A 409 with conflict details: someone edited the order since the list
+      // loaded - refresh so what's shown is what would be deleted.
+      if (res.status === 409 && data.conflict) await fetchOrders()
       setConfirmDialog({
         title: 'Could Not Delete Order',
         description: data.error || 'Failed to delete order.',
@@ -77,8 +88,11 @@ export default function OrdersPage() {
   useEffect(() => {
     fetchOrders()
   }, [fetchOrders])
+  // Orders created/changed by others appear without a reload; held back
+  // while the order form is open (see useEditing in NewOrderModal).
+  useLiveRefresh(['order'], fetchOrders)
 
-  const handleSaveOrder = async (order: Order | Omit<Order, 'id'>) => {
+  const handleSaveOrder = async (order: Order | Omit<Order, 'id'>, overwriteVersion?: number): Promise<boolean> => {
     try {
       // New orders now also carry a client-generated id (so the create
       // request can be idempotent) - "has an id" alone no longer means
@@ -88,19 +102,53 @@ export default function OrdersPage() {
       const url = isEdit ? `/api/orders/${(order as Order).id}` : '/api/orders'
       const method = isEdit ? 'PUT' : 'POST'
       
+      // An edit sends the version it was opened at, so a save over someone
+      // else's newer change is refused instead of silently replacing it.
+      const version = isEdit ? (overwriteVersion ?? orders.find(o => o.id === (order as Order).id)?.version) : undefined
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(order),
+        body: JSON.stringify(version ? { ...order, version } : order),
       })
       if (res.ok) {
         await fetchOrders()
         setIsModalOpen(false)
         setEditOrderId(null)
+        return true
       }
+      const data = await res.json().catch(() => ({}))
+      if (res.status === 409 && data.conflict) {
+        setOrderConflict({
+          item: { label: `Order ${(order as Order).customerOrderNo || ''}`.trim(), conflict: data.conflict, mine: order as unknown as Record<string, unknown> },
+          order: order as Order,
+        })
+        return false
+      }
+      // Previously a failed save was ignored and the form just stayed open.
+      setConfirmDialog({ title: 'Could Not Save Order', description: data.error || `Failed to save order (HTTP ${res.status}).`, onConfirm: () => {} })
+      return false
     } catch (err) {
       console.error('Failed to save order:', err)
+      setConfirmDialog({ title: 'Could Not Save Order', description: 'Failed to save order - check the connection and try again.', onConfirm: () => {} })
+      return false
     }
+  }
+
+  // Conflict dialog: reload shows their version (this user's edit was not
+  // stored); overwrite resends this user's order against the current version.
+  const handleOrderConflictReload = async () => {
+    setOrderConflict(null)
+    setIsModalOpen(false)
+    setEditOrderId(null)
+    await fetchOrders()
+  }
+  const handleOrderConflictOverwrite = async () => {
+    if (!orderConflict) return
+    setResolvingConflict(true)
+    const { order, item } = orderConflict
+    setOrderConflict(null)
+    await handleSaveOrder(order, item.conflict.currentVersion)
+    setResolvingConflict(false)
   }
 
   const filteredOrders = orders.filter((order) => {
@@ -177,6 +225,11 @@ export default function OrdersPage() {
                 <div className="w-[160px] shrink-0 pr-4 border-r border-[#E0E7FF]/50 mr-6">
                   <p className="text-[17px] font-bold text-[#172554] tracking-tight truncate">{order.customerOrderNo}</p>
                   <p className="text-sm font-mono text-[#94A3B8] mt-1">{order.internalOrderNo}</p>
+                  {order.updatedByName && (
+                    <p className="text-[11px] text-[#94A3B8] mt-1 truncate" title={`Last edited by ${order.updatedByName}`}>
+                      Edited by {order.updatedByName}{order.updatedAt ? ` · ${formatWhen(order.updatedAt)}` : ''}
+                    </p>
+                  )}
                 </div>
 
                 <div className="flex flex-1 items-center gap-6">
@@ -275,6 +328,7 @@ export default function OrdersPage() {
         />
 
         <ConfirmDialog state={confirmDialog} onClose={() => setConfirmDialog(null)} />
+        <ConflictDialog items={orderConflict ? [orderConflict.item] : null} onReload={handleOrderConflictReload} onOverwrite={handleOrderConflictOverwrite} busy={resolvingConflict} />
     </div>
   )
 }

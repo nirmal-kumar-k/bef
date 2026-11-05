@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
 import { orders, orderItems } from '@/infrastructure/database/schema'
+import { currentActor, recordAudit } from '@/infrastructure/audit'
+import { orderSnapshot } from './_order-snapshot'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,9 +23,14 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { cart, id, ...orderData } = body
+    // updatedBy*/version are server-managed and never taken from the body.
+    const { cart, id, version: _v, updatedById: _ubi, updatedByName: _ubn, createdAt: _ca, updatedAt: _ua, ...fields } = body
+    const actor = await currentActor()
+    const orderData = { ...fields, updatedById: actor.id, updatedByName: actor.name }
 
     const result = await db.transaction(async (tx) => {
+      const [existing] = id ? await tx.select().from(orders).where(eq(orders.id, id)) : []
+      const before = existing ? orderSnapshot(existing, await tx.select().from(orderItems).where(eq(orderItems.orderId, id))) : null
       // A client-generated id (assigned the moment the order is created in
       // the UI, before it's ever round-tripped to the server) makes this
       // whole create idempotent: if a double-click or slow-network retry
@@ -31,7 +38,7 @@ export async function POST(request: NextRequest) {
       // updates the same row instead of creating a duplicate order.
       const [order] = id
         ? await tx.insert(orders).values({ id, ...orderData })
-            .onConflictDoUpdate({ target: orders.id, set: orderData })
+            .onConflictDoUpdate({ target: orders.id, set: { ...orderData, updatedAt: new Date(), version: sql`${orders.version} + 1` } })
             .returning()
         : await tx.insert(orders).values(orderData).returning()
 
@@ -57,6 +64,9 @@ export async function POST(request: NextRequest) {
           ).returning()
         : []
 
+      await recordAudit(tx, actor, before
+        ? { entityType: 'order', entityId: order.id, action: 'update', before, after: orderSnapshot(order, insertedItems), version: order.version }
+        : { entityType: 'order', entityId: order.id, action: 'create', after: orderSnapshot(order, insertedItems), version: order.version })
       return { ...order, cart: insertedItems }
     })
 

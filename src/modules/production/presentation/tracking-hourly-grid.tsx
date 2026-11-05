@@ -9,6 +9,8 @@ import { cn } from '@/shared/lib/utils'
 import type { TimeSlot } from '@/shared/lib/utils'
 import type { TrackingPlanRow } from './tracking-types'
 import { VARIANCE_REASONS } from './variance-reasons'
+import { saveTrackingRows, pick } from './tracking-save'
+import { formatWhen } from '@/shared/ui/conflict-dialog'
 
 interface TrackingHourlyGridProps {
   rows: TrackingPlanRow[]
@@ -29,6 +31,7 @@ export function TrackingHourlyGrid({ rows, orders, timeSlots, stage, onDirtyChan
   const [edits, setEdits] = useState<Record<string, Record<string, number>>>({})
   const [reasonEdits, setReasonEdits] = useState<Record<string, string>>({})
   const [isSaving, setIsSaving] = useState(false)
+  const [saveMessage, setSaveMessage] = useState<string | null>(null)
 
   // Keyed on WHICH rows are shown, not the array's identity. Depending on the
   // array itself meant any parent re-render that rebuilt it - including the
@@ -39,6 +42,7 @@ export function TrackingHourlyGrid({ rows, orders, timeSlots, stage, onDirtyChan
   useEffect(() => {
     setEdits({})
     setReasonEdits({})
+    setSaveMessage(null)
     onDirtyChange(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rowsKey])
@@ -104,9 +108,9 @@ export function TrackingHourlyGrid({ rows, orders, timeSlots, stage, onDirtyChan
       // A row is dirty if its hourly figures changed, its reason changed, or
       // both - keyed as a set so a row touched in both ways is still one PUT.
       const changedRowIds = Array.from(new Set([...Object.keys(edits), ...Object.keys(reasonEdits)]))
-      await Promise.all(changedRowIds.map(rowId => {
+      const { failedIds, message } = await saveTrackingRows(changedRowIds, rowId => {
         const row = rows.find(r => r.id === rowId)
-        if (!row) return Promise.resolve()
+        if (!row) return null
         const mergedActuals = { ...(row.hourlyActuals || {}), ...(edits[rowId] || {}) }
         const actualTotal = Object.values(mergedActuals).reduce((s, v) => s + (Number(v) || 0), 0)
         const stillShort = actualTotal > 0 && actualTotal < (Number(row.quantityScheduled) || 0)
@@ -119,20 +123,22 @@ export function TrackingHourlyGrid({ rows, orders, timeSlots, stage, onDirtyChan
         // whenever the row is no longer behind.
         if (!stillShort) body.varianceReason = null
         else if (rowId in reasonEdits) body.varianceReason = reasonEdits[rowId] || null
-
-        return fetch(`/api/production-plans/${rowId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        })
-      }))
+        if (row.version) body.version = row.version
+        return body
+      }, rowId => {
+        const row = rows.find(r => r.id === rowId)
+        const orderNo = orders.find((o: any) => (o.id || o._id) === row?.orderId)?.customerOrderNo
+        return `${stage}${row?.coreBoxCode ? ` (${row.coreBoxCode})` : ''}${orderNo ? `, order ${orderNo}` : ''}`
+      })
       await onSaved()
       // Cleared explicitly rather than relying on the reset effect: rowsKey is
       // deliberately unchanged by a save (same rows, new values), so without
       // this the local edits would keep shadowing what actually persisted.
-      setEdits({})
-      setReasonEdits({})
-      onDirtyChange(false)
+      // Rows that did NOT save keep their edits, so nothing typed is lost.
+      setEdits(prev => pick(prev, failedIds))
+      setReasonEdits(prev => pick(prev, failedIds))
+      setSaveMessage(message)
+      onDirtyChange(failedIds.length > 0)
     } finally {
       setIsSaving(false)
     }
@@ -208,6 +214,11 @@ export function TrackingHourlyGrid({ rows, orders, timeSlots, stage, onDirtyChan
                         <span className="text-[10px] text-[#94A3B8] truncate" title={`${order?.customerOrderNo || ''} ${productName}`}>
                           {order?.customerOrderNo || '-'}{stage === 'Core' ? ` | ${productName}` : ''}
                         </span>
+                        {row.updatedByName && (
+                          <span className="text-[9px] text-[#94A3B8] truncate" title={`Last edited by ${row.updatedByName}`}>
+                            Edited by {row.updatedByName}{row.updatedAt ? ` · ${formatWhen(row.updatedAt)}` : ''}
+                          </span>
+                        )}
                         {row.isPending && (
                           <Badge variant="outline" className="mt-1 w-fit bg-red-500/10 text-red-600 border-red-500/20 text-[9px]">
                             Pending{row.carriedForwardFromDate ? ` (from ${row.carriedForwardFromDate})` : ''}
@@ -337,6 +348,11 @@ export function TrackingHourlyGrid({ rows, orders, timeSlots, stage, onDirtyChan
         </div>
       </div>
 
+      {saveMessage && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 whitespace-pre-line">
+          {saveMessage}
+        </div>
+      )}
       <div className="flex justify-end">
         <Button onClick={handleSave} disabled={!hasEdits || isSaving || disabled} className="bg-[#4F46E5] hover:bg-[#4F46E5]/90 text-white">
           {isSaving ? 'Saving...' : 'Save Actuals'}

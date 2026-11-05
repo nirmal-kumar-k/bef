@@ -24,6 +24,7 @@ import {
   CommandList,
 } from '@/shared/ui/command'
 import { Input } from '@/shared/ui/input'
+import { useLiveRefresh } from '@/shared/realtime/live-updates'
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([])
@@ -73,6 +74,7 @@ export default function ProductsPage() {
   useEffect(() => {
     fetchProducts()
   }, [fetchProducts])
+  useLiveRefresh(['product', 'master'], fetchProducts)
 
   const handleSaveProduct = async (product: Omit<Product, 'id'>) => {
     try {

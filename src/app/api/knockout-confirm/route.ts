@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { and, eq, inArray, ne, or } from 'drizzle-orm'
+import { and, eq, inArray, ne, or, sql } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
 import { productionPlans, orders, products } from '@/infrastructure/database/schema'
+import { currentActor, recordAudit } from '@/infrastructure/audit'
+import { publishChange } from '@/infrastructure/realtime'
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,6 +22,7 @@ export async function POST(request: NextRequest) {
     )
 
     let processed = 0
+    const actor = await currentActor()
     await db.transaction(async (tx) => {
       for (const plan of plans) {
         if (!plan.actualQuantity || Number(plan.actualQuantity) <= 0) continue
@@ -51,8 +54,17 @@ export async function POST(request: NextRequest) {
           const cavities = product.cavities || 1
           const piecesToGenerate = Number(plan.actualQuantity) * cavities
 
-          await tx.update(products).set({ stock: (product.stock || 0) + piecesToGenerate }).where(eq(products.id, product.id))
-          await tx.update(productionPlans).set({ isConfirmed: true }).where(eq(productionPlans.id, plan.id))
+          // Claim the plan first: only the request that flips isConfirmed
+          // gets a row back, so two simultaneous confirms cannot both add
+          // its stock (the list above was read before either committed).
+          const claimed = await tx.update(productionPlans)
+            .set({ isConfirmed: true, updatedAt: new Date(), version: sql`${productionPlans.version} + 1`, updatedById: actor.id, updatedByName: actor.name })
+            .where(and(eq(productionPlans.id, plan.id), ne(productionPlans.isConfirmed, true)))
+            .returning()
+          if (claimed.length === 0) continue
+          await recordAudit(tx, actor, { entityType: 'production_plan', entityId: plan.id, action: 'update', before: plan, after: claimed[0], version: claimed[0].version })
+          await tx.update(products).set({ stock: sql`coalesce(${products.stock}, 0) + ${piecesToGenerate}` }).where(eq(products.id, product.id))
+          await publishChange(tx, actor, { type: 'product', action: 'update', id: product.id, label: product.name })
           processed++
         }
       }
