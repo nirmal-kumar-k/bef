@@ -132,6 +132,18 @@ Last updated: 2026-10-22
     sending data.
   - Noted, not changed: creating a customer with missing fields returns 500
     instead of a validation message.
+- [x] **Security upgrade + shadcn** (2026-11-05) — shadcn moved to
+  devDependencies; Next.js 16.2.12 → 16.4.3 (5 critical advisories incl.
+  unauthenticated RCE); overrides for browserslist, source-map-js,
+  baseline-browser-mapping. Runtime audit 85 → 2 (zod: fix only in v4; fflate:
+  browser-side 3D viewer). Both left deliberately.
+- [x] **QA suite in the project** — `pnpm qa` (scripts/qa.sh, tests/qa).
+- [x] **Cart ordering (Phase 3)** (2026-11-05) — `order_items.position`
+  backfilled from ctid (verified identical to what the app showed; 0 gaps),
+  every cart read ordered by it, edits guarded: planned lines can't be
+  removed/moved/swapped (409 with a clear message). Migration:
+  scripts/migrations/2026-11-05-order-items-position.sql — **run on Azure
+  BEFORE drizzle-kit push** at the next deploy.
 - [ ] **Concurrency steps D–E** — stock ledger, History/Activity screens.
 - [ ] **Sessions survive a password change** — a login cookie stays valid for
   7 days even after the password is reset or the user is deactivated
@@ -141,7 +153,7 @@ Last updated: 2026-10-22
 
 ---
 
-## Phase 3 — Cart ordering (deferred, deliberately)
+## Phase 3 — Cart ordering — DONE 2026-11-05 (history below kept for context)
 
 Full plan: [MIGRATION-PLAN-cart-ordering.md](./MIGRATION-PLAN-cart-ordering.md)
 

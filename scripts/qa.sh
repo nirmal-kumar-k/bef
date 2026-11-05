@@ -54,6 +54,8 @@ pg_dump "$DATABASE_URL" -Fc -f "$DUMP" || exit 1
 psql "$DATABASE_URL" -q -v ON_ERROR_STOP=1 -c "create database $QA_DB" || exit 1
 pg_restore --no-owner -d "$TEST_URL" "$DUMP" || exit 1
 
+echo "[qa] applying data migrations (scripts/migrations) to the copy"
+for m in scripts/migrations/*.sql; do psql "$TEST_URL" -q -v ON_ERROR_STOP=1 -f "$m" >/dev/null || { echo "[qa] migration $m FAILED"; exit 1; }; done
 echo "[qa] applying the current schema to the copy"
 DATABASE_URL="$TEST_URL" npx drizzle-kit push 2>&1 | grep -E "Changes applied|No changes|rror" || true
 
@@ -68,7 +70,7 @@ SERVER_STARTED=1
 for _ in $(seq 1 60); do curl -s -o /dev/null "http://localhost:$PORT/login" && break; sleep 1; done
 
 FAILED=()
-for t in throttle api history concurrency login realtime; do
+for t in throttle api history concurrency cart login realtime; do
   echo; echo "========== $t =========="
   QA_BASE_URL="http://localhost:$PORT" QA_DB_NAME="$QA_DB" node --env-file=.env.local "tests/qa/$t.test.mjs" || FAILED+=("$t")
 done

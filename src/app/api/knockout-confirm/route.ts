@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { and, eq, inArray, ne, or, sql } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
-import { productionPlans, orders, products } from '@/infrastructure/database/schema'
+import { productionPlans, orders, products, CART_IN_ORDER } from '@/infrastructure/database/schema'
 import { currentActor, recordAudit } from '@/infrastructure/audit'
 import { publishChange } from '@/infrastructure/realtime'
 
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
 
         const order = await tx.query.orders.findFirst({
           where: eq(orders.id, plan.orderId),
-          with: { cart: true },
+          with: { cart: CART_IN_ORDER },
         })
         if (!order || !order.cart) continue
 

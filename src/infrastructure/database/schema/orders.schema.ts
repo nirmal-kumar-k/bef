@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, integer, numeric, timestamp, pgEnum } from 'drizzle-orm/pg-core'
+import { pgTable, uuid, text, integer, numeric, timestamp, pgEnum, unique } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 
 export const orderStatusEnum = pgEnum('order_status', ['Received', 'Completed'])
@@ -31,6 +31,12 @@ export const orders = pgTable('orders', {
 export const orderItems = pgTable('order_items', {
   id: uuid('id').primaryKey().defaultRandom(),
   orderId: uuid('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
+  // Cart position, 0-based and gap-free. production_plans.item_id is
+  // `${orderId}-${position}`, and every screen resolves it as order.cart[idx],
+  // so this ordering is load-bearing: the cart must always be read in
+  // position order (CART_IN_ORDER), and an edit may never move a line that
+  // has plans (enforced in PUT /api/orders/[id]).
+  position: integer('position').notNull(),
   product: text('product').notNull(),
   productName: text('product_name').notNull(),
   quantity: integer('quantity').notNull(),
@@ -38,7 +44,16 @@ export const orderItems = pgTable('order_items', {
   weight: numeric('weight').notNull(),
   ratePerKg: numeric('rate_per_kg').notNull(),
   unitCost: numeric('unit_cost').notNull(),
-})
+}, (table) => [
+  unique('order_items_order_position_unique').on(table.orderId, table.position),
+])
+
+// Use for every read of an order's cart: `with: { cart: CART_IN_ORDER }`.
+// Without an ORDER BY, Postgres returns rows in physical order, which can
+// change after an UPDATE or VACUUM - silently repointing every plan.
+export const CART_IN_ORDER = {
+  orderBy: (items: typeof orderItems._.columns, { asc }: { asc: (c: any) => any }) => [asc(items.position)],
+} as const
 
 export const ordersRelations = relations(orders, ({ many }) => ({
   cart: many(orderItems),

@@ -1,6 +1,6 @@
 import { eq, or, sql } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
-import { orders, products } from '@/infrastructure/database/schema'
+import { orders, products, CART_IN_ORDER } from '@/infrastructure/database/schema'
 import { currentActor } from '@/infrastructure/audit'
 import { publishChange } from '@/infrastructure/realtime'
 
@@ -14,7 +14,7 @@ export async function syncInspectionStock(itemId: string | undefined | null, ord
 
   const order = await db.query.orders.findFirst({
     where: eq(orders.id, orderId),
-    with: { cart: true },
+    with: { cart: CART_IN_ORDER },
   })
   if (!order || !order.cart) return
 
