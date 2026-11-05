@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
 import { customers } from '@/infrastructure/database/schema'
 import { publishOnSuccess } from '@/infrastructure/realtime/route-wrapper'
+import { dbErrorResponse } from '@/infrastructure/database/db-error'
 
 export async function GET(
   _request: NextRequest,
@@ -43,8 +44,7 @@ async function putHandler(
     return NextResponse.json(customer)
   } catch (error: any) {
     console.error('PUT /api/customers/[id] error:', error)
-    const message = error?.code === '23505' ? 'A customer with this code already exists' : (error?.message || 'Failed to update customer')
-    return NextResponse.json({ error: message }, { status: error?.code === '23505' ? 409 : 500 })
+    return dbErrorResponse(error, 'Failed to update customer', { duplicate: 'A customer with this code already exists' })
   }
 }
 
@@ -58,7 +58,7 @@ async function deleteHandler(
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('DELETE /api/customers/[id] error:', error)
-    return NextResponse.json({ error: 'Failed to delete customer' }, { status: 500 })
+    return dbErrorResponse(error, 'Failed to delete customer')
   }
 }
 

@@ -3,6 +3,7 @@ import { eq, inArray } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
 import { patterns, patternCoreBoxes, patternProducts } from '@/infrastructure/database/schema'
 import { publishOnSuccess } from '@/infrastructure/realtime/route-wrapper'
+import { dbErrorResponse } from '@/infrastructure/database/db-error'
 
 export async function GET(
   _request: NextRequest,
@@ -112,7 +113,7 @@ async function putHandler(
     return NextResponse.json(result)
   } catch (error) {
     console.error('PUT /api/patterns/[id] error:', error)
-    return NextResponse.json({ error: 'Failed to update pattern' }, { status: 500 })
+    return dbErrorResponse(error, 'Failed to update pattern')
   }
 }
 
@@ -126,7 +127,7 @@ async function deleteHandler(
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('DELETE /api/patterns/[id] error:', error)
-    return NextResponse.json({ error: 'Failed to delete pattern' }, { status: 500 })
+    return dbErrorResponse(error, 'Failed to delete pattern')
   }
 }
 

@@ -16,9 +16,14 @@ const key = new TextEncoder().encode(process.env.JWT_SECRET)
 
 // A session for an existing user, signed like the app's own login.
 export async function session(username) {
-  const [u] = await sql`select id, role, name, username from users where username = ${username}`
+  const [u] = await sql`select id, role, name, username, session_version from users where username = ${username}`
   if (!u) throw new Error(`no user ${username} in the scratch database`)
-  const token = await new SignJWT({ id: u.id, role: u.role, name: u.name, username: u.username })
+  return sessionFor(u)
+}
+
+// Signs a token like the app's login does, including the session version.
+export async function sessionFor(u, sv = u.session_version) {
+  const token = await new SignJWT({ id: u.id, role: u.role, name: u.name, username: u.username, sv })
     .setProtectedHeader({ alg: 'HS256' }).setIssuedAt().setExpirationTime('20m').sign(key)
   const cookie = `auth_token=${token}`
   return { user: u, cookie, headers: { Cookie: cookie, 'Content-Type': 'application/json' } }

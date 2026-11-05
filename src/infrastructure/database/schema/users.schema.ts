@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, pgEnum, boolean } from 'drizzle-orm/pg-core'
+import { pgTable, uuid, text, timestamp, pgEnum, boolean, integer } from 'drizzle-orm/pg-core'
 
 export const userRoleEnum = pgEnum('user_role', ['admin', 'manager', 'operator'])
 
@@ -13,6 +13,10 @@ export const users = pgTable('users', {
   passwordHash: text('password_hash').notNull(),
   role: userRoleEnum('role').default('operator').notNull(),
   isActive: boolean('is_active').default(true).notNull(),
+  // Bumped when the password, role or active flag changes; login tokens carry
+  // the version they were issued with, so older sessions stop working
+  // (src/shared/lib/auth.ts).
+  sessionVersion: integer('session_version').default(1).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })
