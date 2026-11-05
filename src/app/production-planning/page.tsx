@@ -10,6 +10,7 @@ import { cn, toLocalDateString } from '@/shared/lib/utils'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
 import { ConfirmDialog, type ConfirmDialogState } from '@/shared/ui/confirm-dialog'
 import { ConflictDialog, type ConflictItem } from '@/shared/ui/conflict-dialog'
+import { StockHistoryModal } from '@/modules/products/presentation/stock-history-modal'
 
 import { BacklogItem } from '@/modules/production/presentation/daily-planning-modal'
 import { CorePlanningTab } from '@/modules/production/presentation/core-planning-tab'
@@ -38,6 +39,7 @@ export default function ProductionPlanningPage() {
   // retry that resends this user's version against the current one.
   const [conflicts, setConflicts] = useState<(ConflictItem & { retry: (version: number) => Promise<Response> })[] | null>(null)
   const [resolvingConflicts, setResolvingConflicts] = useState(false)
+  const [stockHistoryId, setStockHistoryId] = useState<string | null>(null)
   // Set when arriving from Production Tracking's "Revise plan" action
   // (/production-planning?tab=Core&date=YYYY-MM-DD) so the right tab opens on
   // the right day. Read from window.location in an effect rather than via
@@ -803,12 +805,13 @@ export default function ProductionPlanningPage() {
                           <th className="px-6 py-4">Product Name</th>
                           <th className="px-6 py-4 text-center">Finished Stock</th>
                           <th className="px-6 py-4 text-center">Total Rejected</th>
+                          <th className="px-6 py-4 text-right">Ledger</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[#E0E7FF]">
                         {backlogData.FinishedStock.length === 0 ? (
                           <tr>
-                            <td colSpan={3} className="px-6 py-8 text-center text-[#94A3B8] italic">Nothing inspected yet.</td>
+                            <td colSpan={4} className="px-6 py-8 text-center text-[#94A3B8] italic">Nothing inspected yet.</td>
                           </tr>
                         ) : (
                           backlogData.FinishedStock.map((row) => (
@@ -816,6 +819,9 @@ export default function ProductionPlanningPage() {
                               <td className="px-6 py-4 font-semibold text-[#172554]">{row.productName}</td>
                               <td className="px-6 py-4 text-center font-mono font-semibold text-emerald-600">{row.finishedStock}</td>
                               <td className="px-6 py-4 text-center font-mono text-red-500">{row.totalRejected}</td>
+                              <td className="px-6 py-4 text-right">
+                                <Button variant="outline" size="sm" onClick={() => setStockHistoryId(row.productId)}>History</Button>
+                              </td>
                             </tr>
                           ))
                         )}
@@ -905,6 +911,7 @@ export default function ProductionPlanningPage() {
 
       <ConfirmDialog state={saveErrorDialog} onClose={() => setSaveErrorDialog(null)} />
       <ConflictDialog items={conflicts} onReload={handleConflictReload} onOverwrite={handleConflictOverwrite} busy={resolvingConflicts} />
+      <StockHistoryModal productId={stockHistoryId} orders={orders} onClose={() => setStockHistoryId(null)} />
     </div>
   )
 }

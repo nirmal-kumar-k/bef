@@ -1,34 +1,38 @@
-import { eq, or, sql } from 'drizzle-orm'
+import { eq, or } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
 import { orders, products, CART_IN_ORDER } from '@/infrastructure/database/schema'
-import { currentActor } from '@/infrastructure/audit'
-import { publishChange } from '@/infrastructure/realtime'
+import type { Actor } from '@/infrastructure/audit'
+import { moveStock } from '@/infrastructure/stock'
+
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0]
 
 // Correcting or deleting a past Inspection batch (accepted quantity lives in
 // quantityScheduled) must adjust product.stock by the same delta, since that
 // stock was already incremented when the batch was first submitted via
 // /api/inspection-submit - otherwise a fixed typo would leave stock wrong.
-export async function syncInspectionStock(itemId: string | undefined | null, orderId: string | undefined | null, oldAccepted: number, newAccepted: number) {
+// Runs inside the plan's own transaction, so the plan change and the stock
+// change (and its ledger row) commit or roll back together.
+export async function syncInspectionStock(tx: Tx, actor: Actor, plan: {
+  id: string; itemId: string | null; orderId: string | null
+}, oldAccepted: number, newAccepted: number, reason: 'inspection_correction' | 'inspection_undo') {
   const delta = (newAccepted || 0) - (oldAccepted || 0)
-  if (!itemId || !orderId || delta === 0) return
+  if (!plan.itemId || !plan.orderId || delta === 0) return
 
-  const order = await db.query.orders.findFirst({
-    where: eq(orders.id, orderId),
+  const order = await tx.query.orders.findFirst({
+    where: eq(orders.id, plan.orderId),
     with: { cart: CART_IN_ORDER },
   })
   if (!order || !order.cart) return
 
-  const parts = itemId.split('-')
+  const parts = plan.itemId.split('-')
   const idx = parseInt(parts[parts.length - 1], 10)
   const cartItem = order.cart[idx]
   if (!cartItem) return
 
-  const [product] = await db.select().from(products).where(
+  const [product] = await tx.select().from(products).where(
     or(eq(products.name, cartItem.productName), eq(products.code, cartItem.product))
   ).limit(1)
   if (!product) return
 
-  // Applied in the database so a concurrent stock change is not overwritten.
-  await db.update(products).set({ stock: sql`coalesce(${products.stock}, 0) + ${delta}` }).where(eq(products.id, product.id))
-  await publishChange(db, await currentActor(), { type: 'product', action: 'update', id: product.id, label: product.name })
+  await moveStock(tx, actor, { productId: product.id, delta, reason, planId: plan.id, orderId: plan.orderId })
 }

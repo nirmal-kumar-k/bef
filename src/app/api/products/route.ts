@@ -31,7 +31,8 @@ async function postHandler(request: NextRequest) {
       remarks: body.remarks,
       images: body.images,
       linkedPattern: body.linkedPattern,
-      stock: body.stock,
+      // No `stock`: finished stock only changes through the stock ledger
+      // (src/infrastructure/stock). A new product starts at 0.
     }
     // A client-generated id (assigned the moment the product is created in
     // the UI) makes this idempotent - a double-click or slow-network retry

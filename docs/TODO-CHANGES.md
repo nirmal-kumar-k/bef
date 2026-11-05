@@ -144,7 +144,18 @@ Last updated: 2026-10-22
   removed/moved/swapped (409 with a clear message). Migration:
   scripts/migrations/2026-11-05-order-items-position.sql — **run on Azure
   BEFORE drizzle-kit push** at the next deploy.
-- [ ] **Concurrency steps D–E** — stock ledger, History/Activity screens.
+- [x] **Stock ledger (step D)** (2026-11-05) — `stock_movements`: one row per
+  change (reason, delta, balance after, plan/order, who). `moveStock()`
+  (src/infrastructure/stock) is the only way stock changes: it updates
+  products.stock and writes the movement in one transaction, so
+  stock = sum(movements) always. Inspection corrections/undo now run inside
+  the plan's transaction. Product saves can no longer write stock (the form
+  sent back stale stock and erased concurrent inspections). Admin
+  "Adjust stock" takes a counted quantity + required reason. "History" button
+  on Planning > Finished Stock. Opening balances:
+  scripts/migrations/post/2026-11-05-stock-opening-balances.sql — **run on
+  Azure AFTER drizzle-kit push**. Tests: tests/qa/stock.test.mjs (14).
+- [ ] **Step E** — History/Activity screens for plans and orders.
 - [ ] **Sessions survive a password change** — a login cookie stays valid for
   7 days even after the password is reset or the user is deactivated
   (backlog 0d).

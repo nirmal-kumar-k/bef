@@ -3,7 +3,7 @@ import { and, eq, inArray, ne, or, sql } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
 import { productionPlans, orders, products, CART_IN_ORDER } from '@/infrastructure/database/schema'
 import { currentActor, recordAudit } from '@/infrastructure/audit'
-import { publishChange } from '@/infrastructure/realtime'
+import { moveStock } from '@/infrastructure/stock'
 
 export async function POST(request: NextRequest) {
   try {
@@ -63,8 +63,7 @@ export async function POST(request: NextRequest) {
             .returning()
           if (claimed.length === 0) continue
           await recordAudit(tx, actor, { entityType: 'production_plan', entityId: plan.id, action: 'update', before: plan, after: claimed[0], version: claimed[0].version })
-          await tx.update(products).set({ stock: sql`coalesce(${products.stock}, 0) + ${piecesToGenerate}` }).where(eq(products.id, product.id))
-          await publishChange(tx, actor, { type: 'product', action: 'update', id: product.id, label: product.name })
+          await moveStock(tx, actor, { productId: product.id, delta: piecesToGenerate, reason: 'knockout', planId: plan.id, orderId: plan.orderId })
           processed++
         }
       }

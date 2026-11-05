@@ -4,7 +4,7 @@ import { db } from '@/infrastructure/database/client'
 import { productionPlans, orders, products, CART_IN_ORDER } from '@/infrastructure/database/schema'
 import { businessDateString } from '@/shared/lib/utils'
 import { currentActor, recordAudit } from '@/infrastructure/audit'
-import { publishChange } from '@/infrastructure/realtime'
+import { moveStock } from '@/infrastructure/stock'
 
 // Inspects the entire currently-available fettled quantity for one item in a
 // single batch: logs one new Inspection-stage plan row (accepted quantity in
@@ -82,10 +82,7 @@ export async function POST(request: NextRequest) {
       await recordAudit(tx, actor, { entityType: 'production_plan', entityId: inserted[0].id, action: 'create', after: inserted[0], version: inserted[0].version })
 
       if (product && accepted > 0) {
-        // Added in the database, not read-then-written here, so two
-        // simultaneous additions to the same product cannot overwrite each other.
-        await tx.update(products).set({ stock: sql`coalesce(${products.stock}, 0) + ${accepted}` }).where(eq(products.id, product.id))
-        await publishChange(tx, actor, { type: 'product', action: 'update', id: product.id, label: product.name })
+        await moveStock(tx, actor, { productId: product.id, delta: accepted, reason: 'inspection', planId: inserted[0].id, orderId })
       }
 
       return { stale: false as const, row: inserted[0] }

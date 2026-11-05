@@ -39,7 +39,9 @@ async function putHandler(
       remarks: body.remarks,
       images: body.images,
       linkedPattern: body.linkedPattern,
-      stock: body.stock,
+      // No `stock`: the product form sends back the stock it loaded, which
+      // overwrote any inspection that happened while it was open. Stock only
+      // changes through the ledger (src/infrastructure/stock).
       updatedAt: new Date()
     }
     
