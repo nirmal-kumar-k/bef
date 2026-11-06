@@ -132,7 +132,56 @@ Last updated: 2026-10-22
     sending data.
   - Noted, not changed: creating a customer with missing fields returns 500
     instead of a validation message.
-- [ ] **Concurrency steps D–E** — stock ledger, History/Activity screens.
+- [x] **Security upgrade + shadcn** (2026-11-05) — shadcn moved to
+  devDependencies; Next.js 16.2.12 → 16.4.3 (5 critical advisories incl.
+  unauthenticated RCE); overrides for browserslist, source-map-js,
+  baseline-browser-mapping. Runtime audit 85 → 2 (zod: fix only in v4; fflate:
+  browser-side 3D viewer). Both left deliberately.
+- [x] **QA suite in the project** — `pnpm qa` (scripts/qa.sh, tests/qa).
+- [x] **Cart ordering (Phase 3)** (2026-11-05) — `order_items.position`
+  backfilled from ctid (verified identical to what the app showed; 0 gaps),
+  every cart read ordered by it, edits guarded: planned lines can't be
+  removed/moved/swapped (409 with a clear message). Migration:
+  scripts/migrations/2026-11-05-order-items-position.sql — **run on Azure
+  BEFORE drizzle-kit push** at the next deploy.
+- [x] **Stock ledger (step D)** (2026-11-05) — `stock_movements`: one row per
+  change (reason, delta, balance after, plan/order, who). `moveStock()`
+  (src/infrastructure/stock) is the only way stock changes: it updates
+  products.stock and writes the movement in one transaction, so
+  stock = sum(movements) always. Inspection corrections/undo now run inside
+  the plan's transaction. Product saves can no longer write stock (the form
+  sent back stale stock and erased concurrent inspections). Admin
+  "Adjust stock" takes a counted quantity + required reason. "History" button
+  on Planning > Finished Stock. Opening balances:
+  scripts/migrations/post/2026-11-05-stock-opening-balances.sql — **run on
+  Azure AFTER drizzle-kit push**. Tests: tests/qa/stock.test.mjs (14).
+- [x] **Clear write errors** (2026-11-05) — dbErrorResponse(): missing field
+  -> 400 naming it, duplicate -> 409 (the old `error.code === '23505'`
+  checks never fired because Drizzle wraps the error in `cause`).
+- [x] **Sessions end on password/role/active change** (2026-11-05) —
+  users.session_version carried in the token; checked per request (15s cache).
+- [x] **ESLint** (2026-11-05) — eslint 10.13 + eslint-config-next 16.4.3,
+  `pnpm lint` passes with 0 errors (326 warnings, mostly `any` and unused
+  vars) and runs in `pnpm qa`. Bugs found and fixed through it: the product
+  form erased the product's customer when saved on first open; the order form
+  set state inside useMemo; three planning modals' backlog memo missed
+  removedRows. React-Compiler-only rules downgraded to warnings (app does not
+  use the compiler) after review.
+- [x] **History/Activity screens (step E)** (2026-11-05) — GET /api/activity
+  (whole feed: admin only; `?orderId=`: any logged-in user, includes the
+  order's deleted plans; IST day filters; paging). Admin > Activity page with
+  filters; a History section in the View Order window. Tests:
+  tests/qa/activity.test.mjs (14). Full suite 163/163.
+  - Redesigned 2026-11-06: history is on demand - a small "History" button
+    (View Order header, Finished Stock rows, every saved plan row in the four
+    planning modals and Tracking) opens a slide-over panel: a timeline grouped
+    by day with initials on a "pour line", one line per change, tap for
+    details. Important changes (deletions; stock adjustments incl. inspection
+    corrections/undos; planned quantity moved 25%+; order products or delivery
+    date changed) get an amber tag naming why, a Highlights strip and an
+    "Important only" switch. Stock movements are part of the timeline; the
+    stock count form sits in the product panel. API: ?entityId=, ?productId=,
+    type=stock, important=1. Tests: 25 activity checks; full suite 174/174.
 - [ ] **Sessions survive a password change** — a login cookie stays valid for
   7 days even after the password is reset or the user is deactivated
   (backlog 0d).
@@ -141,7 +190,7 @@ Last updated: 2026-10-22
 
 ---
 
-## Phase 3 — Cart ordering (deferred, deliberately)
+## Phase 3 — Cart ordering — DONE 2026-11-05 (history below kept for context)
 
 Full plan: [MIGRATION-PLAN-cart-ordering.md](./MIGRATION-PLAN-cart-ordering.md)
 

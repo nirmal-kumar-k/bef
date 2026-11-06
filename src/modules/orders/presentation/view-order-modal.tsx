@@ -21,6 +21,7 @@ import { Input } from '@/shared/ui/input'
 import { useState, useEffect } from 'react'
 import { pdf } from '@react-pdf/renderer'
 import { SalesOrderPdf } from './sales-order-pdf'
+import { HistoryButton } from '@/modules/activity/presentation/history-panel'
 
 export function ViewOrderModal({
   order: initialOrder,
@@ -209,6 +210,14 @@ export function ViewOrderModal({
             >
               <Download weight="duotone" className="mr-2 h-4 w-4" /> {generatingPdf === 'download' ? 'Generating...' : 'Export'}
             </Button>
+            {order?.id && (
+              <HistoryButton
+                title={`Order ${order.customerOrderNo}`}
+                subtitle="This order, its plans and the stock its inspections moved"
+                scope={{ orderId: order.id }}
+                className="h-8 px-3 text-sm border border-[#E0E7FF] bg-[#FFFFFF] hover:text-[#172554]"
+              />
+            )}
             {role === 'Admin' && onEdit && (
               <Button 
                 variant="outline" 

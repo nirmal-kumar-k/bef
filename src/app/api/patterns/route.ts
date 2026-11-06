@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/infrastructure/database/client'
 import { patterns, patternCoreBoxes, patternProducts } from '@/infrastructure/database/schema'
 import { publishOnSuccess } from '@/infrastructure/realtime/route-wrapper'
+import { dbErrorResponse } from '@/infrastructure/database/db-error'
 
 export const dynamic = 'force-dynamic'
 
@@ -75,7 +76,7 @@ async function postHandler(request: NextRequest) {
     return NextResponse.json(result, { status: 201 })
   } catch (error) {
     console.error('POST /api/patterns error:', error)
-    return NextResponse.json({ error: 'Failed to create pattern' }, { status: 500 })
+    return dbErrorResponse(error, 'Failed to create pattern')
   }
 }
 

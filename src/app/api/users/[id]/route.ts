@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
-import { eq, count } from 'drizzle-orm'
+import { eq, count, sql } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
 import { users } from '@/infrastructure/database/schema'
-import { getSessionUser } from '@/shared/lib/auth'
+import { forgetSessionCache, getSessionUser, issueSession } from '@/shared/lib/auth'
 import { passwordProblem } from '@/modules/users/domain/password'
 import { publishOnSuccess } from '@/infrastructure/realtime/route-wrapper'
+import { dbErrorResponse } from '@/infrastructure/database/db-error'
 
 async function putHandler(
   request: NextRequest,
@@ -36,7 +37,16 @@ async function putHandler(
       safeData.passwordHash = await bcrypt.hash(body.password, 10)
     }
 
+    // A new password, a role change or deactivation ends every existing
+    // session of this user: their old login tokens carry the old version.
+    const [current] = await db.select({ role: users.role, isActive: users.isActive }).from(users).where(eq(users.id, id))
+    const revoke = !!body.password
+      || (safeData.role !== undefined && current && safeData.role !== current.role)
+      || (safeData.isActive !== undefined && current && safeData.isActive !== current.isActive)
+    if (revoke) safeData.sessionVersion = sql`${users.sessionVersion} + 1`
+
     const [row] = await db.update(users).set(safeData).where(eq(users.id, id)).returning({
+      sessionVersion: users.sessionVersion,
       id: users.id,
       name: users.name,
       username: users.username,
@@ -49,11 +59,17 @@ async function putHandler(
     if (!row) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
-    return NextResponse.json(row)
+    if (revoke) {
+      forgetSessionCache(id)
+      // Changing your OWN password/role would otherwise log you out mid-task:
+      // re-issue this browser's session at the new version.
+      if (id === session.id && row.isActive) await issueSession({ ...row, role: row.role, sessionVersion: row.sessionVersion })
+    }
+    const { sessionVersion: _sv, ...publicRow } = row
+    return NextResponse.json(publicRow)
   } catch (error: any) {
     console.error('PUT /api/users/[id] error:', error)
-    const message = error?.code === '23505' ? 'A user with this username already exists' : 'Failed to update user'
-    return NextResponse.json({ error: message }, { status: error?.code === '23505' ? 409 : 500 })
+    return dbErrorResponse(error, 'Failed to update user', { duplicate: 'A user with this username already exists' })
   }
 }
 
@@ -82,13 +98,14 @@ async function deleteHandler(
     }
 
     const [row] = await db.delete(users).where(eq(users.id, id)).returning()
+    forgetSessionCache(id)
     if (!row) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('DELETE /api/users/[id] error:', error)
-    return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 })
+    return dbErrorResponse(error, 'Failed to delete user')
   }
 }
 

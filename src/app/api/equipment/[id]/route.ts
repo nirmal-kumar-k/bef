@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
 import { equipment } from '@/infrastructure/database/schema'
 import { publishOnSuccess } from '@/infrastructure/realtime/route-wrapper'
+import { dbErrorResponse } from '@/infrastructure/database/db-error'
 
 async function putHandler(
   req: Request,
@@ -38,10 +39,7 @@ async function putHandler(
     return NextResponse.json(row)
   } catch (error) {
     console.error('Failed to update equipment:', error)
-    return NextResponse.json(
-      { error: 'Failed to update equipment' },
-      { status: 500 }
-    )
+    return dbErrorResponse(error, 'Failed to update equipment')
   }
 }
 
@@ -63,10 +61,7 @@ async function deleteHandler(
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Failed to delete equipment:', error)
-    return NextResponse.json(
-      { error: 'Failed to delete equipment' },
-      { status: 500 }
-    )
+    return dbErrorResponse(error, 'Failed to delete equipment')
   }
 }
 

@@ -116,6 +116,15 @@ export function ViewProductModal({
     }
   }, [product, isOpen])
 
+  // The customer list is fetched when the form opens, so on the first open it
+  // is still empty while the effect above runs - the customer came up blank,
+  // and saving then erased the product's customer. Fill it once the list is in.
+  useEffect(() => {
+    if (!product || !isOpen) return
+    const c = customers.find(x => x.label === product.customer)
+    if (c) setSelectedCustomer(c.value)
+  }, [customers, product, isOpen])
+
   // Auto-calculated Unit Price when toggle is ON
   const calculatedUnitPrice = useMemo(() => {
     const w = Number(weight)

@@ -17,6 +17,7 @@ import {
   Fire,
   Wrench,
   UserGear,
+  ClockCounterClockwise,
   SignOut
 } from '@phosphor-icons/react'
 import { logoutUser } from '@/modules/users/application/auth.actions'
@@ -55,6 +56,7 @@ const navGroups: { label: string; adminOnly?: boolean; items: { href: string; la
     adminOnly: true,
     items: [
       { href: '/users', label: 'Users', icon: <UserGear weight="duotone" className="w-[18px] h-[18px] opacity-80 group-hover:opacity-100 transition-opacity" /> },
+      { href: '/activity', label: 'Activity', icon: <ClockCounterClockwise weight="duotone" className="w-[18px] h-[18px] opacity-80 group-hover:opacity-100 transition-opacity" /> },
     ]
   }
 ]

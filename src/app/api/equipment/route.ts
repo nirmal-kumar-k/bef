@@ -3,6 +3,7 @@ import { asc } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
 import { equipment } from '@/infrastructure/database/schema'
 import { publishOnSuccess } from '@/infrastructure/realtime/route-wrapper'
+import { dbErrorResponse } from '@/infrastructure/database/db-error'
 
 export const dynamic = 'force-dynamic'
 
@@ -36,10 +37,7 @@ async function postHandler(req: Request) {
     return NextResponse.json(row)
   } catch (error) {
     console.error('Failed to create equipment:', error)
-    return NextResponse.json(
-      { error: 'Failed to create equipment' },
-      { status: 500 }
-    )
+    return dbErrorResponse(error, 'Failed to create equipment')
   }
 }
 

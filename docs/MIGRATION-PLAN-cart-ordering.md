@@ -1,6 +1,9 @@
 # Migration Plan — Deterministic Cart Ordering (`order_items.position`)
 
-Status: **DRAFT — nothing has been executed.** Written for review.
+Status: **EXECUTED 2026-11-05** (local; Azure at the next deploy). Migration:
+`scripts/migrations/2026-11-05-order-items-position.sql` (idempotent). Step 3d
+decided: planned lines are protected (see the guard in PUT /api/orders/[id]).
+Tests: `tests/qa/cart.test.mjs`.
 Date: 2026-08-06
 
 ---

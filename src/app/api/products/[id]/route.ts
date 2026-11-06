@@ -3,6 +3,7 @@ import { and, eq, inArray, ne } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
 import { products, patternProducts } from '@/infrastructure/database/schema'
 import { publishOnSuccess } from '@/infrastructure/realtime/route-wrapper'
+import { dbErrorResponse } from '@/infrastructure/database/db-error'
 
 export async function GET(
   _request: NextRequest,
@@ -39,7 +40,9 @@ async function putHandler(
       remarks: body.remarks,
       images: body.images,
       linkedPattern: body.linkedPattern,
-      stock: body.stock,
+      // No `stock`: the product form sends back the stock it loaded, which
+      // overwrote any inspection that happened while it was open. Stock only
+      // changes through the ledger (src/infrastructure/stock).
       updatedAt: new Date()
     }
     
@@ -72,7 +75,7 @@ async function putHandler(
     return NextResponse.json(product)
   } catch (error) {
     console.error('PUT /api/products/[id] error:', error)
-    return NextResponse.json({ error: 'Failed to update product' }, { status: 500 })
+    return dbErrorResponse(error, 'Failed to update product')
   }
 }
 
@@ -86,7 +89,7 @@ async function deleteHandler(
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('DELETE /api/products/[id] error:', error)
-    return NextResponse.json({ error: 'Failed to delete product' }, { status: 500 })
+    return dbErrorResponse(error, 'Failed to delete product')
   }
 }
 

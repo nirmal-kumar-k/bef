@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { eq, sql } from 'drizzle-orm'
+import { asc, eq, sql } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
-import { orders, orderItems } from '@/infrastructure/database/schema'
+import { orders, orderItems, CART_IN_ORDER } from '@/infrastructure/database/schema'
 import { currentActor, recordAudit } from '@/infrastructure/audit'
 import { orderSnapshot } from './_order-snapshot'
 
@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic'
 export async function GET() {
   try {
     const rows = await db.query.orders.findMany({
-      with: { cart: true },
+      with: { cart: CART_IN_ORDER },
       orderBy: (orders, { desc }) => [desc(orders.createdAt)],
     })
     return NextResponse.json(rows)
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
 
     const result = await db.transaction(async (tx) => {
       const [existing] = id ? await tx.select().from(orders).where(eq(orders.id, id)) : []
-      const before = existing ? orderSnapshot(existing, await tx.select().from(orderItems).where(eq(orderItems.orderId, id))) : null
+      const before = existing ? orderSnapshot(existing, await tx.select().from(orderItems).where(eq(orderItems.orderId, id)).orderBy(asc(orderItems.position))) : null
       // A client-generated id (assigned the moment the order is created in
       // the UI, before it's ever round-tripped to the server) makes this
       // whole create idempotent: if a double-click or slow-network retry
@@ -51,8 +51,10 @@ export async function POST(request: NextRequest) {
 
       const insertedItems = cart?.length
         ? await tx.insert(orderItems).values(
-            cart.map((item: any) => ({
+            cart.map((item: any, index: number) => ({
               orderId: order.id,
+              // Cart position = the line's place in the submitted list.
+              position: index,
               product: item.product,
               productName: item.productName,
               quantity: item.quantity,
@@ -61,7 +63,7 @@ export async function POST(request: NextRequest) {
               ratePerKg: item.ratePerKg,
               unitCost: item.unitCost,
             }))
-          ).returning()
+          ).returning().then(rows => rows.sort((a, b) => a.position - b.position))
         : []
 
       await recordAudit(tx, actor, before

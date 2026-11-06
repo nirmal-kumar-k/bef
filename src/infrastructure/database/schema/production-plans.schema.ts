@@ -22,10 +22,11 @@ export const productionPlans = pgTable('production_plans', {
   // already did this by hand, this makes it guaranteed rather than dependent
   // on every future code path remembering to.
   orderId: uuid('order_id').references(() => orders.id, { onDelete: 'cascade' }),
-  // NOT a foreign key: this is `${orderId}-${cartIndex}`, a positional pointer
-  // into the cart array rather than a reference to a row. See
-  // docs/MIGRATION-PLAN-cart-ordering.md - order_items already has real uuid
-  // keys, so this can eventually point at them properly.
+  // NOT a foreign key: this is `${orderId}-${position}`, pointing at the cart
+  // line with that order_items.position. Safe because the cart is always read
+  // in position order (CART_IN_ORDER) and an order edit can never move a line
+  // that has plans (PUT /api/orders/[id]). order_items already has real uuid
+  // keys, so this could eventually point at them directly.
   itemId: text('item_id').notNull(),
   stage: productionPlanStageEnum('stage').notNull(),
   coreBoxCode: text('core_box_code').default(''),
