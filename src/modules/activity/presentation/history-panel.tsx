@@ -16,8 +16,12 @@ type Props = {
   scope: HistoryScope
   // Extra controls pinned under the timeline (e.g. the stock adjustment form).
   footer?: ReactNode
-  // Icon-only, for tight spots such as table rows.
+  // Icon-only, for very tight spots.
   compact?: boolean
+  // A small bordered button sized for table rows (icon + "History").
+  row?: boolean
+  // Extra hover text, e.g. "Last edited by Ravi · 10:42".
+  hint?: string
   className?: string
 }
 
@@ -25,20 +29,20 @@ type Props = {
 // a panel opened from inside another window (View Order, a planning modal) is
 // a nested dialog of that window: the window stays open underneath, focus
 // moves into the panel, and Escape closes just the panel.
-export function HistoryButton({ title, subtitle, scope, footer, compact, className }: Props) {
+export function HistoryButton({ title, subtitle, scope, footer, compact, row, hint, className }: Props) {
   const [open, setOpen] = useState(false)
   return (
     <DialogPrimitive.Root open={open} onOpenChange={o => setOpen(o)}>
       <DialogPrimitive.Trigger
         onClick={e => e.stopPropagation()}
-        title={`History of ${title}`}
+        title={hint ? `${hint} - click for the full history` : `History of ${title}`}
         className={cn(
           'inline-flex items-center gap-1 rounded-md text-[#64748B] hover:text-[#4F46E5] hover:bg-[#EEF2FF] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5]/40',
-          compact ? 'p-1' : 'px-2 py-1 text-xs font-medium',
+          compact ? 'p-1' : row ? 'h-[26px] w-fit px-2.5 text-[11px] font-medium border border-[#E0E7FF] bg-white hover:border-[#C7D2FE]' : 'px-2 py-1 text-xs font-medium',
           className,
         )}
       >
-        <ClockCounterClockwise weight="duotone" className={compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} />
+        <ClockCounterClockwise weight="duotone" className={compact ? 'w-3.5 h-3.5' : row ? 'w-3.5 h-3.5' : 'w-4 h-4'} />
         {compact ? <span className="sr-only">History</span> : 'History'}
       </DialogPrimitive.Trigger>
       {open && <Panel title={title} subtitle={subtitle} scope={scope} footer={footer} />}

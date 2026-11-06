@@ -1313,16 +1313,16 @@ export function MeltPlanningModal({
                                           <span className="text-[9px] font-bold uppercase tracking-wide text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded shrink-0">{pour.grade}</span>
                                         </div>
                                         <span className="text-[11px] text-[#94A3B8] truncate">{pour.orderNo} · {pour.mouldWeight} kg/mould</span>
-                                        <span className="flex items-center gap-1 min-w-0">
-                                          {pour.updatedByName && (
-                                            <span className={cn("text-[9px] truncate", "text-[#94A3B8]")} title={`Last edited by ${pour.updatedByName}`}>
-                                              Edited by {pour.updatedByName}{pour.updatedAt ? ` · ${formatWhen(pour.updatedAt)}` : ''}
-                                            </span>
-                                          )}
-                                          {pour.planId && !pour.isNew && (
-                                            <HistoryButton compact title={`Melt pour · ${pour.patternRef || pour.orderNo}`} subtitle="Every change to this plan row" scope={{ entityId: pour.planId! }} />
-                                          )}
-                                        </span>
+                                        {pour.planId && !pour.isNew && (
+                                          <HistoryButton
+                                            row
+                                            className="mt-1"
+                                            title={`Melt pour · ${pour.patternRef || pour.orderNo}`}
+                                            subtitle="Every change to this plan row"
+                                            scope={{ entityId: pour.planId! }}
+                                            hint={pour.updatedByName ? `Last edited by ${pour.updatedByName}${pour.updatedAt ? ` · ${formatWhen(pour.updatedAt)}` : ''}` : undefined}
+                                          />
+                                        )}
                                       </div>
                                     </div>
                                     <div className="flex items-center gap-2 shrink-0">

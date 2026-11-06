@@ -962,16 +962,16 @@ export function CorePlanningModal({
                                   </button>
                                 </div>
                                 <span className={cn("text-[10px] truncate transition-colors duration-500 ease-in-out", theme.rowMuted)}>{row.orderNo} | {row.productName}</span>
-                                <span className="flex items-center gap-1 min-w-0">
-                                  {row.updatedByName && (
-                                    <span className={cn("text-[9px] truncate", theme.rowMuted)} title={`Last edited by ${row.updatedByName}`}>
-                                      Edited by {row.updatedByName}{row.updatedAt ? ` · ${formatWhen(row.updatedAt)}` : ''}
-                                    </span>
-                                  )}
-                                  {row.planId && !row.isNew && (
-                                    <HistoryButton compact title={`Core plan · ${row.productName || row.orderNo}`} subtitle="Every change to this plan row" scope={{ entityId: row.planId! }} />
-                                  )}
-                                </span>
+                                {row.planId && !row.isNew && (
+                                  <HistoryButton
+                                    row
+                                    className="mt-1"
+                                    title={`Core plan · ${row.productName || row.orderNo}`}
+                                    subtitle="Every change to this plan row"
+                                    scope={{ entityId: row.planId! }}
+                                    hint={row.updatedByName ? `Last edited by ${row.updatedByName}${row.updatedAt ? ` · ${formatWhen(row.updatedAt)}` : ''}` : undefined}
+                                  />
+                                )}
                               </div>
                             </td>
                             <td className={cn("px-2 py-3 text-center border-x transition-colors duration-500 ease-in-out", theme.pendingQtyCell)}>
