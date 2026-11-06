@@ -3,6 +3,7 @@ import { asc } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
 import { customers } from '@/infrastructure/database/schema'
 import { publishOnSuccess } from '@/infrastructure/realtime/route-wrapper'
+import { dbErrorResponse } from '@/infrastructure/database/db-error'
 
 export const dynamic = 'force-dynamic'
 
@@ -51,8 +52,7 @@ async function postHandler(request: NextRequest) {
     return NextResponse.json(row, { status: 201 })
   } catch (error: any) {
     console.error('POST /api/customers error:', error)
-    const message = error?.code === '23505' ? 'A customer with this code already exists' : (error?.message || 'Failed to create customer')
-    return NextResponse.json({ error: message }, { status: error?.code === '23505' ? 409 : 500 })
+    return dbErrorResponse(error, 'Failed to create customer', { duplicate: 'A customer with this code already exists' })
   }
 }
 

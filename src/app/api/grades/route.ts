@@ -3,6 +3,7 @@ import { asc } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
 import { grades } from '@/infrastructure/database/schema'
 import { publishOnSuccess } from '@/infrastructure/realtime/route-wrapper'
+import { dbErrorResponse } from '@/infrastructure/database/db-error'
 
 export const dynamic = 'force-dynamic'
 
@@ -32,7 +33,7 @@ async function postHandler(request: NextRequest) {
     return NextResponse.json(row, { status: 201 })
   } catch (error) {
     console.error('POST /api/grades error:', error)
-    return NextResponse.json({ error: 'Failed to create grade' }, { status: 500 })
+    return dbErrorResponse(error, 'Failed to create grade')
   }
 }
 

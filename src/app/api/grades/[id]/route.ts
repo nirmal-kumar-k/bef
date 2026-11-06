@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
 import { grades } from '@/infrastructure/database/schema'
 import { publishOnSuccess } from '@/infrastructure/realtime/route-wrapper'
+import { dbErrorResponse } from '@/infrastructure/database/db-error'
 
 async function putHandler(
   request: NextRequest,
@@ -26,7 +27,7 @@ async function putHandler(
     return NextResponse.json(grade)
   } catch (error) {
     console.error('PUT /api/grades/[id] error:', error)
-    return NextResponse.json({ error: 'Failed to update grade' }, { status: 500 })
+    return dbErrorResponse(error, 'Failed to update grade')
   }
 }
 
@@ -40,7 +41,7 @@ async function deleteHandler(
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('DELETE /api/grades/[id] error:', error)
-    return NextResponse.json({ error: 'Failed to delete grade' }, { status: 500 })
+    return dbErrorResponse(error, 'Failed to delete grade')
   }
 }
 

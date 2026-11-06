@@ -22,6 +22,7 @@ import { formatWhen } from '@/shared/ui/conflict-dialog'
 import { generateTimeSlots, TimeSlot, resolveAvgProductionRate } from '@/shared/lib/utils'
 import type { Shift } from './shift-master-page'
 import { useEditing } from '@/shared/realtime/live-updates'
+import { HistoryButton } from '@/modules/activity/presentation/history-panel'
 
 interface MouldPlanningModalProps {
   isOpen: boolean
@@ -735,7 +736,7 @@ export function MouldPlanningModal({
     return Array.from(options.values())
       .map(b => ({ ...b, totalScheduled: b.totalScheduled + getSessionCommittedQty(b.orderNo, b.patternRef) }))
       .filter(b => b.totalRequired > b.totalScheduled)
-  }, [backlogData, activeRows, plannedRows])
+  }, [backlogData, activeRows, plannedRows, removedRows])
 
   return (
     <>
@@ -899,7 +900,7 @@ export function MouldPlanningModal({
                   <div className={cn("p-16 flex flex-col items-center justify-center transition-colors duration-500 ease-in-out", theme.rowMuted)}>
                     <CubeTransparent className="w-12 h-12 mb-4 opacity-20" />
                     <p className={cn("text-lg font-medium transition-colors duration-500 ease-in-out", theme.label)}>No patterns scheduled</p>
-                    <p className="text-sm">Click the button above to add a pattern to this machine's schedule.</p>
+                    <p className="text-sm">Click the button above to add a pattern to this machine&apos;s schedule.</p>
                   </div>
                 ) : (
                   <div className="w-full overflow-x-auto">
@@ -929,10 +930,15 @@ export function MouldPlanningModal({
                                 <div className="flex flex-col gap-1">
                                   <span className={cn("font-bold text-sm truncate transition-colors duration-500 ease-in-out", theme.rowText)}>{row.patternRef}</span>
                                   <span className={cn("text-[10px] truncate transition-colors duration-500 ease-in-out", theme.rowMuted)}>{row.orderNo} | {row.productName}</span>
-                                  {row.updatedByName && (
-                                    <span className={cn("text-[9px] truncate", theme.rowMuted)} title={`Last edited by ${row.updatedByName}`}>
-                                      Edited by {row.updatedByName}{row.updatedAt ? ` · ${formatWhen(row.updatedAt)}` : ''}
-                                    </span>
+                                  {row.planId && !row.isNew && (
+                                    <HistoryButton
+                                      row
+                                      className="mt-1"
+                                      title={`Mould plan · ${row.productName || row.orderNo}`}
+                                      subtitle="Every change to this plan row"
+                                      scope={{ entityId: row.planId! }}
+                                      hint={row.updatedByName ? `Last edited by ${row.updatedByName}${row.updatedAt ? ` · ${formatWhen(row.updatedAt)}` : ''}` : undefined}
+                                    />
                                   )}
                                 </div>
                               </td>

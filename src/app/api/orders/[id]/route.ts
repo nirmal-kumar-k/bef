@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { eq, sql } from 'drizzle-orm'
+import { asc, eq, sql } from 'drizzle-orm'
 import { db } from '@/infrastructure/database/client'
-import { orders, orderItems, productionPlans } from '@/infrastructure/database/schema'
+import { orders, orderItems, productionPlans, CART_IN_ORDER } from '@/infrastructure/database/schema'
 import { conflictDetails, conflictMessage, currentActor, parseExpectedVersion, recordAudit } from '@/infrastructure/audit'
 import { orderSnapshot } from '../_order-snapshot'
 
@@ -13,7 +13,7 @@ export async function GET(
     const { id } = await params
     const order = await db.query.orders.findFirst({
       where: eq(orders.id, id),
-      with: { cart: true },
+      with: { cart: CART_IN_ORDER },
     })
     if (!order) return NextResponse.json({ error: 'Not found' }, { status: 404 })
     return NextResponse.json(order)
@@ -49,7 +49,23 @@ export async function PUT(
       if (expected.version !== undefined && locked.version !== expected.version) {
         return { conflict: await conflictDetails(tx, 'order', id, expected.version, locked) }
       }
-      const before = orderSnapshot(locked, await tx.select().from(orderItems).where(eq(orderItems.orderId, id)))
+      const existingCart = await tx.select().from(orderItems).where(eq(orderItems.orderId, id)).orderBy(asc(orderItems.position))
+      const before = orderSnapshot(locked, existingCart)
+
+      // Plans point at cart lines by position (item_id = `${orderId}-${n}`).
+      // A line with plans must keep its position and its product, or those
+      // plans silently move to a different product. Quantities and prices
+      // may change; lines may be added at the end; unplanned lines removed.
+      if (cart !== undefined) {
+        const planned = await tx.select({ itemId: productionPlans.itemId }).from(productionPlans).where(eq(productionPlans.orderId, id))
+        const usedPositions = [...new Set(planned.map(p => Number(p.itemId.match(/-(\d+)$/)?.[1])).filter(n => Number.isInteger(n)))].sort((a, b) => a - b)
+        const incoming: any[] = Array.isArray(cart) ? cart : []
+        const broken = usedPositions.filter(n => !incoming[n] || !existingCart[n] || incoming[n].product !== existingCart[n].product)
+        if (broken.length > 0) {
+          const lines = broken.map(n => `line ${n + 1} (${existingCart[n]?.product ?? 'unknown'})`).join(', ')
+          return { cartLocked: `This order has production plans against ${lines}. Those lines can't be removed, moved, or changed to a different product - that would attach their planned quantities to the wrong product. You can still change quantities and prices, add new lines at the end, or remove lines that have no plans.` }
+        }
+      }
 
       const [order] = await tx.update(orders)
         .set({ ...orderData, updatedAt: new Date(), version: sql`${orders.version} + 1`, updatedById: actor.id, updatedByName: actor.name })
@@ -59,8 +75,11 @@ export async function PUT(
         await tx.delete(orderItems).where(eq(orderItems.orderId, id))
         const insertedItems = cart?.length
           ? await tx.insert(orderItems).values(
-              cart.map((item: any) => ({
+              cart.map((item: any, index: number) => ({
                 orderId: id,
+                // Cart position = the line's place in the submitted list; the
+                // guard above guarantees planned lines keep theirs.
+                position: index,
                 product: item.product,
                 productName: item.productName,
                 quantity: item.quantity,
@@ -69,18 +88,21 @@ export async function PUT(
                 ratePerKg: item.ratePerKg,
                 unitCost: item.unitCost,
               }))
-            ).returning()
+            ).returning().then(rows => rows.sort((a, b) => a.position - b.position))
           : []
         await recordAudit(tx, actor, { entityType: 'order', entityId: id, action: 'update', before, after: orderSnapshot(order, insertedItems), version: order.version })
         return { ...order, cart: insertedItems }
       }
 
-      const existingItems = await tx.select().from(orderItems).where(eq(orderItems.orderId, id))
+      const existingItems = await tx.select().from(orderItems).where(eq(orderItems.orderId, id)).orderBy(asc(orderItems.position))
       await recordAudit(tx, actor, { entityType: 'order', entityId: id, action: 'update', before, after: orderSnapshot(order, existingItems), version: order.version })
       return { ...order, cart: existingItems }
     })
 
     if (!result) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    if ('cartLocked' in result && result.cartLocked) {
+      return NextResponse.json({ error: result.cartLocked }, { status: 409 })
+    }
     if ('conflict' in result && result.conflict) {
       return NextResponse.json({ error: conflictMessage(result.conflict), conflict: result.conflict }, { status: 409 })
     }
@@ -124,7 +146,7 @@ export async function DELETE(
       if (expected.version !== undefined && locked.version !== expected.version) {
         return { kind: 'conflict' as const, conflict: await conflictDetails(tx, 'order', id, expected.version, locked) }
       }
-      const before = orderSnapshot(locked, await tx.select().from(orderItems).where(eq(orderItems.orderId, id)))
+      const before = orderSnapshot(locked, await tx.select().from(orderItems).where(eq(orderItems.orderId, id)).orderBy(asc(orderItems.position)))
       const plans = await tx.delete(productionPlans).where(eq(productionPlans.orderId, id)).returning()
       for (const plan of plans) {
         await recordAudit(tx, actor, { entityType: 'production_plan', entityId: plan.id, action: 'delete', before: plan })

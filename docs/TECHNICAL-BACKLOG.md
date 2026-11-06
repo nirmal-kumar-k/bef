@@ -25,7 +25,7 @@ advisories (Server Action DoS, two SSRF, cache confusion, unauthenticated disclo
 of internal Server Function endpoints).
 **Do this first — it is the single highest-value security item in this document.**
 
-### [ ] 0b. `shadcn` sits in `dependencies` and drags in a vulnerable server stack
+### [x] 0b. `shadcn` sits in `dependencies` and drags in a vulnerable server stack
 **Evidence:** never imported anywhere in `src`, but listed under `dependencies`. It is
 a CLI scaffolding tool. Through it the app installs `@modelcontextprotocol/sdk`,
 `express`, `hono`, `body-parser`, `js-yaml`, `brace-expansion`, `fast-uri`,
@@ -110,7 +110,7 @@ write wins. Realistic where day and night shift overlap.
 **Fix:** a `version` integer bumped on write, with the update conditioned on the
 version the client read. Surface a "changed elsewhere, reload" message on conflict.
 
-### [ ] 7. `itemId` is a positional string
+### [x] 7. `itemId` is a positional string
 **Evidence:** convention is `${orderId}-${cartIndex}`, parsed back via
 `split('-')` in several components.
 **Impact:** reordering or deleting a cart line silently repoints every existing

@@ -6,6 +6,7 @@ import { users } from '@/infrastructure/database/schema'
 import { getSessionUser } from '@/shared/lib/auth'
 import { passwordProblem } from '@/modules/users/domain/password'
 import { publishOnSuccess } from '@/infrastructure/realtime/route-wrapper'
+import { dbErrorResponse } from '@/infrastructure/database/db-error'
 
 export const dynamic = 'force-dynamic'
 
@@ -67,8 +68,7 @@ async function postHandler(request: NextRequest) {
     return NextResponse.json(row, { status: 201 })
   } catch (error: any) {
     console.error('POST /api/users error:', error)
-    const message = error?.code === '23505' ? 'A user with this username already exists' : 'Failed to create user'
-    return NextResponse.json({ error: message }, { status: error?.code === '23505' ? 409 : 500 })
+    return dbErrorResponse(error, 'Failed to create user', { duplicate: 'A user with this username already exists' })
   }
 }
 

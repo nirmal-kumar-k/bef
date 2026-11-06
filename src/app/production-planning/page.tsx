@@ -10,6 +10,8 @@ import { cn, toLocalDateString } from '@/shared/lib/utils'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
 import { ConfirmDialog, type ConfirmDialogState } from '@/shared/ui/confirm-dialog'
 import { ConflictDialog, type ConflictItem } from '@/shared/ui/conflict-dialog'
+import { HistoryButton } from '@/modules/activity/presentation/history-panel'
+import { StockAdjustForm } from '@/modules/products/presentation/stock-adjust-form'
 
 import { BacklogItem } from '@/modules/production/presentation/daily-planning-modal'
 import { CorePlanningTab } from '@/modules/production/presentation/core-planning-tab'
@@ -794,7 +796,7 @@ export default function ProductionPlanningPage() {
                 <div className="space-y-6 bg-white p-6 rounded-2xl border border-[#E0E7FF] shadow-lg">
                   <div>
                     <h3 className="text-[#172554] font-bold text-lg font-heading">Finished Stock</h3>
-                    <p className="text-[#64748B] text-xs mt-1">Total accepted-and-stocked quantity per product, across every order - not broken down by PO No, since stock itself isn't order-scoped.</p>
+                    <p className="text-[#64748B] text-xs mt-1">Total accepted-and-stocked quantity per product, across every order - not broken down by PO No, since stock itself isn&apos;t order-scoped.</p>
                   </div>
                   <div className="border border-[#E0E7FF] rounded-xl overflow-x-auto shadow-sm">
                     <table className="w-full text-sm text-left whitespace-nowrap">
@@ -803,12 +805,13 @@ export default function ProductionPlanningPage() {
                           <th className="px-6 py-4">Product Name</th>
                           <th className="px-6 py-4 text-center">Finished Stock</th>
                           <th className="px-6 py-4 text-center">Total Rejected</th>
+                          <th className="px-6 py-4 text-right">Ledger</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[#E0E7FF]">
                         {backlogData.FinishedStock.length === 0 ? (
                           <tr>
-                            <td colSpan={3} className="px-6 py-8 text-center text-[#94A3B8] italic">Nothing inspected yet.</td>
+                            <td colSpan={4} className="px-6 py-8 text-center text-[#94A3B8] italic">Nothing inspected yet.</td>
                           </tr>
                         ) : (
                           backlogData.FinishedStock.map((row) => (
@@ -816,6 +819,14 @@ export default function ProductionPlanningPage() {
                               <td className="px-6 py-4 font-semibold text-[#172554]">{row.productName}</td>
                               <td className="px-6 py-4 text-center font-mono font-semibold text-emerald-600">{row.finishedStock}</td>
                               <td className="px-6 py-4 text-center font-mono text-red-500">{row.totalRejected}</td>
+                              <td className="px-6 py-4 text-right">
+                                <HistoryButton
+                                  title={row.productName}
+                                  subtitle="Every change to this product's finished stock"
+                                  scope={{ productId: row.productId }}
+                                  footer={role === 'Admin' ? <StockAdjustForm productId={row.productId} /> : undefined}
+                                />
+                              </td>
                             </tr>
                           ))
                         )}

@@ -40,6 +40,12 @@ export async function PUT(
         .set({ ...updateData, version: sql`${productionPlans.version} + 1`, updatedById: actor.id, updatedByName: actor.name })
         .where(eq(productionPlans.id, id)).returning()
       await recordAudit(tx, actor, { entityType: 'production_plan', entityId: id, action: 'update', before: existing, after: plan, version: plan.version })
+      // Correcting a past Inspection batch's accepted quantity (e.g. fixing a
+      // mistyped rejected count) must adjust product.stock by the difference -
+      // that stock was already incremented once when the batch was submitted.
+      if (plan.stage === 'Inspection') {
+        await syncInspectionStock(tx, actor, plan, existing.quantityScheduled || 0, plan.quantityScheduled, 'inspection_correction')
+      }
       return { kind: 'ok' as const, plan, existing }
     })
 
@@ -47,12 +53,7 @@ export async function PUT(
     if (result.kind === 'conflict') {
       return NextResponse.json({ error: conflictMessage(result.conflict), conflict: result.conflict }, { status: 409 })
     }
-    const { plan, existing } = result
-    // Correcting a past Inspection batch's accepted quantity (e.g. fixing a
-    // mistyped rejected count) must adjust product.stock by the difference -
-    // that stock was already incremented once when the batch was submitted.
-    if (plan.stage === 'Inspection') await syncInspectionStock(plan.itemId, plan.orderId, existing?.quantityScheduled || 0, plan.quantityScheduled)
-    return NextResponse.json(plan)
+    return NextResponse.json(result.plan)
   } catch (error) {
     console.error('PUT /api/production-plans/[id] error:', error)
     return NextResponse.json({ error: 'Failed to update plan' }, { status: 500 })
@@ -79,19 +80,18 @@ export async function DELETE(
       }
       const [deleted] = await tx.delete(productionPlans).where(eq(productionPlans.id, id)).returning()
       await recordAudit(tx, actor, { entityType: 'production_plan', entityId: id, action: 'delete', before: deleted })
+      // Undoing a mistaken Inspection batch entirely must reverse the stock
+      // it added - the deleted row's own quantity becomes available to
+      // inspect fresh again automatically, since it's no longer counted in
+      // the "already inspected" sum backlogData computes.
+      if (deleted.stage === 'Inspection') {
+        await syncInspectionStock(tx, actor, deleted, deleted.quantityScheduled, 0, 'inspection_undo')
+      }
       return { kind: 'ok' as const, deleted }
     })
 
     if (result.kind === 'conflict') {
       return NextResponse.json({ error: conflictMessage(result.conflict), conflict: result.conflict }, { status: 409 })
-    }
-    if (result.kind === 'ok') {
-      const { deleted } = result
-      // Undoing a mistaken Inspection batch entirely must reverse the stock
-      // it added - the deleted row's own quantity becomes available to
-      // inspect fresh again automatically, since it's no longer counted in
-      // the "already inspected" sum backlogData computes.
-      if (deleted.stage === 'Inspection') await syncInspectionStock(deleted.itemId, deleted.orderId, deleted.quantityScheduled, 0)
     }
     // Deleting a row that is already gone stays a success, as before.
     return NextResponse.json({ success: true })
