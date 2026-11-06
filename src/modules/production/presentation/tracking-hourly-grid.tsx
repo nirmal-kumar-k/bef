@@ -11,6 +11,7 @@ import type { TrackingPlanRow } from './tracking-types'
 import { VARIANCE_REASONS } from './variance-reasons'
 import { saveTrackingRows, pick } from './tracking-save'
 import { formatWhen } from '@/shared/ui/conflict-dialog'
+import { HistoryButton } from '@/modules/activity/presentation/history-panel'
 
 interface TrackingHourlyGridProps {
   rows: TrackingPlanRow[]
@@ -214,11 +215,16 @@ export function TrackingHourlyGrid({ rows, orders, timeSlots, stage, onDirtyChan
                         <span className="text-[10px] text-[#94A3B8] truncate" title={`${order?.customerOrderNo || ''} ${productName}`}>
                           {order?.customerOrderNo || '-'}{stage === 'Core' ? ` | ${productName}` : ''}
                         </span>
-                        {row.updatedByName && (
-                          <span className="text-[9px] text-[#94A3B8] truncate" title={`Last edited by ${row.updatedByName}`}>
-                            Edited by {row.updatedByName}{row.updatedAt ? ` · ${formatWhen(row.updatedAt)}` : ''}
-                          </span>
-                        )}
+                        <span className="flex items-center gap-1 min-w-0">
+                          {row.updatedByName && (
+                            <span className="text-[9px] text-[#94A3B8] truncate" title={`Last edited by ${row.updatedByName}`}>
+                              Edited by {row.updatedByName}{row.updatedAt ? ` · ${formatWhen(row.updatedAt)}` : ''}
+                            </span>
+                          )}
+                          {row.id && (
+                            <HistoryButton compact title={`${stage} plan · ${stage === 'Core' ? (row.coreBoxCode || productName) : productName}`} subtitle="Every change to this plan row" scope={{ entityId: row.id! }} />
+                          )}
+                        </span>
                         {row.isPending && (
                           <Badge variant="outline" className="mt-1 w-fit bg-red-500/10 text-red-600 border-red-500/20 text-[9px]">
                             Pending{row.carriedForwardFromDate ? ` (from ${row.carriedForwardFromDate})` : ''}

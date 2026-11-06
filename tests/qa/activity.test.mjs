@@ -62,5 +62,39 @@ if (other) {
   check('...and sends a non-admin away', pageOther.status >= 300 && pageOther.status < 400)
 }
 
+// ---- importance rules (agreed 2026-11-06)
+const imp = async (scope) => (await call(admin, 'GET', `/api/activity?${scope}`)).body.events
+const evFor = (list, id, action) => list.find(e => e.entityId === id && e.action === action)
+let list = await imp(`orderId=${orderId}`)
+check('deletion is important ("Deleted")', evFor(list, p2.id, 'delete')?.important === 'Deleted')
+check('Quantity 10 -> 12 (+20%) is NOT important', evFor(list, p1.id, 'update')?.important === null)
+const p1now = (await sql`select version from production_plans where id = ${p1.id}`)[0]
+await call(admin, 'PUT', `/api/production-plans/${p1.id}`, { quantityScheduled: 9, version: p1now.version })   // 12 -> 9 = -25%
+list = await imp(`entityId=${p1.id}`)
+check('single-record history (entityId) works', list.length >= 3 && list.every(e => e.entityId === p1.id))
+check('Quantity 12 -> 9 (-25%, the boundary) is important with the percentage', list[0].important === 'Quantity -25%', list[0].important)
+const p1v = (await sql`select version from production_plans where id = ${p1.id}`)[0]
+await call(admin, 'PUT', `/api/production-plans/${p1.id}`, { quantityScheduled: 11, version: p1v.version })  // 9 -> 11 = +22%
+check('Quantity 9 -> 11 (+22%) is not important', (await imp(`entityId=${p1.id}`))[0].important === null)
+const ord = (await sql`select version from orders where id = ${orderId}`)[0]
+const cart2 = [{ product: 'P', productName: 'P', quantity: 5, deliveryQuantity: 0, weight: 1, ratePerKg: 1, unitCost: 1 }, { product: 'Q', productName: 'Q', quantity: 2, deliveryQuantity: 0, weight: 1, ratePerKg: 1, unitCost: 1 }]
+await call(admin, 'PUT', `/api/orders/${orderId}`, { cart: cart2, version: ord.version })
+const ord2 = (await sql`select version from orders where id = ${orderId}`)[0]
+await call(admin, 'PUT', `/api/orders/${orderId}`, { deliveryDate: '2026-12-31', cart: cart2, version: ord2.version })
+list = await imp(`entityId=${orderId}`)
+check('order products changed -> important "Products changed"', list.some(e => e.important === 'Products changed'))
+check('order delivery date changed -> important "Delivery date changed"', list.some(e => e.important === 'Delivery date changed'))
+
+// stock movements in the timeline
+const [prod] = await sql`select id, coalesce(stock,0)::int s from products order by name limit 1`
+await call(admin, 'POST', `/api/products/${prod.id}/stock-movements`, { countedStock: prod.s + 3, note: 'activity test count' })
+const ph = await imp(`productId=${prod.id}`)
+check('product history (productId) lists stock movements', ph.length >= 1 && ph.every(e => e.entityType === 'stock'))
+check('a manual count is important ("Stock adjusted") with its note and before/after', ph[0].important === 'Stock adjusted' && ph[0].note === 'activity test count' && ph[0].changes[0].to === prod.s + 3 && ph[0].changes[0].from === prod.s)
+const stockOnly = await imp('type=stock&limit=20')
+check('type=stock returns only stock movements', stockOnly.length > 0 && stockOnly.every(e => e.entityType === 'stock'))
+const importantOnly = await imp('important=1&limit=50')
+check('important=1 returns only important entries', importantOnly.length > 0 && importantOnly.every(e => !!e.important))
+
 await call(admin, 'DELETE', `/api/orders/${orderId}?force=true`)
 await done()

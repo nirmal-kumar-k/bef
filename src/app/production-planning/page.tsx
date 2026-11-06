@@ -10,7 +10,8 @@ import { cn, toLocalDateString } from '@/shared/lib/utils'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
 import { ConfirmDialog, type ConfirmDialogState } from '@/shared/ui/confirm-dialog'
 import { ConflictDialog, type ConflictItem } from '@/shared/ui/conflict-dialog'
-import { StockHistoryModal } from '@/modules/products/presentation/stock-history-modal'
+import { HistoryButton } from '@/modules/activity/presentation/history-panel'
+import { StockAdjustForm } from '@/modules/products/presentation/stock-adjust-form'
 
 import { BacklogItem } from '@/modules/production/presentation/daily-planning-modal'
 import { CorePlanningTab } from '@/modules/production/presentation/core-planning-tab'
@@ -39,7 +40,6 @@ export default function ProductionPlanningPage() {
   // retry that resends this user's version against the current one.
   const [conflicts, setConflicts] = useState<(ConflictItem & { retry: (version: number) => Promise<Response> })[] | null>(null)
   const [resolvingConflicts, setResolvingConflicts] = useState(false)
-  const [stockHistoryId, setStockHistoryId] = useState<string | null>(null)
   // Set when arriving from Production Tracking's "Revise plan" action
   // (/production-planning?tab=Core&date=YYYY-MM-DD) so the right tab opens on
   // the right day. Read from window.location in an effect rather than via
@@ -820,7 +820,12 @@ export default function ProductionPlanningPage() {
                               <td className="px-6 py-4 text-center font-mono font-semibold text-emerald-600">{row.finishedStock}</td>
                               <td className="px-6 py-4 text-center font-mono text-red-500">{row.totalRejected}</td>
                               <td className="px-6 py-4 text-right">
-                                <Button variant="outline" size="sm" onClick={() => setStockHistoryId(row.productId)}>History</Button>
+                                <HistoryButton
+                                  title={row.productName}
+                                  subtitle="Every change to this product's finished stock"
+                                  scope={{ productId: row.productId }}
+                                  footer={role === 'Admin' ? <StockAdjustForm productId={row.productId} /> : undefined}
+                                />
                               </td>
                             </tr>
                           ))
@@ -911,7 +916,6 @@ export default function ProductionPlanningPage() {
 
       <ConfirmDialog state={saveErrorDialog} onClose={() => setSaveErrorDialog(null)} />
       <ConflictDialog items={conflicts} onReload={handleConflictReload} onOverwrite={handleConflictOverwrite} busy={resolvingConflicts} />
-      <StockHistoryModal productId={stockHistoryId} orders={orders} onClose={() => setStockHistoryId(null)} />
     </div>
   )
 }

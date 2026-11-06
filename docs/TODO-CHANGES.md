@@ -172,6 +172,16 @@ Last updated: 2026-10-22
   order's deleted plans; IST day filters; paging). Admin > Activity page with
   filters; a History section in the View Order window. Tests:
   tests/qa/activity.test.mjs (14). Full suite 163/163.
+  - Redesigned 2026-11-06: history is on demand - a small "History" button
+    (View Order header, Finished Stock rows, every saved plan row in the four
+    planning modals and Tracking) opens a slide-over panel: a timeline grouped
+    by day with initials on a "pour line", one line per change, tap for
+    details. Important changes (deletions; stock adjustments incl. inspection
+    corrections/undos; planned quantity moved 25%+; order products or delivery
+    date changed) get an amber tag naming why, a Highlights strip and an
+    "Important only" switch. Stock movements are part of the timeline; the
+    stock count form sits in the product panel. API: ?entityId=, ?productId=,
+    type=stock, important=1. Tests: 25 activity checks; full suite 174/174.
 - [ ] **Sessions survive a password change** — a login cookie stays valid for
   7 days even after the password is reset or the user is deactivated
   (backlog 0d).

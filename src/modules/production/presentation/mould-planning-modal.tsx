@@ -22,6 +22,7 @@ import { formatWhen } from '@/shared/ui/conflict-dialog'
 import { generateTimeSlots, TimeSlot, resolveAvgProductionRate } from '@/shared/lib/utils'
 import type { Shift } from './shift-master-page'
 import { useEditing } from '@/shared/realtime/live-updates'
+import { HistoryButton } from '@/modules/activity/presentation/history-panel'
 
 interface MouldPlanningModalProps {
   isOpen: boolean
@@ -929,11 +930,16 @@ export function MouldPlanningModal({
                                 <div className="flex flex-col gap-1">
                                   <span className={cn("font-bold text-sm truncate transition-colors duration-500 ease-in-out", theme.rowText)}>{row.patternRef}</span>
                                   <span className={cn("text-[10px] truncate transition-colors duration-500 ease-in-out", theme.rowMuted)}>{row.orderNo} | {row.productName}</span>
-                                  {row.updatedByName && (
-                                    <span className={cn("text-[9px] truncate", theme.rowMuted)} title={`Last edited by ${row.updatedByName}`}>
-                                      Edited by {row.updatedByName}{row.updatedAt ? ` · ${formatWhen(row.updatedAt)}` : ''}
-                                    </span>
-                                  )}
+                                  <span className="flex items-center gap-1 min-w-0">
+                                    {row.updatedByName && (
+                                      <span className={cn("text-[9px] truncate", theme.rowMuted)} title={`Last edited by ${row.updatedByName}`}>
+                                        Edited by {row.updatedByName}{row.updatedAt ? ` · ${formatWhen(row.updatedAt)}` : ''}
+                                      </span>
+                                    )}
+                                    {row.planId && !row.isNew && (
+                                      <HistoryButton compact title={`Mould plan · ${row.productName || row.orderNo}`} subtitle="Every change to this plan row" scope={{ entityId: row.planId! }} />
+                                    )}
+                                  </span>
                                 </div>
                               </td>
                               <td className={cn("px-2 py-4 text-center border-x transition-colors duration-500 ease-in-out", theme.pendingQtyCell)}>
